@@ -1,0 +1,500 @@
+// RPS Game JavaScript
+
+let searchInterval = null;
+let gameStatusInterval = null;
+let moveTimerInterval = null;
+let isMoveTimerRunning = false;
+let currentGameId = null;
+let searchTimer = 10;
+let moveTimer = 8;
+
+// Инициализация
+document.addEventListener('DOMContentLoaded', function() {
+    // Если мы на странице выбора ставки
+    const betButtons = document.querySelectorAll('.bet-btn');
+    if (betButtons.length > 0) {
+        betButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const betAmount = this.dataset.bet;
+                startGameSearch(betAmount);
+            });
+        });
+    }
+    
+    // Если мы на странице игры
+    if (typeof gameId !== 'undefined' && gameId) {
+        currentGameId = gameId;
+        startGameStatusPolling();
+        
+        // Обработчики ходов
+        const moveButtons = document.querySelectorAll('.move-btn');
+        moveButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const move = this.dataset.move;
+                makeMove(move);
+            });
+        });
+    }
+});
+
+// Поиск игры
+function startGameSearch(betAmount) {
+    const betButtons = document.querySelectorAll('.bet-btn');
+    betButtons.forEach(btn => {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+    });
+    
+    const searchStatus = document.getElementById('search-status');
+    const searchTimerEl = document.getElementById('search-timer');
+    
+    searchStatus.style.display = 'block';
+    searchTimer = 10;
+    searchTimerEl.textContent = searchTimer;
+    
+    // Вибрация при начале поиска
+    if (navigator.vibrate) {
+        navigator.vibrate(100);
+    }
+    
+    // Отправляем запрос на поиск
+    fetch('/rps/api/search/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify({
+            bet_amount: betAmount
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            showNotification(data.error, 'error');
+            resetBetButtons();
+            searchStatus.style.display = 'none';
+            return;
+        }
+        
+        if (data.opponent_found) {
+            // Противник найден - переходим к игре
+            showNotification('Противник найден!', 'success');
+            setTimeout(() => {
+                window.location.href = `/rps/game/${data.game_id}/`;
+            }, 500);
+        } else {
+            // Начинаем поиск
+            startSearchTimer(betAmount);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Ошибка при поиске игры', 'error');
+        resetBetButtons();
+        searchStatus.style.display = 'none';
+    });
+}
+
+// Таймер поиска
+function startSearchTimer(betAmount) {
+    const searchTimerEl = document.getElementById('search-timer');
+    
+    searchInterval = setInterval(() => {
+        searchTimer--;
+        searchTimerEl.textContent = searchTimer;
+        
+        if (searchTimer <= 0) {
+            clearInterval(searchInterval);
+            // Подключаем бота
+            connectBot(betAmount);
+        } else {
+            // Продолжаем поиск
+            checkForOpponent(betAmount);
+        }
+    }, 1000);
+}
+
+// Проверка противника
+function checkForOpponent(betAmount) {
+    fetch('/rps/api/search/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify({
+            bet_amount: betAmount
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.opponent_found) {
+            clearInterval(searchInterval);
+            window.location.href = `/rps/game/${data.game_id}/`;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+// Подключение бота
+function connectBot(betAmount) {
+    const searchStatus = document.getElementById('search-status');
+    const searchTimerEl = document.getElementById('search-timer');
+    
+    searchTimerEl.textContent = 'Подключение бота...';
+    
+    fetch('/rps/api/bot/connect/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify({
+            bet_amount: betAmount
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            showNotification(data.error, 'error');
+            resetBetButtons();
+            searchStatus.style.display = 'none';
+            return;
+        }
+        
+        if (data.bot_connected) {
+            showNotification('Бот подключен!', 'success');
+            if (navigator.vibrate) {
+                navigator.vibrate([100, 50, 100]);
+            }
+            setTimeout(() => {
+                window.location.href = `/rps/game/${data.game_id}/`;
+            }, 500);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Ошибка при подключении бота', 'error');
+        resetBetButtons();
+        searchStatus.style.display = 'none';
+    });
+}
+
+// Сброс кнопок ставок
+function resetBetButtons() {
+    const betButtons = document.querySelectorAll('.bet-btn');
+    betButtons.forEach(btn => {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+    });
+}
+
+// Опрос статуса игры
+function startGameStatusPolling() {
+    if (!currentGameId) return;
+    
+    gameStatusInterval = setInterval(() => {
+        fetch(`/rps/api/game/${currentGameId}/status/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Error:', data.error);
+                    return;
+                }
+                
+                updateGameStatus(data);
+                
+                // Если игра завершена, останавливаем опрос
+                if (data.status === 'finished') {
+                    clearInterval(gameStatusInterval);
+                    if (moveTimerInterval) {
+                        clearInterval(moveTimerInterval);
+                        moveTimerInterval = null;
+                        isMoveTimerRunning = false;
+                    }
+                    // Перезагружаем страницу для показа результата
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    }, 1500);
+}
+
+// Обновление статуса игры
+function updateGameStatus(data) {
+        // Обновляем ходы
+        if (data.player1_move) {
+            const player1Move = document.getElementById('player1-move');
+            if (player1Move) {
+                const moveEmoji1 = data.player1_move === 'rock' ? '✊' : 
+                                  data.player1_move === 'paper' ? '🖐️' : '✌️';
+                player1Move.innerHTML = `<div class="move-icon move-${data.player1_move}">${moveEmoji1}</div>`;
+            }
+        }
+        
+        if (data.status === 'finished' && data.player2_move) {
+            const player2Move = document.getElementById('player2-move');
+            if (player2Move) {
+                const moveEmoji2 = data.player2_move === 'rock' ? '✊' : 
+                                  data.player2_move === 'paper' ? '🖐️' : '✌️';
+                player2Move.innerHTML = `<div class="move-icon move-${data.player2_move}">${moveEmoji2}</div>`;
+            }
+        }
+    
+    // Обновляем банк
+    if (data.game_bank) {
+        const gameBank = document.getElementById('game-bank');
+        if (gameBank) {
+            gameBank.textContent = `${data.game_bank.toFixed(0)} FL`;
+        }
+    }
+    
+    // Запускаем таймер хода
+    if (data.status === 'playing' || data.status === 'betting') {
+        startMoveTimer();
+    }
+}
+
+// Таймер хода (8 секунд + дополнительно 7 секунд)
+let additionalTimeUsed = false;
+
+function startMoveTimer() {
+    const timerEl = document.getElementById('game-timer');
+    const timerValue = document.getElementById('timer-value');
+    
+    if (!timerEl || !timerValue) return;
+    if (isMoveTimerRunning) return; // не стартуем новый, если уже крутится
+    
+    timerEl.style.display = 'block';
+    moveTimer = 8;  // Основной таймер: 8 секунд
+    additionalTimeUsed = false;
+    timerValue.textContent = moveTimer;
+    timerEl.classList.remove('warning', 'danger');
+    
+    if (moveTimerInterval) {
+        clearInterval(moveTimerInterval);
+    }
+    isMoveTimerRunning = true;
+    
+    moveTimerInterval = setInterval(() => {
+        moveTimer--;
+        timerValue.textContent = moveTimer;
+        
+        // Изменяем цвет в зависимости от оставшегося времени
+        if (moveTimer <= 1) {
+            timerEl.classList.add('danger');
+            timerEl.classList.remove('warning');
+            if (navigator.vibrate) navigator.vibrate(50);
+        } else if (moveTimer <= 2) {
+            timerEl.classList.add('warning');
+            timerEl.classList.remove('danger');
+        }
+        
+        if (moveTimer <= 0) {
+            if (!additionalTimeUsed) {
+                // Добавляем дополнительно 7 секунд (чуть больше толерантности)
+                additionalTimeUsed = true;
+                moveTimer = 7;
+                timerValue.textContent = moveTimer;
+                timerEl.classList.remove('warning', 'danger');
+                showNotification('Дополнительное время: +7 секунд', 'info');
+            } else {
+                // Время истекло
+                clearInterval(moveTimerInterval);
+                isMoveTimerRunning = false;
+                showNotification('Время вышло!', 'error');
+                timerEl.style.display = 'none';
+            }
+        }
+    }, 1000);
+}
+
+// Совершение хода
+function makeMove(move) {
+    if (!currentGameId) return;
+    
+    const moveButtons = document.querySelectorAll('.move-btn');
+    moveButtons.forEach(btn => {
+        btn.disabled = true;
+        btn.classList.remove('selected');
+    });
+    
+    // Выделяем выбранный ход
+    const selectedBtn = document.querySelector(`.move-btn[data-move="${move}"]`);
+    if (selectedBtn) {
+        selectedBtn.classList.add('selected');
+    }
+    
+    // Показываем индикатор загрузки
+    showLoading();
+    
+    fetch('/rps/api/move/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify({
+            game_id: currentGameId,
+            move: move
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        
+        if (data.error) {
+            showNotification(data.error, 'error');
+            moveButtons.forEach(btn => btn.disabled = false);
+            return;
+        }
+        
+        // Обновляем отображение хода с анимацией
+        const player1Move = document.getElementById('player1-move');
+        if (player1Move && typeof isPlayer1 !== 'undefined' && isPlayer1) {
+            const moveEmoji = move === 'rock' ? '✊' : move === 'paper' ? '🖐️' : '✌️';
+            player1Move.innerHTML = `<div class="move-icon move-${move}">${moveEmoji}</div>`;
+            // Вибрация (если поддерживается)
+            if (navigator.vibrate) {
+                navigator.vibrate(100);
+            }
+        }
+        
+        if (data.game_finished) {
+            // Игра завершена
+            clearInterval(gameStatusInterval);
+            clearInterval(moveTimerInterval);
+            
+            // Показываем ход противника с задержкой для драматизма
+            setTimeout(() => {
+                if (data.player2_move) {
+                    const player2Move = document.getElementById('player2-move');
+                    if (player2Move) {
+                        const moveEmoji = data.player2_move === 'rock' ? '✊' : 
+                                         data.player2_move === 'paper' ? '🖐️' : '✌️';
+                        player2Move.innerHTML = `<div class="move-icon move-${data.player2_move}">${moveEmoji}</div>`;
+                    }
+                }
+                
+                // Определяем победителя и добавляем классы
+                const player1Card = document.querySelector('.player-card.player-1');
+                const player2Card = document.querySelector('.player-card.player-2');
+                
+                if (data.result === 'player1_win') {
+                    if (player1Card) player1Card.classList.add('winner');
+                    if (player2Card) player2Card.classList.add('loser');
+                    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                } else if (data.result === 'player2_win') {
+                    if (player2Card) player2Card.classList.add('winner');
+                    if (player1Card) player1Card.classList.add('loser');
+                    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                }
+                
+                // Перезагружаем страницу через 3 секунды
+                setTimeout(() => {
+                    window.location.reload();
+                }, 3000);
+            }, 500);
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        console.error('Error:', error);
+        showNotification('Ошибка при совершении хода', 'error');
+        moveButtons.forEach(btn => btn.disabled = false);
+    });
+}
+
+// Получение CSRF токена
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Показ уведомлений
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        background: ${type === 'error' ? '#FF5A8F' : type === 'success' ? '#5AFF75' : '#3D50C7'};
+        color: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        z-index: 10000;
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Показ загрузки
+function showLoading() {
+    const overlay = document.createElement('div');
+    overlay.className = 'loading-overlay';
+    overlay.id = 'loading-overlay';
+    overlay.innerHTML = '<div class="loading-spinner"></div>';
+    document.body.appendChild(overlay);
+}
+
+// Скрытие загрузки
+function hideLoading() {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        overlay.remove();
+    }
+}
+
+// Добавляем CSS для уведомлений
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(style);
+

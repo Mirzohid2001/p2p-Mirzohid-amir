@@ -1,0 +1,448 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}P2P Биржа FL{% endblock %}
+
+{% block content %}
+<div class="cf-summary-block mb-4 animate-float">
+    <div>Создано FL: {{ cf_created|intcomma }}</div>
+    <div>Выращено: {{ cf_grown|floatformat:0|intcomma }}</div>
+    <div>Осталось: {{ cf_left|floatformat:0|intcomma }}</div>
+</div>
+
+<!-- Цена TON и CF -->
+<div class="flex justify-center gap-6 mt-2 mb-4 text-white text-base">
+    <div>Цена FL: <span class="font-bold">{{ cf_price_rub }}</span> ₽</div>
+    <div>TON: <span class="font-bold">{% if ton_to_rub %}{{ ton_to_rub|floatformat:2 }}{% else %}—{% endif %}</span> ₽</div>
+</div>
+
+<!-- График -->
+<div class="card mb-4 p-2 flex items-center justify-center" style="background: rgba(255,255,255,0.22); min-height:150px;">
+<div id="candlestick-chart" style="width: 320px; height: 120px;"></div>
+
+
+</div>
+{% if market_open %}
+<!-- Кнопки -->
+<div class="flex justify-center gap-6 mt-4">
+    <button id="btn-buy" class="p2p-main-btn">Купить</button>
+    <button id="btn-sell" class="p2p-main-btn">Продать</button>
+</div>
+
+
+
+
+<div class="recent-trades-block mt-8 mb-4 ">
+
+    <div style="background:rgba(34, 38, 82, 0.18); border-radius:13px; padding:13px 18px 7px 18px; margin-top: 10px;">
+        {% for order in recent_trades %}
+  <div class="flex items-center mb-1" style="color:#eaf2ff;">
+    <span style="font-weight:500;">
+      @{{ order.fulfilled_by.username|default:order.fulfilled_by.first_name|slice:":2" }}... купил
+      {{ order.cf_amount|floatformat:0 }} FL
+    </span>
+  </div>
+{% empty %}
+  <div style="color:#b3b9dc; font-size:1rem;">Пока никто не покупал FL</div>
+{% endfor %}
+
+    </div>
+</div>
+{% else %}
+      <div style="text-align:center; color:#ffeaa7; font-weight:600; margin:24px 0 24px 0; font-size:1.2rem">
+    ⚠️ Когда будут добыты все монеты, откроется п2п рынок
+  </div>
+{% endif %}
+
+<!-- Модалка Продать -->
+<div id="modal-sell" class="p2p-modal">
+  <div class="p2p-modal-content">
+    <span class="p2p-modal-close" id="closeSellModal">&times;</span>
+    <div class="p2p-modal-title">Продать FL</div>
+
+
+    <form id="sell-form">
+      <label class="p2p-modal-label">Сколько FL хотите продать?</label>
+      <input id="cf-amount-input" name="cf_amount" type="number" min="0.01" step="0.01"
+             class="p2p-modal-input" placeholder="Введите количество">
+      <div id="sell-convert-hint" class="p2p-modal-convert"></div>
+      <button type="submit" class="p2p-modal-btn">Продать</button>
+    </form>
+    <div id="sell-result" class="p2p-modal-success"></div>
+  </div>
+</div>
+
+<!-- Модалка Купить -->
+<div id="modal-buy" class="p2p-modal">
+  <div class="p2p-modal-content" style="max-width:440px;">
+    <span class="p2p-modal-close" id="closeBuyModal">&times;</span>
+    <div class="p2p-modal-title">Ордера на продажу</div>
+      <div class="flex items-center gap-3 mb-4" id="buy-orders-filters" style="justify-content:center;">
+    <label style="color:#fff; font-size:0.95em;">Сортировка:</label>
+    <select id="order-sort-select" class="p2p-modal-input" style="width:auto; min-width:135px; padding:5px 18px;">
+        <option value="price_asc">Цена ↑</option>
+        <option value="price_desc">Цена ↓</option>
+        <option value="amount_desc">Кол-во ↓</option>
+        <option value="amount_asc">Кол-во ↑</option>
+        <option value="all" selected>Все</option>
+    </select>
+
+</div>
+    <div id="buy-orders-list">
+      <div class="text-center text-gray-300 py-3" style="color:#c5d5fa;">Загрузка...</div>
+    </div>
+  </div>
+</div>
+
+<style>
+.p2p-main-btn {
+    min-width: 155px;
+    padding: 17px 0;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #382686 2%, #5b43c9 97%);
+    color: #fff;
+    font-size: 1.17rem;
+    font-weight: 500;
+    box-shadow: 0 3px 22px #23286927;
+    transition: background 0.14s, box-shadow 0.13s;
+    outline: none;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    margin-bottom: 0;
+}
+.p2p-main-btn:active, .p2p-main-btn:focus {
+    background: linear-gradient(180deg, #281e5a 0%, #47319c 100%);
+    box-shadow: 0 2px 8px #23286918;
+}
+
+.p2p-modal {
+  display: none;
+  position: fixed;
+  z-index: 9999;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(44, 50, 81, 0.48);
+  justify-content: center;
+  align-items: center;
+}
+.recent-trades-block { width: 100%; max-width: 520px; margin: 0 auto; }
+.p2p-modal.active { display: flex; }
+.p2p-modal-content {
+  background: linear-gradient(90deg,#3a247a 10%, #368fff 100%);
+  padding: 36px 28px 28px 28px;
+  border-radius: 22px;
+  box-shadow: 0 6px 28px #23286948;
+  min-width: 275px; max-width: 96vw;
+  position: relative;
+  text-align: center;
+}
+.p2p-modal-close {
+  position: absolute; right: 16px; top: 14px; font-size: 2rem; color: #aaa; cursor: pointer;
+  font-weight: 700;
+  transition: color 0.15s;
+}
+.p2p-modal-close:hover { color: #fff; }
+.p2p-modal-title {
+  font-size: 1.32rem;
+  color: #fff;
+  font-weight: 800;
+  margin-bottom: 12px;
+  letter-spacing: 0.03em;
+}
+.p2p-modal-label {
+  color: #c8e0ff;
+  font-size: 1rem;
+  margin-bottom: 9px;
+  display: block;
+  font-weight: 500;
+}
+.p2p-modal-input {
+  width: 100%;
+  padding: 12px 15px;
+  border-radius: 12px;
+  border: 1.2px solid #5f74c9;
+  font-size: 1.11rem;
+  margin-bottom: 17px;
+  color: #292866;
+  font-weight: 700;
+  background: #fff;
+  outline: none;
+  transition: border .15s;
+}
+.p2p-modal-input:focus { border-color: #368fff; }
+.p2p-modal-convert {
+  color: #f6fffa;
+  font-size: 1.08rem;
+  font-weight: 600;
+  margin-bottom: 7px;
+}
+.p2p-modal-btn {
+  width: 100%;
+  padding: 13px 0;
+  border: none;
+  border-radius: 13px;
+  background: linear-gradient(90deg,#3a247a 10%, #368fff 100%);
+  color: #fff;
+  font-size: 1.17rem;
+  font-weight: 700;
+  box-shadow: 0 2px 12px #3a247a22;
+  margin-top: 8px;
+  transition: background 0.13s;
+  cursor: pointer;
+}
+#buy-orders-list {
+    max-height: 450px; /* или сколько нужно — можно уменьшить для мобильных */
+    overflow-y: auto;
+    padding-right: 3px;
+    margin-bottom: 7px;
+}
+@media (max-width: 600px) {
+    #buy-orders-list {
+        max-height: 450px;
+    }
+}
+
+.p2p-modal-btn:active { background: linear-gradient(90deg,#4823b7 20%, #259aff 100%);}
+.p2p-modal-success { color: #27be6c; font-weight: 700; margin-top: 8px;}
+@media (max-width: 600px) {
+  .p2p-modal-content { min-width: 85vw; padding: 22px 6vw 18px 6vw;}
+}
+</style>
+
+    <div id="p2p-status-modal" class="p2p-modal">
+  <div class="p2p-modal-content" style="max-width:360px;">
+    <span class="p2p-modal-close" onclick="hideP2PStatusModal()">&times;</span>
+    <div id="p2p-status-message" style="font-size:1.15rem; color:#fff; margin-bottom:12px;"></div>
+    <button class="p2p-modal-btn" style="margin-top:5px;" onclick="hideP2PStatusModal()">OK</button>
+  </div>
+</div>
+
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/lightweight-charts@4.0.1/dist/lightweight-charts.standalone.production.js"></script>
+
+<script>
+let allCandles = []; // тут массив из API (history)
+let visibleCount = 30; // сколько свечей видно одновременно
+let chart, candleSeries, pointer = 0;
+
+function showCandles() {
+    let data = allCandles.slice(pointer, pointer + visibleCount);
+    candleSeries.setData(data);
+}
+document.addEventListener('DOMContentLoaded', function() {
+  // === БИРЖЕВОЙ ГРАФИК ===
+  fetch("{% url 'p2p:price_history_json' %}")
+      .then(r => r.json())
+      .then(data => {
+        const chart = LightweightCharts.createChart(document.getElementById('candlestick-chart'), {
+          width: 320,
+          height: 120,
+          layout: {
+            background: { color: 'rgba(90,140,255,0.05)' },
+            textColor: '#fff',
+          },
+          grid: { vertLines: { color: '#0000' }, horzLines: { color: '#0000' } },
+          rightPriceScale: { visible: false },
+          timeScale: { visible: false },
+        });
+        const candleSeries = chart.addCandlestickSeries({
+          upColor: '#22e97a',
+          downColor: '#ee4747',
+          borderVisible: false,
+          wickUpColor: '#22e97a',
+          wickDownColor: '#ee4747',
+        });
+
+        // Приводим данные к нужному формату:
+        const candles = data.history.map(x => ({
+          time: x.time,
+          open: x.open,
+          high: x.high,
+          low: x.low,
+          close: x.close,
+        }));
+        candleSeries.setData(candles);
+      });
+
+  // === ОБРАБОТКА КНОПОК, ФОРМ, МОДАЛОК ===
+
+  // Глобальные переменные (из шаблона)
+  window.tonPerCf = Number('{{ ton_per_cf|default:0|safe }}');
+  window.tonToRub = Number('{{ ton_to_rub|default:0|safe }}');
+  window.cfPriceRub = Number('{{ cf_price_rub|default:0|safe }}');
+
+  // --- ПРОДАТЬ ---
+  const btnSell = document.getElementById('btn-sell');
+  const btnBuy = document.getElementById('btn-buy');
+  const closeSellModal = document.getElementById('closeSellModal');
+  const closeBuyModal = document.getElementById('closeBuyModal');
+  const sellForm = document.getElementById('sell-form');
+  const cfAmountInput = document.getElementById('cf-amount-input');
+  const sellConvertHint = document.getElementById('sell-convert-hint');
+  const sellResult = document.getElementById('sell-result');
+
+  if (btnSell) btnSell.onclick = function() {
+      document.getElementById('modal-sell').classList.add('active');
+      document.body.style.overflow = 'hidden';
+  };
+  if (closeSellModal) closeSellModal.onclick = function() {
+      document.getElementById('modal-sell').classList.remove('active');
+      document.body.style.overflow = '';
+      if (sellForm) sellForm.reset();
+      if (sellResult) sellResult.innerText = '';
+      if (sellConvertHint) sellConvertHint.innerText = '';
+  };
+  if (cfAmountInput) cfAmountInput.oninput = function() {
+    let cf = parseFloat(this.value) || 0;
+    if (window.tonPerCf && window.tonToRub) {
+      let ton = (cf * window.tonPerCf).toFixed(3);
+      let tonPerCf = Number(window.tonPerCf).toFixed(3);
+      let tonToRub = Number(window.tonToRub).toFixed(2);
+      sellConvertHint.innerHTML = cf ?
+        `<span style="color:#fff;">${cf} FL ≈ <b>${ton} TON</b></span>
+        <br><span style="font-size:14px;color:#bed7fa;">Курс: 1 FL = <b>${tonPerCf}</b> TON, 1 TON = <b>${tonToRub}</b> ₽</span>`
+        : '';
+    } else {
+      sellConvertHint.innerHTML = `<span style="color:#e85;">Курс временно недоступен</span>`;
+    }
+  };
+  if (sellForm) sellForm.onsubmit = function(e){
+      e.preventDefault();
+      const cf = parseFloat(cfAmountInput.value) || 0;
+      if (cf <= 0) return;
+      sellResult.innerText = "Загрузка...";
+      fetch("{% url 'p2p:sell_order' %}", {
+          method: "POST",
+          headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              "X-CSRFToken": "{{ csrf_token }}"
+          },
+          body: "cf_amount=" + encodeURIComponent(cf)
+      })
+      .then(r => r.json())
+      .then(data => {
+          showP2PStatusModal(data.msg, !!data.success);
+          if (data.success) {
+              setTimeout(() => {
+                  document.getElementById('modal-sell').classList.remove('active');
+                  document.body.style.overflow = '';
+                  sellForm.reset();
+                  sellResult.innerText = '';
+                  sellConvertHint.innerText = '';
+                  updateBuyOrders();
+              }, 1300);
+          } else {
+              sellResult.innerText = data.msg;
+          }
+      })
+      .catch(() => {
+          showP2PStatusModal("Ошибка связи с сервером", false);
+      });
+  };
+
+  // --- КУПИТЬ ---
+  if (btnBuy) btnBuy.onclick = function() {
+      document.getElementById('modal-buy').classList.add('active');
+      document.body.style.overflow = 'hidden';
+      updateBuyOrders();
+  };
+  if (closeBuyModal) closeBuyModal.onclick = function() {
+      document.getElementById('modal-buy').classList.remove('active');
+      document.body.style.overflow = '';
+  };
+
+  // --- ФИЛЬТРЫ ---
+  let currentSort = "all";
+  let currentMinAmount = "";
+  function attachBuyOrderHandlers() {
+      document.querySelectorAll('.btn-buy-order').forEach(btn => {
+          btn.onclick = function() {
+              const orderId = this.dataset.orderId;
+              window.buyOrder(orderId);
+          };
+      });
+  }
+  function updateBuyOrders() {
+      const params = new URLSearchParams();
+      if (currentSort && currentSort !== "all") params.append("sort", currentSort);
+      if (currentMinAmount) params.append("min_amount", currentMinAmount);
+
+      fetch("{% url 'p2p:buy_ajax' %}?" + params.toString())
+          .then(r => r.text())
+          .then(html => {
+              document.getElementById('buy-orders-list').innerHTML = html;
+              attachBuyOrderHandlers();
+          });
+  }
+  attachBuyOrderHandlers();
+
+  const orderSortSelect = document.getElementById('order-sort-select');
+  if (orderSortSelect) orderSortSelect.onchange = function() {
+      currentSort = this.value;
+      updateBuyOrders();
+  };
+
+  // --- МОДАЛКИ И СТАТУСЫ ---
+  window.showP2PStatusModal = function(message, isSuccess=true, callback=null) {
+      const modal = document.getElementById('p2p-status-modal');
+      const msg = document.getElementById('p2p-status-message');
+      msg.innerHTML = message;
+      msg.style.color = isSuccess ? '#27be6c' : '#ff6868';
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+
+      const okBtn = modal.querySelector('.p2p-modal-btn');
+      okBtn.onclick = function() {
+          modal.classList.remove('active');
+          document.body.style.overflow = '';
+          if (callback) callback();
+      };
+  };
+  window.hideP2PStatusModal = function() {
+      document.getElementById('p2p-status-modal').classList.remove('active');
+      document.body.style.overflow = '';
+  };
+
+  window.buyOrder = function(orderId) {
+      if (!orderId) return;
+      showP2PStatusModal('Купить этот ордер?', true, function(){
+          doBuyOrder(orderId);
+      });
+  };
+
+  function doBuyOrder(orderId) {
+      fetch("{% url 'p2p:buy_order' %}", {
+          method: "POST",
+          headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              "X-CSRFToken": "{{ csrf_token }}"
+          },
+          body: "order_id=" + encodeURIComponent(orderId)
+      })
+      .then(r => r.json())
+      .then(data => {
+          showP2PStatusModal(data.msg, !!data.success, function() {
+              if (data.success) {
+                  updateBuyOrders();
+                  document.getElementById('modal-buy').classList.remove('active');
+                  document.body.style.overflow = '';
+                  location.reload();
+              }
+          });
+      })
+      .catch(() => {
+          showP2PStatusModal("Ошибка связи с сервером", false);
+      });
+  }
+});
+
+</script>
+
+
+{% endblock %}

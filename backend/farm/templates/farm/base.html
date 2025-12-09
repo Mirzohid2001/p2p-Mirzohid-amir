@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}CF Farm{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'farm/style.css' %}">
+    <!-- Можно добавить favicon и другие head элементы -->
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <nav>
+            <!-- Логотип и ссылки на основные страницы -->
+            <a href="{% url 'home' %}"><img src="{% static 'farm/icons/logo.svg' %}" alt="Logo" height="40"></a>
+            <a href="{% url 'market' %}">Рынок</a>
+            <a href="{% url 'staking_list' %}">Стейкинг</a>
+            <a href="{% url 'profile' %}">Профиль</a>
+        </nav>
+    </header>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    <footer>
+        &copy; 2025 CF Farm
+    </footer>
+</body>
+</html>

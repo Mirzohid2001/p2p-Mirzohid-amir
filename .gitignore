@@ -1,0 +1,87 @@
+# =========================
+# Python umumiy
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+.env
+.venv/
+env/
+ENV/
+
+# Log fayllar
+*.log
+logs/
+log/
+
+# =========================
+# Django
+# =========================
+
+# SQLite baza
+db.sqlite3
+*.sqlite3
+
+# Migratsiya cache'lari
+*.pyc
+
+# Collected static (collectstatic natijasi)
+staticfiles/
+static_root/
+static_collected/
+
+# Agar media fayllarni gitga qo‘ymoqchi bo‘lmasang:
+media/
+media_root/
+
+# Django configlar (agar local sozlamalar bo‘lsa)
+local_settings.py
+
+# =========================
+# Telegram bot / API keys
+# =========================
+
+# Sirlari bo'lgan fayllar
+*.env
+.env.*
+secrets.json
+config.json
+
+# =========================
+# IDE / OS fayllari
+# =========================
+
+# VSCode
+.vscode/
+
+# PyCharm / IDEA
+.idea/
+*.iml
+
+# MacOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux / system
+Thumbs.db
+Desktop.ini
+
+# =========================
+# Testlar / tools
+# =========================
+
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# =========================
+# Docker (agar ishlatsang)
+# =========================
+docker-compose.override.yml

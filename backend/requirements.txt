@@ -1,0 +1,45 @@
+# Django Core
+Django==5.2
+asgiref==3.8.1
+sqlparse==0.5.3
+tzdata==2025.2
+
+# Database
+psycopg2-binary>=2.9.0
+
+# Celery & Redis
+celery>=5.0
+redis>=4.0
+django-redis>=5.0.0
+amqp==5.3.1
+billiard==4.2.1
+kombu==5.5.3
+vine==5.1.0
+
+# Telegram Bot
+python-telegram-bot>=20.0
+python-dotenv>=1.0.0
+
+# Utilities
+click==8.1.8
+click-didyoumean==0.3.1
+click-plugins==1.1.1
+click-repl==0.3.0
+colorama==0.4.6
+prompt_toolkit==3.0.51
+python-dateutil==2.9.0.post0
+six==1.17.0
+wcwidth==0.2.13
+requests>=2.31.0
+
+# Development & Testing
+pytest>=7.0.0
+pytest-django>=4.5.0
+
+# Optional: For production deployment
+gunicorn>=20.0.0
+whitenoise>=6.0.0
+
+# Optional: For monitoring
+sentry-sdk>=1.0.0
+

@@ -1,0 +1,25 @@
+from .settings import *
+
+DEBUG = False
+SMS_CODE_ACTIVE = False
+ESKIZ_TOKEN = ""
+ALLOWED_HOSTS = ('api.DOMAIN.uz', )
+CORS_ORIGIN_WHITELIST = ('', )
+FRONTEND_DOMAIN = 'https://bukhara-flour.uz'
+
+PAYME_LOGIN = 'Paycom'
+PAYME_PASSWORD = 'hxkgSChRGD2SW91N%JtOWJoRt6g3SiX1fX?V'
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': '',
+        'USER': '',
+        'PASSWORD': '',
+        'HOST': 'localhost',
+        'PORT': 5432,
+    }
+}
+
+STATIC_ROOT = 'static'
+MEDIA_ROOT = 'files/uploads'

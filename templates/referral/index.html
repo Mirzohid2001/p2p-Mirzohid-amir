@@ -1,0 +1,467 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+.container, .container-fluid {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+}
+    body {
+        min-height: 100vh;
+        font-family: 'Inter', 'Montserrat', Arial, sans-serif;
+        position: relative;
+    }
+    .ref-container {
+
+        background: url('{% static "images/bg2.png" %}') center bottom/cover no-repeat;
+        max-width: 380px;
+        margin: 0 auto;
+        padding: 10px;
+    }
+    .ref-title {
+        font-weight: 600;
+        font-size: 30px;
+        margin-bottom: 0.3rem;
+        padding-top: 2rem;
+        letter-spacing: 1px;
+        color: #000000;
+        text-align: center;
+    }
+    .ref-subtitle {
+        color: #000000;
+        font-weight: 500;
+        text-align: center;
+        font-size: 20px;
+        margin-bottom: 1.9rem;
+    }
+    .ref-bonus-card {
+        background: #0866D7;
+        width: 190px;
+        height: 184px;
+        color: #fff;
+        border-radius: 25px;
+        padding: 18px 0 8px 0;
+        margin-bottom: 1.3rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        box-shadow: 0 6px 24px #7c66e66b;
+        border: 1px solid #fff;
+        margin-left: 5px;
+        justify-content: center;
+    }
+    .ref-bonus-card img {
+        width: 90px;
+        height: 94px;
+        margin-bottom: 0.5rem;
+    }
+    .ref-bonus-label {
+        color: #fff;
+        border-radius: 18px;
+        font-weight: 500;
+        font-size: 15px;
+        padding: 4px 18px 4px 18px;
+        margin-bottom: 0.6rem;
+        text-align: center;
+        align-items: center;
+        display: flex;
+        justify-content: center;
+        gap: 4px;
+    }
+    .coin-inline {
+        width: 16px !important;
+        height: 16px !important;
+        margin-left: 2px;
+        margin-right: 0;
+        vertical-align: -3px;
+        display: inline-block;
+        object-fit: contain;
+    }
+    .ref-bonus-desc {
+        font-weight: 500;
+        font-size: 1.06rem;
+        margin-top: 0.3rem;
+        margin-bottom: 0.5rem;
+        text-align: center;
+    }
+    .ref-stat-cards {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 1.2rem;
+    }
+    .ref-stat {
+        background: linear-gradient(137deg, #fff7fe 0%, #e9e8ff 100%);
+        border-radius: 15px;
+        padding: 14px 0 8px 0;
+        width: 48%;
+        min-width: 125px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        box-shadow: 0 2px 10px #b9b5e766;
+    }
+    .ref-stat-title {
+        color: #7a72ab;
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.3rem;
+    }
+    .ref-stat-value {
+        color: #363371;
+        font-weight: 800;
+        font-size: 1.18rem;
+        letter-spacing: 0.03em;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .ref-invite-btn {
+        width: 100%;
+        background: linear-gradient(90deg, #744aff 10%, #3d17d3 100%);
+        border: none;
+        border-radius: 24px;
+        color: #fff;
+        font-weight: 700;
+        font-size: 1.15rem;
+        padding: 16px 0 13px 0;
+        margin-bottom: 2.3rem;
+        box-shadow: 0 4px 16px #563be94a;
+        transition: 0.13s;
+    }
+    .ref-invite-btn:active, .ref-invite-btn:focus {
+        background: linear-gradient(90deg,#3d17d3 10%,#744aff 100%);
+    }
+    .ref-friends-title {
+        font-size: 1.19rem;
+        font-weight: 800;
+        color: #1e1d51;
+        margin-bottom: 0.85rem;
+    }
+    .ref-friends-list {
+        background: linear-gradient(137deg, #fff 0%, #f2eeff 100%);
+        border-radius: 18px;
+        padding: 15px;
+        min-height: 62px;
+        box-shadow: 0 1px 5px #dad7ef2b;
+        color: #7a6cce;
+        text-align: center;
+        font-weight: 700;
+        font-size: 1.04rem;
+    }
+    .ref-no-friends {
+        color: #a9aad7;
+        font-size: 1.05rem;
+        font-weight: 500;
+        margin-top: 8px;
+    }
+    .friend-bonus {
+        color: #1e1d51;
+        float: right;
+        font-size: 0.97em;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+    }
+    .friend-bonus img {
+        width: 14px !important;
+        height: 14px !important;
+        margin-left: 1px;
+        vertical-align: -2px;
+        display: inline-block;
+        object-fit: contain;
+    }
+    .ref-content-row {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  gap: 26px;
+  position: relative;
+  margin-bottom: 2.5rem;
+  margin-top: 1rem;
+}
+
+.ref-bonus-label {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 400;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.coin-inline {
+  width: 18px !important;
+  height: 18px !important;
+  vertical-align: -3px;
+  display: inline-block;
+  object-fit: contain;
+}
+
+.ref-stats-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.stat-card {
+  background: rgba(243, 244, 255, 0.38);
+  border-radius: 25px;
+  box-shadow: 0 2px 10px #b9b5e766;
+  width: 160px;
+    height: 87px;
+  padding: 20px 10px 14px 10px;
+  text-align: center;
+  border: 1px solid #fff;
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.stat-title {
+  color: #7872ad;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 0.2rem;
+}
+.stat-value {
+  color: #2662be;
+  font-weight: 500;
+  font-size: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.background-coins {
+  position: absolute;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.coin-bg-img {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.80;
+  filter: blur(0.5px) brightness(1.07);
+  transition: filter 0.2s;
+}
+.bottom-nav, .ref-invite-btn, .ref-bonus-card{
+  position: relative;
+  z-index: 5; /* Или больше */
+
+}
+
+@media (max-width: 450px) {
+  .coin-bg-img { width: 26px; height: 26px;}
+}
+
+.ref-friends-list {
+    background: linear-gradient(137deg, #e4e2fb 0%, #c8c1fa 100%);
+    border-radius: 19px;
+    padding: 17px 16px 13px 16px;
+    min-height: 62px;
+    box-shadow: 0 3px 13px #a39ee34f;
+    color: #51458d;
+    font-weight: 600;
+    font-size: 1.05rem;
+    text-align: left;
+    margin-bottom: 1.4rem;
+    border: 1.2px solid #edeafd;
+}
+
+
+.ref-friends-list > div {
+    background: rgba(120, 91, 240, 0.08);
+    border-radius: 11px;
+    margin-bottom: 7px;
+    padding: 10px 10px 9px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background 0.18s;
+}
+.ref-friends-list > div:hover {
+    background: rgba(120, 91, 240, 0.17);
+}
+
+
+
+
+</style>
+<div class="background-coins"></div>
+
+<div class="ref-container">
+    <div class="ref-title">Друзья</div>
+    <div class="ref-subtitle">Приглашайте друзей и<br>получайте бонусы</div>
+
+
+    <div class="ref-content-row">
+
+  <div class="ref-bonus-card">
+    <img src="{% static 'images/gift.png' %}" alt="gift" />
+    <div class="ref-bonus-label">
+      Для вас и вашего друга 50
+      <img src="{% static 'images/coin.png' %}" alt="coin" class="coin-inline" />
+    </div>
+  </div>
+
+
+  <div class="ref-stats-stack">
+    <div class="stat-card">
+      <div class="stat-title">Количество приглашений</div>
+      <div class="stat-value">{{ referral_count|default:0 }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">Заработано</div>
+      <div class="stat-value">
+        {{ referral_rewards|default:0 }}
+        <img src="{% static 'images/coin.png' %}" alt="coin" class="coin-inline" />
+      </div>
+    </div>
+  </div>
+</div>
+
+
+    <button class="ref-invite-btn" data-bs-toggle="modal" data-bs-target="#refModal">Пригласить друзей</button>
+{% if tasks %}
+  <div class="ref-friends-title" style="margin-top:1.5rem;">Задания</div>
+  <div class="ref-friends-list ref-tasks-list">
+    {% for task in tasks %}
+      <div>
+        <div>
+          <b>{{ task.title }}</b><br>
+          <span style="color:#5842b6">{{ task.description }}</span>
+        </div>
+        <div>
+          {% if task.id in completed_task_ids %}
+              <span class="badge bg-success">Выполнено</span>
+          {% else %}
+              {% if task.type == "tg_channel" and task.channel_username %}
+                  <a href="https://t.me/{{ task.channel_username|cut:'@' }}" target="_blank"
+                      class="btn btn-sm btn-outline-primary" style="margin:8px 0;">Перейти</a>
+                  <button class="btn btn-sm btn-success" onclick="checkTask('{{ task.id }}')">Проверить</button>
+              {% endif %}
+          {% endif %}
+          <span class="friend-bonus" style="margin-left:10px;">+{{ task.reward_fl }} <img src="{% static 'images/coin.png' %}" alt="coin"></span>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+
+    <div class="ref-friends-title">Список друзей</div>
+{% if referrals %}
+    <div class="ref-friends-list">
+        {% for r in referrals %}
+            <div>
+                <span>
+                    <span style="color:#5842b6;font-weight:700;">
+                        {{ r.first_name }}{% if r.last_name %} {{ r.last_name }}{% endif %}
+                    </span>
+                    {% if r.username %}
+                        <span style="color:#a48bf3;">@{{ r.username }}</span>
+                    {% endif %}
+                </span>
+                <span class="friend-bonus">
+                    +{{ r.bonus }}
+                    <img src="{% static 'images/coin.png' %}" alt="coin">
+                </span>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="ref-friends-list ref-no-friends">Нет друзей</div>
+{% endif %}
+
+</div>
+
+<!-- MODAL QR КОД -->
+<div class="modal fade" id="refModal" tabindex="-1" aria-labelledby="refModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius: 22px; padding: 1.5rem 0;">
+      <div class="modal-header border-0">
+        <h5 class="modal-title w-100 text-center" id="refModalLabel" style="font-weight:700;">Ваша реферальная ссылка</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+      </div>
+      <div class="modal-body text-center">
+        <div class="mb-3">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=170x170&data={{ referral_link|urlencode }}"
+                 alt="QR код" style="border-radius: 16px;">
+        </div>
+        <div class="mb-2">
+            <input type="text" id="ref-link-input" class="form-control text-center" style="border-radius:14px;font-size:1.02rem;" value="{{ referral_link }}" readonly>
+        </div>
+        <button type="button" class="btn btn-primary px-4" style="border-radius:18px;" onclick="copyReferralLink()">Скопировать ссылку</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function copyReferralLink() {
+    const input = document.getElementById('ref-link-input');
+    input.select();
+    document.execCommand('copy');
+    input.blur();
+}
+</script>
+    <script>
+document.addEventListener('DOMContentLoaded', function () {
+    const container = document.querySelector('.background-coins');
+    const coins = [
+        "{% static 'images/coin1.png' %}",
+        "{% static 'images/coin2.png' %}"
+    ];
+    const COUNT = 20; // сколько монеток
+    const vw = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+    const vh = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+
+    for(let i=0; i<COUNT; i++){
+        let img = document.createElement('img');
+        img.src = coins[Math.random() < 0.6 ? 0 : 1]; // 60% желтых, 40% фиолетовых
+        img.className = 'coin-bg-img';
+        img.style.left = Math.random() * 100 + 'vw';
+        img.style.top = Math.random() * 100 + 'vh';
+        img.style.transform = `rotate(${Math.floor(Math.random()*360)}deg) scale(${0.7 + Math.random()*0.8})`;
+        img.style.opacity = (0.5 + Math.random()*0.4).toFixed(2);
+        container.appendChild(img);
+    }
+});
+</script>
+<script>
+function checkTask(taskId) {
+    fetch(`/referral/check_task/${taskId}/`, {
+        method: "POST",
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        alert(data.msg || data.error || data.status);
+        if(data.status === 'success') {
+            location.reload();
+        }
+    });
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,559 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Магазин{% endblock %}
+
+{% block content %}
+<style>
+.container, .container-fluid {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+}
+body, html {
+  background: #4336a7;
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', Arial, sans-serif;
+  height: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+    width: 100vh;
+}
+.shop-bg {
+  position: relative;
+  width: 100vw;
+  min-height: 100vh;
+  background: url('{% static "images/bg.png" %}') center bottom/cover repeat;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 90px; /* можно уменьшить или убрать */
+
+}
+
+.shop-title-btn {
+  background: linear-gradient(90deg,#2575e6 15%,#589be9 85%);
+  border-radius: 17px;
+  color: #fff;
+  font-size: 1.14rem;
+  font-weight: 800;
+  padding: 13px 0 13px 0;
+  text-align: center;
+  width: 85vw;
+  max-width: 320px;
+  margin: 0 auto 18px auto;
+  box-shadow: 0 2px 10px #2864e428;
+  letter-spacing: 0.5px;
+}
+
+.shop-list {
+  width: 100vw;
+
+  margin: 0 auto;
+  padding-left: 15px;
+}
+.shop-row {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: row;
+  gap: 10px;
+  margin-bottom: 22px;
+  padding: 0;
+}
+.shop-pic {
+  flex: 0 0 55px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.shop-pic img {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  box-shadow: 0 2px 8px #a6d0f71a;
+
+}
+.shop-pic-bg {
+  width: 85px;
+  height: 85px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 60% 30%, #b5d6fe 0%, #50b2ff 60%, #527cfe 100%);
+  box-shadow: 0 6px 32px 0 #47a2fa40, 0 1.5px 9px #c1e4ff80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  position: relative;
+}
+.shop-pic-bg img {
+  width: 68px;
+  height: 68px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 10px #a7c6fc60);
+}
+
+.shop-card {
+  background: rgba(243, 244, 255, 0.38);
+  border: 1px solid #e4eaff;
+  border-radius: 15px;
+  padding: 8px 14px 8px 14px;
+  width: 122px;
+    height: 104px;
+  box-shadow: 0 2px 10px #a7c6fc1a;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.shop-card-title {
+  font-size: 1.00rem;
+  font-weight: 700;
+  color: #23257b;
+  margin-bottom: 6px;
+}
+.shop-card-desc {
+  color: #23257b;
+  font-size: 0.92rem;
+  margin-bottom: 0;
+  margin-top: 0.5px;
+  font-weight: 600;
+}
+.sh{
+    color: #fff;
+}
+
+
+.shop-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 0;
+  align-items: flex-end;
+  justify-content: center;
+
+
+
+}
+
+.shop-btn {
+  border: none;
+  outline: none;
+  background: linear-gradient(90deg,#3a247a 10%, #368fff 100%);
+  color: #fff;
+  font-weight: 500;
+  border-radius: 25px;
+  font-size: 14px;
+  padding: 4px 15px 4px 15px;
+  box-shadow: 0 1px 7px #2575e618;
+  letter-spacing: 0.06em;
+  width: 135px;
+    height: 48px;
+  margin: 0;
+
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.19s;
+    align-items: center;
+}
+
+.shop-btn1 {
+  border: none;
+  outline: none;
+  background: linear-gradient(90deg,#3a247a 10%, #368fff 100%);
+  color: #fff;
+  font-weight: 600;
+  border-radius: 25px;
+  font-size: 14px;
+  padding: 4px 15px 4px 15px;
+  box-shadow: 0 1px 7px #2575e618;
+  letter-spacing: 0.06em;
+  width: 135px;
+    height: 48px;
+  margin: 0;
+    margin-top: 30px;
+
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.19s;
+    align-items: center;
+}
+.shop-btn.second {
+  background: linear-gradient(90deg, #3a247a 10%, #22a9ff 100%);
+}
+.shop-btn:active, .shop-btn:focus {
+  background: linear-gradient(90deg, #4823b7 20%, #259aff 100%);
+}
+.shop-input-qty {
+  border: 1px solid #e4eaff;
+  border-radius: 25px;
+  width: 135px;
+    height: 48px;
+  font-size: 1rem;
+  text-align: center;
+  padding: 3px 2px;
+  background: rgba(243, 244, 255, 0.38);
+  color: #241c62;
+  font-weight: 700;
+  outline: none;
+
+  margin-bottom: 4px;
+
+}
+
+
+.shop-message {
+    background: linear-gradient(90deg, #16c0ff, #3d5afe 80%);
+    color: #fff;
+    padding: 14px 18px;
+    border-radius: 18px;
+    margin: 10px auto 20px auto;
+    max-width: 320px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 1.04rem;
+    box-shadow: 0 2px 18px #2d57ec21;
+    z-index: 9;
+    position: relative;
+    animation: fadeIn 0.6s;
+}
+@keyframes fadeIn {
+  from { opacity:0; transform:translateY(-15px);}
+  to   { opacity:1; transform:none;}
+}
+
+.inventory-block {
+  background: linear-gradient(120deg, rgba(80,150,255,0.12) 0%, rgba(90,60,255,0.21) 100%);
+  backdrop-filter: blur(7px);
+  border-radius: 22px;
+  max-width: 350px;
+  box-shadow: 0 6px 32px 0 #4e61e040, 0 1.5px 12px #7f9cff48;
+  padding: 18px 15px 18px 15px;
+  position: relative;
+  border: 1.5px solid rgba(255,255,255,0.23);
+  z-index: 10;
+  margin-top: 15px;
+}
+.inventory-title {
+  font-weight: 800;
+  color: #241c62;
+  font-size: 1.13rem;
+  margin-bottom: 16px;
+  letter-spacing: 0.3px;
+  text-shadow: 0 2px 6px #33316822;
+}
+.inventory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+.inventory-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: linear-gradient(110deg, rgba(255,255,255,0.19) 0%, rgba(80,150,255,0.08) 100%);
+  border-radius: 14px;
+  box-shadow: 0 1px 9px #7ab8f61a;
+  padding: 9px 11px;
+  margin-bottom: 0;
+  border: 1px solid rgba(255,255,255,0.14);
+}
+.inventory-img {
+  width: 37px;
+  height: 37px;
+  object-fit: contain;
+  border-radius: 9px;
+  background: rgba(220,230,255,0.44);
+  border: 1.5px solid #e4eaff50;
+  box-shadow: 0 0.5px 4px #7cc7ff30;
+}
+.inventory-info {
+  flex: 1 1 50px;
+  min-width: 60px;
+}
+.inventory-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #241c62;
+  text-shadow: 0 1px 3px #2d3a6e19;
+}
+.inventory-valid {
+  font-size: 0.89rem;
+  color: #8adfff;
+  margin-top: 3px;
+}
+.inventory-use-btn {
+  background: linear-gradient(90deg,#48e6a8,#28b7fc 90%);
+  border: none;
+  border-radius: 11px;
+  color: #fff;
+  font-size: 0.92rem;
+  font-weight: 700;
+  padding: 7px 19px;
+  box-shadow: 0 2px 8px #13e4c930;
+  margin-left: 10px;
+  cursor: pointer;
+  transition: background 0.13s;
+}
+.inventory-use-btn:active, .inventory-use-btn:focus {
+  background: linear-gradient(90deg,#16d3c3,#1a83ea 80%);
+}
+.inventory-empty {
+  text-align: center;
+  color: #c7e3ff;
+  font-size: 1.07rem;
+  margin-top: 22px;
+  font-weight: 600;
+  text-shadow: 0 2px 8px #3d7fff18;
+}
+
+
+.shop-input-qty {
+  resize: none;
+  height: 45px;
+  font-size: 0.92rem;
+  padding: 6px 8px;
+  line-height: 1.2;
+  font-weight: 600;
+  border-radius: 25px;
+}
+
+
+
+</style>
+
+<div class="shop-bg">
+  <div class="cf-summary-block">
+    <div>Создано FL: {{ total_created_cf|intcomma }}</div>
+    <div>Выращено: {{ all_cf_grown|floatformat:0|intcomma }}</div>
+    <div>Осталось: {{ cf_left|floatformat:0|intcomma }}</div>
+</div>
+  <div class="shop-title-btn">Магазин</div>
+  <div id="shop-message" style="display:none;" class="shop-message"></div>
+
+  <div class="shop-list">
+
+    <div class="shop-row">
+      <div class="shop-pic">
+          <div class="shop-pic-bg">
+        <img src="{% static 'images/watering_can.png' %}" alt="Автополив">
+              </div>
+      </div>
+      <div class="shop-card">
+        <div class="shop-card-title">Автополив</div>
+        <div class="shop-card-desc">Срок: <span class="sh">24ч</span> </div>
+        <div class="shop-card-desc">Срок: <span class="sh">48ч</span></div>
+      </div>
+      <div class="shop-btns">
+        <form action="{% url 'shop:buy_auto_water' %}" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="tree_id" value="{{ user.cf_trees.0.id|default:1 }}">
+          <input type="hidden" name="days" value="1">
+          <button type="submit" class="shop-btn">Купить 0.1 TON</button>
+        </form>
+        <form action="{% url 'shop:buy_auto_water' %}" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="tree_id" value="{{ user.cf_trees.0.id|default:1 }}">
+          <input type="hidden" name="days" value="2">
+          <button type="submit" class="shop-btn second">Купить 0.2 TON</button>
+        </form>
+      </div>
+    </div>
+
+
+    <div class="shop-row">
+      <div class="shop-pic">
+          <div class="shop-pic-bg">
+        <img src="{% static 'images/Seed.png' %}" alt="Удобрение">
+          </div>
+      </div>
+      <div class="shop-card">
+        <div class="shop-card-title">Увеличивает</div>
+        <div class="shop-card-desc">Доход: <span class="sh">x2</span></div>
+        <div class="shop-card-desc">Срок: <span class="sh">24ч</span></div>
+      </div>
+      <div class="shop-btns">
+        <form action="{% url 'shop:buy_fertilizer' %}" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="tree_id" value="{{ user.cf_trees.0.id|default:1 }}">
+          <button type="submit" class="shop-btn1 shop-btn">Купить 0.1 TON</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Ветки -->
+    <div class="shop-row">
+      <div class="shop-pic">
+          <div class="shop-pic-bg">
+        <img src="{% static 'images/tree.png' %}" alt="Ветки">
+          </div>
+      </div>
+      <div class="shop-card">
+        <div class="shop-card-title">Ветки</div>
+        <div class="shop-card-desc">Улучшение дерева</div>
+      </div>
+      <div class="shop-btns">
+        <form action="{% url 'shop:buy_branches' %}" method="post" style="display: flex; flex-direction: column; align-items: flex-end;">
+          {% csrf_token %}
+<textarea class="shop-input-qty"
+          name="quantity"
+          id="quantity"
+          placeholder="Напишите количество"
+          rows="2"></textarea>
+          <button type="submit" class="shop-btn" id="branch-btn">1шт 0.1 TON</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="inventory-block">
+  <div class="inventory-title">Инвентарь</div>
+  {% if purchases %}
+    <div class="inventory-list">
+      {% for p in purchases %}
+        <div class="inventory-item">
+          {% comment %}
+          Определяем картинку и подпись:
+          {% endcomment %}
+          {% if p.item.type == "fertilizer" %}
+            <img src="{% static 'images/Seed.png' %}" alt="Удобрение" class="inventory-img">
+          {% elif p.item.type == "auto_water" %}
+            <img src="{% static 'images/watering_can.png' %}" alt="Автополив" class="inventory-img">
+          {% else %}
+            <img src="{% static 'images/tree_1.png' %}" alt="Предмет" class="inventory-img">
+          {% endif %}
+
+          <div class="inventory-info">
+            <div class="inventory-name">
+              {% if p.item.type == "auto_water" %}
+                Автополив {{ p.item.duration|floatformat:0 }}ч
+              {% elif p.item.type == "fertilizer" %}
+                Удобрение {{ p.item.duration|floatformat:0 }}ч
+              {% else %}
+                {{ p.item.name }}
+              {% endif %}
+            </div>
+            {% if p.valid_until %}
+              <div class="inventory-valid">Действует до: {{ p.valid_until|date:"d.m H:i" }}</div>
+            {% endif %}
+          </div>
+          {% if p.item.type == "auto_water" or p.item.type == "fertilizer" %}
+            <button type="button" class="inventory-use-btn" data-purchase-id="{{ p.id }}">Активировать</button>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="inventory-empty">Пусто</div>
+  {% endif %}
+</div>
+
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+  var branchInput = document.getElementById('quantity');
+  var branchBtn = document.getElementById('branch-btn');
+  if (branchInput && branchBtn) {
+    branchInput.addEventListener('input', function() {
+  let val = Number(branchInput.value) || 1;
+  let price = (val * 0.1).toFixed(2);
+  branchBtn.textContent = val + 'шт ' + price + ' TON';
+});
+
+  }
+
+  document.querySelectorAll('.shop-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (btn.disabled) return;
+      btn.disabled = true;
+      var form = btn.closest('form');
+      var formData = new FormData(form);
+      fetch(form.action, {
+        method: "POST",
+        body: formData,
+        headers: {
+          "X-CSRFToken": formData.get("csrfmiddlewaretoken"),
+        }
+      })
+      .then(res => res.json())
+      .then(data => showShopMessage(data))
+      .catch(() => showShopMessage({status: "error", message: "Ошибка сети"}))
+      .finally(() => { btn.disabled = false; });
+    });
+  });
+
+  document.querySelectorAll('.inventory-use-btn').forEach(function(btn) {
+  btn.addEventListener('click', function(e) {
+    e.preventDefault();
+    if (btn.disabled) return;
+    btn.disabled = true;
+    let purchaseId = btn.getAttribute('data-purchase-id');
+    fetch(`/shop/use/${purchaseId}/`, {
+      method: "POST",
+      headers: { "X-CSRFToken": '{{ csrf_token }}' }
+    })
+    .then(res => res.json())
+    .then(data => {
+    showShopMessage(data);
+    if (data.status === "success") {
+        setTimeout(function() {
+            location.reload();
+        }, 900);
+    }
+})
+
+    .catch(() => showShopMessage({status: "error", message: "Ошибка сети"}))
+    .finally(() => { btn.disabled = false; });
+  });
+});
+
+
+  function showShopMessage(data) {
+  let msgDiv = document.getElementById('shop-message');
+  if (msgDiv) {
+    msgDiv.innerText = data.message;
+    msgDiv.style.display = 'block';
+
+    // Удаляем старую кнопку, если была
+    let oldBtn = msgDiv.querySelector('.close-shop-msg');
+    if (oldBtn) oldBtn.remove();
+
+    // Новая кнопка!
+    let btn = document.createElement('button');
+    if (data.status === "success") {
+      btn.textContent = 'Обновить инвентарь';
+      btn.onclick = function() { location.reload(); };
+    } else {
+      btn.textContent = 'Закрыть';
+      btn.onclick = function() { msgDiv.style.display = "none"; };
+    }
+    btn.className = 'close-shop-msg';
+    btn.style.cssText = "margin-left:16px;padding:4px 14px;border-radius:10px;border:none;background:#2929ae;color:#fff;font-weight:600;cursor:pointer;";
+    msgDiv.appendChild(btn);
+
+    // Цвет фона по статусу
+    if (data.status === "success") {
+      msgDiv.style.background = "linear-gradient(90deg, #3dd47a, #29c6ef 80%)";
+    } else {
+      msgDiv.style.background = "linear-gradient(90deg, #d4373d, #ef2929 80%)";
+    }
+  } else {
+    alert(data.message);
+    if (data.status === "success") location.reload();
+  }
+}
+
+
+
+});
+</script>
+
+
+
+{% endblock %}

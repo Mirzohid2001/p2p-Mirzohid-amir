@@ -1,0 +1,260 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    .dashboard {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    .card {
+        background: white;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        padding: 15px;
+    }
+    .card h3 {
+        margin-top: 0;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+        color: #417690;
+    }
+    .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        margin: 15px 0;
+        color: #333;
+    }
+    .currency {
+        color: #777;
+        font-size: 14px;
+    }
+    table.data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    table.data-table th,
+    table.data-table td {
+        padding: 8px 12px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+    }
+    table.data-table th {
+        background: #f8f8f8;
+    }
+    .section-title {
+        margin: 30px 0 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #79aec8;
+        color: #417690;
+    }
+    .timestamp {
+        font-size: 12px;
+        color: #999;
+        text-align: right;
+        margin-top: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'farm_admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; {% trans 'Analytics' %}
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>{% trans 'Farm Analytics Dashboard' %}</h1>
+
+<h2 class="section-title">{% trans 'Users & Trees' %}</h2>
+<div class="dashboard">
+    <div class="card">
+        <h3>{% trans 'Total Users' %}</h3>
+        <div class="stat-value">{{ user_stats.total_users }}</div>
+    </div>
+    <div class="card">
+        <h3>{% trans 'Active Users (7 days)' %}</h3>
+        <div class="stat-value">{{ user_stats.active_users }}</div>
+    </div>
+    <div class="card">
+        <h3>{% trans 'Users with Telegram' %}</h3>
+        <div class="stat-value">{{ user_stats.users_with_tg }}</div>
+    </div>
+    <div class="card">
+        <h3>{% trans 'Total Trees' %}</h3>
+        <div class="stat-value">{{ user_stats.total_trees }}</div>
+    </div>
+    <div class="card">
+        <h3>{% trans 'Average Tree Level' %}</h3>
+        <div class="stat-value">{{ user_stats.avg_tree_level }}</div>
+    </div>
+</div>
+
+<h2 class="section-title">{% trans 'Economy Stats' %}</h2>
+<div class="dashboard">
+    <div class="card">
+        <h3>{% trans 'Total CF Balance' %}</h3>
+        <div class="stat-value">{{ economy_stats.total_cf_balance|floatformat:2 }} <span class="currency">CF</span></div>
+    </div>
+    <div class="card">
+        <h3>{% trans 'Total TON Balance' %}</h3>
+        <div class="stat-value">{{ economy_stats.total_ton_balance|floatformat:8 }} <span class="currency">TON</span></div>
+    </div>
+    <div class="card">
+        <h3>{% trans 'Total NOT Balance' %}</h3>
+        <div class="stat-value">{{ economy_stats.total_not_balance|floatformat:2 }} <span class="currency">NOT</span></div>
+    </div>
+    <div class="card">
+        <h3>{% trans 'Open Orders' %}</h3>
+        <div class="stat-value">{{ economy_stats.orders_open }}</div>
+    </div>
+    <div class="card">
+        <h3>{% trans 'Filled Orders' %}</h3>
+        <div class="stat-value">{{ economy_stats.orders_filled }}</div>
+    </div>
+    <div class="card">
+        <h3>{% trans 'Average Order Price' %}</h3>
+        <div class="stat-value">{{ economy_stats.avg_order_price|floatformat:8 }} <span class="currency">TON</span></div>
+    </div>
+    <div class="card">
+        <h3>{% trans 'Total Commission' %}</h3>
+        <div class="stat-value">{{ economy_stats.total_commission|floatformat:8 }} <span class="currency">TON</span></div>
+    </div>
+</div>
+
+<h2 class="section-title">{% trans 'Special Trees' %}</h2>
+<div class="dashboard">
+    <div class="card">
+        <h3>{% trans 'TON Trees' %}</h3>
+        <div class="stat-value">{{ special_tree_stats.ton_trees }}</div>
+    </div>
+    <div class="card">
+        <h3>{% trans 'NOT Trees' %}</h3>
+        <div class="stat-value">{{ special_tree_stats.not_trees }}</div>
+    </div>
+    <div class="card">
+        <h3>{% trans 'TON Profit Per Tree' %}</h3>
+        <div class="stat-value">{{ special_tree_stats.ton_profit_per_tree|floatformat:8 }} <span class="currency">TON</span></div>
+    </div>
+    <div class="card">
+        <h3>{% trans 'NOT Profit Per Tree' %}</h3>
+        <div class="stat-value">{{ special_tree_stats.not_profit_per_tree|floatformat:2 }} <span class="currency">NOT</span></div>
+    </div>
+</div>
+
+<h2 class="section-title">{% trans 'Passive Water Income' %}</h2>
+<div class="dashboard">
+    <div class="card">
+        <h3>{% trans 'Total Passive CF' %}</h3>
+        <div class="stat-value">{{ passive_water_stats.total_amount|floatformat:8 }} <span class="currency">CF</span></div>
+    </div>
+    <div class="card">
+        <h3>{% trans 'Passive Transactions' %}</h3>
+        <div class="stat-value">{{ passive_water_stats.transaction_count }}</div>
+    </div>
+</div>
+
+<h2 class="section-title">{% trans 'Daily Passive Income (7 days)' %}</h2>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>{% trans 'Date' %}</th>
+            <th>{% trans 'Amount (CF)' %}</th>
+            <th>{% trans 'Transactions' %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for day in passive_water_stats.by_day %}
+        <tr>
+            <td>{{ day.date }}</td>
+            <td>{{ day.daily_total|floatformat:8 }} CF</td>
+            <td>{{ day.daily_count }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="3">{% trans 'No passive income data available' %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2 class="section-title">{% trans 'Top 5 Active Users' %}</h2>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>{% trans 'Username' %}</th>
+            <th>{% trans 'Transactions' %}</th>
+            <th>{% trans 'CF Balance' %}</th>
+            <th>{% trans 'TON Balance' %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in top_users %}
+        <tr>
+            <td>{{ user.username }}</td>
+            <td>{{ user.transaction_count }}</td>
+            <td>{{ user.balance_cf|floatformat:2 }} CF</td>
+            <td>{{ user.balance_ton|floatformat:8 }} TON</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4">{% trans 'No data available' %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2 class="section-title">{% trans 'Tree Level Distribution' %}</h2>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>{% trans 'Level' %}</th>
+            <th>{% trans 'Number of Trees' %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for level in tree_levels %}
+        <tr>
+            <td>{{ level.level }}</td>
+            <td>{{ level.count }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="2">{% trans 'No data available' %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2 class="section-title">{% trans 'Recent Transaction Summary' %}</h2>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>{% trans 'Currency' %}</th>
+            <th>{% trans 'Count' %}</th>
+            <th>{% trans 'Total Amount' %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for tx in transactions_by_day %}
+        <tr>
+            <td>{{ tx.currency }}</td>
+            <td>{{ tx.count }}</td>
+            <th>{{ tx.total|floatformat:4 }} {{ tx.currency }}</th>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="3">{% trans 'No transactions in the last 7 days' %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="timestamp">
+    {% trans 'Data as of' %}: {{ timestamp }}
+</div>
+{% endblock %}

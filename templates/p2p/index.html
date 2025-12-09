@@ -1,0 +1,326 @@
+{% extends 'base.html' %}
+
+{% block title %}Oxiri P2P - Обмен{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/p2p.css">
+<link rel="stylesheet" href="/static/css/modern-p2p.css">
+<script src="/static/js/p2p.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="p2p-container">
+    <!-- Заголовок и кнопки переключения -->
+    <div class="p2p-header">
+        <h1 class="p2p-title">P2P Обмен</h1>
+        <div class="p2p-actions">
+            <a href="?action=buy" class="p2p-tab {% if action == 'buy' or not action %}active{% endif %}">
+                Купить
+            </a>
+            <a href="?action=sell" class="p2p-tab {% if action == 'sell' %}active{% endif %}">
+                Продать
+            </a>
+        </div>
+    </div>
+    
+    <!-- Выбор криптовалюты -->
+    <div class="crypto-selector">
+        <a href="?action={{ action }}&crypto=cf" class="crypto-option {% if crypto == 'cf' or not crypto %}active{% endif %}">
+            FL
+        </a>
+        <a href="?action={{ action }}&crypto=ton" class="crypto-option {% if crypto == 'ton' %}active{% endif %}">
+            TON
+        </a>
+        <a href="?action={{ action }}&crypto=not" class="crypto-option {% if crypto == 'not' %}active{% endif %}">
+            NOT
+        </a>
+    </div>
+    
+    <!-- График цены CF -->
+    <div class="chart-card">
+        <h2 class="chart-title">Динамика цены FL</h2>
+        <div class="chart-container">
+            <canvas id="cfPriceChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Фильтры и сортировка -->
+    <div class="filter-section">
+        <div class="filter-grid">
+            <div>
+                <label for="filter-price" class="filter-label">Максимальная цена</label>
+                <input type="number" id="filter-price" class="filter-input" placeholder="Любая">
+            </div>
+            <div>
+                <label for="filter-amount" class="filter-label">Минимальная сумма</label>
+                <input type="number" id="filter-amount" class="filter-input" placeholder="Любая">
+            </div>
+            <div>
+                <label for="sort-orders" class="filter-label">Сортировка</label>
+                <select id="sort-orders" class="sort-select">
+                    <option value="price">По цене</option>
+                    <option value="amount">По количеству</option>
+                    <option value="date">По дате</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Форма создания ордера -->
+    {% if action == 'sell' %}
+    <div class="order-form-card">
+        <h2 class="order-form-title">Создать ордер на продажу</h2>
+        <form class="p2p-form" action="/p2p/create_order/" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="type" value="sell">
+            <input type="hidden" name="token_type" value="{{ crypto|default:'FL'|upper }}">
+            
+            <div class="mb-4">
+                <label class="block text-sm mb-1">Количество {{ crypto|default:'FL'|upper }}</label>
+                <input type="number" name="amount" class="input-field w-full" placeholder="0.00" step="0.01" min="0.01" required>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm mb-1">Цена в рублях за 1 {{ crypto|default:'FL'|upper }}</label>
+                <input type="number" name="price" class="input-field w-full" placeholder="0.00" step="0.01" min="0.01" required>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm mb-1">Минимальная сумма (руб.)</label>
+                <input type="number" name="min_amount" class="input-field w-full" placeholder="100" step="1" min="1" required>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm mb-1">Ваши реквизиты для оплаты</label>
+                <textarea name="payment_details" class="input-field w-full" rows="3" placeholder="Номер карты или кошелька для получения оплаты" required></textarea>
+            </div>
+            
+            <button type="submit" class="bg-accent text-dark font-semibold py-3 rounded-xl text-center w-full">
+                Создать ордер
+            </button>
+        </form>
+    </div>
+    {% else %}
+    <div class="order-form-card">
+        <h2 class="order-form-title">Создать ордер на покупку</h2>
+        <form class="p2p-form" action="/p2p/create_order/" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="type" value="buy">
+            <input type="hidden" name="token_type" value="{{ crypto|default:'FL'|upper }}">
+            
+            <div class="mb-4">
+                <label class="block text-sm mb-1">Количество {{ crypto|default:'FL'|upper }}</label>
+                <input type="number" name="amount" class="input-field w-full" placeholder="0.00" step="0.01" min="0.01" required>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm mb-1">Цена в рублях за 1 {{ crypto|default:'FL'|upper }}</label>
+                <input type="number" name="price" class="input-field w-full" placeholder="0.00" step="0.01" min="0.01" required>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm mb-1">Минимальная сумма (руб.)</label>
+                <input type="number" name="min_amount" class="input-field w-full" placeholder="100" step="1" min="1" required>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm mb-1">Ваши реквизиты для перевода</label>
+                <textarea name="payment_details" class="input-field w-full" rows="3" placeholder="Адрес кошелька для получения криптовалюты" required></textarea>
+            </div>
+            
+            <button type="submit" class="bg-accent text-dark font-semibold py-3 rounded-xl text-center w-full">
+                Создать ордер
+            </button>
+        </form>
+    </div>
+    {% endif %}
+    
+    <!-- Список ордеров -->
+    <div class="orders-section">
+        <h2 class="orders-title">Активные ордера</h2>
+        
+        <div class="orders-container">
+            {% if orders %}
+                {% for order in orders %}
+                <div class="order-card {% if order.type == 'buy' %}order-buy{% else %}order-sell{% endif %}"
+                     data-price="{{ order.price_per_unit }}" 
+                     data-amount="{{ order.amount }}" 
+                     data-date="{{ order.created_at|date:'YmdHis' }}">
+                    <div class="order-header">
+                        <div>
+                            {% if order.type == 'buy' %}
+                                <span class="order-type buy">ПОКУПКА</span>
+                            {% else %}
+                                <span class="order-type sell">ПРОДАЖА</span>
+                            {% endif %}
+                        </div>
+                        <div class="order-date">
+                            {{ order.created_at|date:"d.m.Y H:i" }}
+                        </div>
+                    </div>
+                    
+                    <div class="order-info-grid">
+                        <div class="order-info-item">
+                            <div class="order-info-label">Количество:</div>
+                            <div class="order-info-value">{{ order.amount }} {{ order.token_type }}</div>
+                        </div>
+                        <div class="order-info-item">
+                            <div class="order-info-label">Цена за единицу:</div>
+                            <div class="order-info-value">{{ order.price_per_unit }} ₽</div>
+                        </div>
+                    </div>
+                    
+                    <div class="order-actions">
+                        <a href="/p2p/order/{{ order.id }}/" class="order-action-button secondary">
+                            Подробнее
+                        </a>
+                        {% if order.user != request.user %}
+                            <a href="/p2p/deal/{{ order.id }}/" class="order-action-button primary">
+                                {% if order.type == 'buy' %}Продать{% else %}Купить{% endif %}
+                            </a>
+                        {% else %}
+                            <a href="/p2p/cancel/{{ order.id }}/" class="order-action-button secondary" style="color: #FF5757;">
+                                Отменить
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="card p-4 text-center">
+                <p class="mb-4">Нет активных ордеров для {{ crypto|default:'CF'|upper }}</p>
+                <p class="text-sm opacity-70">Будьте первым, кто создаст ордер!</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- История сделок -->
+    <div class="transactions-section">
+        <h2 class="transactions-title">Ваши сделки</h2>
+        <div class="overflow-x-auto">
+            <table class="transactions-table">
+                <thead>
+                    <tr>
+                        <th>Дата</th>
+                        <th>Тип</th>
+                        <th>Валюта</th>
+                        <th style="text-align: right;">Количество</th>
+                        <th style="text-align: right;">Цена</th>
+                        <th style="text-align: right;">Сумма</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if transactions %}
+                        {% for tx in transactions %}
+                        <tr class="border-t border-primary/20">
+                            <td class="p-2">{{ tx.created_at|date:"d.m.Y H:i" }}</td>
+                            <td class="p-2">
+                                {% if tx.buyer == user %}
+                                    <span class="text-xs px-2 py-1 rounded-full bg-accent/20 text-accent">ПОКУПКА</span>
+                                {% else %}
+                                    <span class="text-xs px-2 py-1 rounded-full bg-secondary/20 text-white">ПРОДАЖА</span>
+                                {% endif %}
+                            </td>
+                            <td class="p-2">{{ tx.token_type }}</td>
+                            <td class="p-2 text-right">{{ tx.amount }}</td>
+                            <td class="p-2 text-right">{{ tx.price_per_unit }} ₽</td>
+                            <td class="p-2 text-right">{{ tx.total_amount }} ₽</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr class="border-t border-primary/20">
+                            <td colspan="6" class="p-4 text-center opacity-70">У вас пока нет завершенных сделок</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Инициализация графика цены CF
+    const ctx = document.getElementById('cfPriceChart').getContext('2d');
+    
+    // Используем JSON для безопасной передачи данных
+    const chartLabels = JSON.parse('{{ chart_data.labels|safe|escapejs }}');
+    const chartValues = JSON.parse('{{ chart_data.values|safe|escapejs }}');
+    
+    const cfPriceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                label: 'Цена CF (₽)',
+                data: chartValues,
+                backgroundColor: 'rgba(90, 255, 117, 0.2)',
+                borderColor: 'rgba(90, 255, 117, 1)',
+                borderWidth: 2,
+                pointBackgroundColor: 'rgba(90, 255, 117, 1)',
+                pointBorderColor: '#fff',
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)',
+                    },
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        font: {
+                            size: 12
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)',
+                    },
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        font: {
+                            size: 12
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: {
+                        color: 'rgba(255, 255, 255, 0.8)',
+                        font: {
+                            size: 14
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(13, 31, 74, 0.8)',
+                    titleColor: 'rgba(255, 255, 255, 1)',
+                    bodyColor: 'rgba(255, 255, 255, 0.8)',
+                    displayColors: false,
+                    callbacks: {
+                        label: function(context) {
+                            return `Цена: ${context.parsed.y} ₽`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %} 

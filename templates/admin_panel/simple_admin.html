@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div style="padding: 20px; font-family: Arial, sans-serif;">
+    <h1>Админ-панель</h1>
+    
+    <div style="display: flex; justify-content: space-between;">
+        <h2>Добро пожаловать, {{ request.user.username }}</h2>
+        <a href="{% url 'admin_logout' %}" style="padding: 10px; background-color: #f44336; color: white; text-decoration: none; border-radius: 4px;">Выход</a>
+    </div>
+    
+    <div style="margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+        <!-- Статистика -->
+        <div style="background-color: #f1f1f1; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+            <h3>Статистика токенов</h3>
+            <div>
+                <p>Общее количество CF: <strong>{{ cf_total_supply }}</strong></p>
+                <p>В обращении: <strong>{{ cf_in_circulation }}</strong></p>
+                <p>Застейкано: <strong>{{ cf_staked }}</strong></p>
+                <p>Пользователей: <strong>{{ users_count }}</strong></p>
+            </div>
+        </div>
+        
+        <!-- Форма сжигания -->
+        <div style="background-color: #f1f1f1; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+            <h3>Сжигание CF токенов</h3>
+            <form method="post" action="{% url 'burn_tokens' %}">
+                {% csrf_token %}
+                <div style="margin-bottom: 10px;">
+                    <input type="number" name="amount" placeholder="Количество токенов" style="width: 100%; padding: 8px; margin-bottom: 10px;" required>
+                    <input type="text" name="reason" placeholder="Причина сжигания" style="width: 100%; padding: 8px;" required>
+                </div>
+                <button type="submit" style="background-color: #f44336; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; width: 100%;">Сжечь токены</button>
+            </form>
+        </div>
+        
+        <!-- Форма раздачи TON -->
+        <div style="background-color: #f1f1f1; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+            <h3>Раздача TON</h3>
+            <form method="post" action="{% url 'create_ton_distribution' %}">
+                {% csrf_token %}
+                <div style="margin-bottom: 10px;">
+                    <input type="number" name="amount" placeholder="Количество TON" style="width: 100%; padding: 8px; margin-bottom: 10px;" required>
+                    <input type="text" name="reason" placeholder="Описание раздачи" style="width: 100%; padding: 8px;" required>
+                </div>
+                <button type="submit" style="background-color: #2196F3; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; width: 100%;">Начать раздачу</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Таблицы -->
+    <div style="margin-top: 30px;">
+        <h3>Активные раздачи</h3>
+        {% if active_distributions %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #f1f1f1;">
+                        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">ID</th>
+                        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Сумма</th>
+                        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Дата создания</th>
+                        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Статус</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dist in active_distributions %}
+                    <tr>
+                        <td style="padding: 10px; border-bottom: 1px solid #ddd;">#{{ dist.id }}</td>
+                        <td style="padding: 10px; border-bottom: 1px solid #ddd;">{{ dist.amount }} TON</td>
+                        <td style="padding: 10px; border-bottom: 1px solid #ddd;">{{ dist.created_at|date:"d.m.Y H:i" }}</td>
+                        <td style="padding: 10px; border-bottom: 1px solid #ddd;">
+                            <span style="background-color: #4CAF50; color: white; padding: 3px 8px; border-radius: 10px; font-size: 12px;">Активна</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p>Нет активных раздач.</p>
+        {% endif %}
+        
+        <h3 style="margin-top: 20px;">Последние операции</h3>
+        {% if recent_operations %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #f1f1f1;">
+                        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Тип</th>
+                        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Сумма</th>
+                        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Дата</th>
+                        <th style="padding: 10px; text-align: left; border-bottom: 1px solid #ddd;">Описание</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for op in recent_operations %}
+                    <tr>
+                        <td style="padding: 10px; border-bottom: 1px solid #ddd;">
+                            {% if op.operation_type == 'burn' %}
+                            <span style="background-color: #f44336; color: white; padding: 3px 8px; border-radius: 10px; font-size: 12px;">
+                                {{ op.get_operation_type_display }}
+                            </span>
+                            {% elif op.operation_type == 'mint' %}
+                            <span style="background-color: #4CAF50; color: white; padding: 3px 8px; border-radius: 10px; font-size: 12px;">
+                                {{ op.get_operation_type_display }}
+                            </span>
+                            {% else %}
+                            <span style="background-color: #2196F3; color: white; padding: 3px 8px; border-radius: 10px; font-size: 12px;">
+                                {{ op.get_operation_type_display }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 10px; border-bottom: 1px solid #ddd;">{{ op.amount }}</td>
+                        <td style="padding: 10px; border-bottom: 1px solid #ddd;">{{ op.timestamp|date:"d.m.Y H:i" }}</td>
+                        <td style="padding: 10px; border-bottom: 1px solid #ddd;">{{ op.description }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p>Нет операций в истории.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // Обновление статистики каждые 30 секунд
+    function updateTokenStats() {
+        fetch('{% url "get_token_stats" %}')
+            .then(response => response.json())
+            .then(data => {
+                document.querySelectorAll('p')[0].innerHTML = 'Общее количество CF: <strong>' + data.cf_total_supply + '</strong>';
+                document.querySelectorAll('p')[1].innerHTML = 'В обращении: <strong>' + data.cf_in_circulation + '</strong>';
+                document.querySelectorAll('p')[2].innerHTML = 'Застейкано: <strong>' + data.cf_staked + '</strong>';
+            });
+    }
+
+    // Обновлять каждые 30 секунд
+    setInterval(updateTokenStats, 30000);
+</script>
+{% endblock %}

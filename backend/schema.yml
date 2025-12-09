@@ -1,0 +1,296 @@
+openapi: 3.0.3
+info:
+  title: Crypto Farm API
+  version: 1.0.0
+  description: |
+    # API для криптовалютной игры-фермы
+    
+    API позволяет взаимодействовать с игровыми механиками крипто-фермы:
+    * Выращивание и полив деревьев
+    * Торговля между пользователями через ордеры
+    * Стейкинг криптовалюты
+    * Покупка специальных деревьев для пассивного дохода
+    
+    ## Авторизация
+    Все запросы требуют JWT токен в заголовке `Authorization: Bearer <token>`.
+    Токен можно получить в `/api/token/`.
+    
+  contact:
+    email: admin@cryptofarm.example
+    
+servers:
+  - url: https://api.cryptofarm.example
+    description: Production server
+  - url: http://localhost:8000
+    description: Development server
+    
+tags:
+  - name: trees
+    description: Операции с деревьями
+  - name: orders
+    description: Торговые ордеры
+  - name: staking
+    description: Стейкинг валюты
+  - name: transactions
+    description: История транзакций
+  - name: special
+    description: Специальные деревья
+  - name: admin
+    description: Администраторские функции
+    
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  
+  schemas:
+    Tree:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        owner:
+          type: integer
+          example: 1
+        level:
+          type: integer
+          example: 1
+        last_watered:
+          type: string
+          format: date-time
+        auto_water_expires:
+          type: string
+          format: date-time
+          nullable: true
+        fertilizer_expires:
+          type: string
+          format: date-time
+          nullable: true
+    
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        seller:
+          type: integer
+          example: 2
+        amount_cf:
+          type: number
+          format: decimal
+          example: 10.0
+        price_ton:
+          type: number
+          format: decimal
+          example: 0.005
+        order_type:
+          type: string
+          enum: [sell, buy]
+          example: sell
+        status:
+          type: string
+          enum: [open, filled, cancelled]
+          example: open
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+    
+    Staking:
+      type: object
+      properties:
+        started_at:
+          type: string
+          format: date-time
+        finishes_at:
+          type: string
+          format: date-time
+        bonus_percent:
+          type: number
+          format: decimal
+          example: 10.0
+    
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user:
+          type: integer
+          example: 1
+        type:
+          type: string
+          example: water
+        amount:
+          type: number
+          format: decimal
+          example: 1.0
+        currency:
+          type: string
+          enum: [CF, TON, NOT]
+          example: CF
+        timestamp:
+          type: string
+          format: date-time
+          
+security:
+  - bearerAuth: []
+  
+paths:
+  /api/trees/:
+    get:
+      tags:
+        - trees
+      summary: Получить список всех деревьев пользователя
+      responses:
+        "200":
+          description: Список деревьев
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tree'
+    post:
+      tags:
+        - trees
+      summary: Создать новое дерево
+      responses:
+        "201":
+          description: Дерево создано
+        "400":
+          description: Ошибка при создании
+          
+  /api/trees/{id}/water/:
+    post:
+      tags:
+        - trees
+      summary: Полить дерево
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Дерево успешно полито
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: watered
+                  gained_cf:
+                    type: number
+                    format: decimal
+                    example: 1.0
+        "400":
+          description: Ошибка полива
+          
+  /api/orders/:
+    get:
+      tags:
+        - orders
+      summary: Получить список открытых ордеров
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [sell, buy]
+        - name: min_price
+          in: query
+          schema:
+            type: number
+        - name: max_price
+          in: query
+          schema:
+            type: number
+        - name: ordering
+          in: query
+          schema:
+            type: string
+            enum: [price_ton, -price_ton, amount_cf, -amount_cf]
+      responses:
+        "200":
+          description: Список ордеров
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+    post:
+      tags:
+        - orders
+      summary: Создать новый ордер
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount_cf:
+                  type: number
+                  format: decimal
+                  example: 10.0
+                price_ton:
+                  type: number
+                  format: decimal
+                  example: 0.005
+                order_type:
+                  type: string
+                  enum: [sell, buy]
+                  example: sell
+      responses:
+        "201":
+          description: Ордер создан
+        "400":
+          description: Ошибка при создании ордера
+          
+  /api/staking/:
+    get:
+      tags:
+        - staking
+      summary: Получить информацию о текущем стейкинге
+      responses:
+        "200":
+          description: Информация о стейкинге
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Staking'
+        "404":
+          description: Активный стейкинг отсутствует
+    post:
+      tags:
+        - staking
+      summary: Создать новый стейкинг
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount_cf:
+                  type: number
+                  format: decimal
+                  example: 100.0
+                days:
+                  type: integer
+                  example: 7
+      responses:
+        "201":
+          description: Стейкинг начат
+        "400":
+          description: Ошибка при создании стейкинга 

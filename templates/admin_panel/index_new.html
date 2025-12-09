@@ -1,0 +1,227 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block head_extra %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/admin_new.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-header">
+        <h1 class="text-2xl font-bold">Админ-панель</h1>
+        <a href="{% url 'admin_logout' %}" class="logout-btn">
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+            <span>Выход</span>
+        </a>
+    </div>
+
+    <div class="container mx-auto">
+        <div class="card-columns">
+            <!-- Статистика токенов -->
+            <div class="glass-card">
+                <div class="card-title">
+                    <svg class="icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"></path>
+                        <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"></path>
+                    </svg>
+                    Статистика токенов
+                </div>
+                <div id="token-stats">
+                    <div class="stat-grid">
+                        <div class="stat-label">Общее количество CF</div>
+                        <div class="stat-value">{{ cf_total_supply }}</div>
+                    </div>
+                    <div class="stat-grid">
+                        <div class="stat-label">В обращении</div>
+                        <div class="stat-value">{{ cf_in_circulation }}</div>
+                    </div>
+                    <div class="stat-grid">
+                        <div class="stat-label">Застейкано</div>
+                        <div class="stat-value">{{ cf_staked }}</div>
+                    </div>
+                    <div class="stat-grid">
+                        <div class="stat-label">Пользователей</div>
+                        <div class="stat-value">{{ users_count }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Управление токенами -->
+            <div class="glass-card">
+                <div class="card-title">
+                    <svg class="icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path>
+                    </svg>
+                    Сжигание CF токенов
+                </div>
+                <form method="post" action="{% url 'burn_tokens' %}">
+                    {% csrf_token %}
+                    <div class="form-grid">
+                        <div class="form-full-width">
+                            <input type="number" name="amount" placeholder="Количество токенов" class="input-field" required>
+                        </div>
+                        <div class="form-full-width">
+                            <input type="text" name="reason" placeholder="Причина сжигания" class="input-field" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="danger-btn">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 7l-5 5m0 0l-5-5m5 5V3"></path>
+                        </svg>
+                        Сжечь токены
+                    </button>
+                </form>
+            </div>
+
+            <!-- Раздача TON -->
+            <div class="glass-card">
+                <div class="card-title">
+                    <svg class="icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8zM12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z"></path>
+                    </svg>
+                    Раздача TON
+                </div>
+                <form method="post" action="{% url 'create_ton_distribution' %}">
+                    {% csrf_token %}
+                    <div class="form-grid">
+                        <div class="form-full-width">
+                            <input type="number" name="amount" placeholder="Количество TON" class="input-field" required>
+                        </div>
+                        <div class="form-full-width">
+                            <input type="text" name="reason" placeholder="Описание раздачи" class="input-field" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="primary-btn">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                        </svg>
+                        Начать раздачу
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Вторая строка карточек -->
+        <div class="card-columns mt-6">
+            <!-- Активные раздачи -->
+            <div class="glass-card">
+                <div class="card-title">
+                    <svg class="icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+                    </svg>
+                    Активные раздачи
+                </div>
+                
+                <div class="responsive-table">
+                    {% if active_distributions %}
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Сумма</th>
+                                <th>Дата создания</th>
+                                <th>Статус</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dist in active_distributions %}
+                            <tr>
+                                <td>#{{ dist.id }}</td>
+                                <td>{{ dist.amount }} TON</td>
+                                <td>{{ dist.created_at|date:"d.m.Y H:i" }}</td>
+                                <td><span class="badge active-badge">Активна</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="empty-state">
+                        <svg class="icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                        </svg>
+                        <p>Нет активных раздач</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- История операций -->
+            <div class="glass-card" style="grid-column: span 2;">
+                <div class="card-title">
+                    <svg class="icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path>
+                    </svg>
+                    Последние операции
+                </div>
+                
+                <div class="responsive-table">
+                    {% if recent_operations %}
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Тип</th>
+                                <th>Сумма</th>
+                                <th>Дата</th>
+                                <th>Описание</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for op in recent_operations %}
+                            <tr>
+                                <td>
+                                    {% if op.operation_type == 'burn' %}
+                                    <span class="badge burn-badge">
+                                        {{ op.get_operation_type_display }}
+                                    </span>
+                                    {% elif op.operation_type == 'mint' %}
+                                    <span class="badge distribute-badge">
+                                        {{ op.get_operation_type_display }}
+                                    </span>
+                                    {% else %}
+                                    <span class="badge active-badge">
+                                        {{ op.get_operation_type_display }}
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ op.amount }}</td>
+                                <td>{{ op.timestamp|date:"d.m.Y H:i" }}</td>
+                                <td>{{ op.description }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="empty-state">
+                        <svg class="icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                        </svg>
+                        <p>Нет операций в истории</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Обновление статистики каждые 30 секунд
+    function updateTokenStats() {
+        fetch('{% url "get_token_stats" %}')
+            .then(response => response.json())
+            .then(data => {
+                document.querySelector('#token-stats .stat-grid:nth-child(1) .stat-value').textContent = data.cf_total_supply;
+                document.querySelector('#token-stats .stat-grid:nth-child(2) .stat-value').textContent = data.cf_in_circulation;
+                document.querySelector('#token-stats .stat-grid:nth-child(3) .stat-value').textContent = data.cf_staked;
+            });
+    }
+
+    // Обновлять каждые 30 секунд
+    setInterval(updateTokenStats, 30000);
+</script>
+{% endblock %}

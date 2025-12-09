@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}CryptoFarm — Мои деревья{% endblock %}
+
+{% block content %}
+
+<!-- Суммарная панель -->
+<div class="cf-summary-block">
+    <div>Создано FL: {{ total_created_cf|intcomma }}</div>
+    <div>Выращено: {{ all_cf_grown|floatformat:0|intcomma }}</div>
+    <div>Осталось: {{ cf_left|floatformat:0|intcomma }}</div>
+</div>
+
+{% if messages %}
+<div class="messages-wrap">
+    {% for message in messages %}
+        <div class="custom-message custom-message-{{ message.tags }}">
+            {{ message }}
+        </div>
+    {% endfor %}
+</div>
+{% endif %}
+<div class="trees-main-wrap">
+
+    {# CF-дерево #}
+    {% if cf_trees and cf_trees.0 %}
+        {% with cf_tree=cf_trees.0 %}
+    <a href="{% url 'tree_detail' cf_tree.id %}" class="tree-card-link">
+            <div class="tree-card-wrapper">
+
+        <div class="tree-card">
+
+            <div class="grown-chip">
+                Выращено: {{ user.cf_balance|floatformat:0|intcomma }} FL
+            </div>
+            <img class="tree-img"
+                src="{% static 'images/tree_' %}{{ cf_tree.level }}.png"
+                alt="FL Tree">
+
+            <div class="tree-info-block">
+                <div>Уровень: {{ cf_tree.level }}</div>
+                <div>Доход/ч: {{ cf_tree.income_per_hour|floatformat:1 }} FL</div>
+                <div>Удобрение: {% if cf_tree.is_fertilized %}Активно{% else %}Не активно{% endif %}</div>
+                <div>Автополив: {% if cf_tree.is_auto_watered %}Активно{% else %}Не активно{% endif %}</div>
+
+            </div>
+
+
+            </div>
+            <a href="{% url 'tree_detail' cf_tree.id %}" class="tree-detail-btn"><p>Открыть</p></a>
+</div>
+
+
+
+        {% endwith %}
+    {% endif %}
+
+    {# TON-дерево #}
+{% if ton_trees and ton_trees.0 %}
+    {% with ton_tree=ton_trees.0 %}
+    <a href="{% url 'tree_detail' ton_tree.id %}" class="tree-card-link">
+        <div class="tree-card">
+            <div class="grown-chip ton">
+                Выращено: {{ user.ton_balance|floatformat:1|intcomma }} TON
+            </div>
+            <img class="tree-img"
+                src="{% static 'images/ton_' %}{{ ton_tree.level }}.png"
+                alt="TON Tree">
+            <div class="tree-info-block">
+                <div>Уровень: {{ ton_tree.level }}</div>
+<div>Доход/ч: {{ ton_tree.ton_per_hour|floatformat:2 }} TON</div>
+                <div>Удобрение: {% if ton_tree.is_fertilized %}Активно{% else %}Не активно{% endif %}</div>
+                    <div>Автополив: {% if ton_tree.is_auto_watered %}Активен{% else %}Не активен{% endif %}</div>
+            </div>
+        </div>
+    </a>
+        <a href="{% url 'tree_detail' ton_tree.id %}" class="tree-detail-btn"><p>Открыть</p></a>
+
+    {% endwith %}
+
+
+{% else %}
+    <div class="tree-card tree-card-locked">
+        <div class="locked-ton-overlay"></div>
+        <img src="{% static 'images/locked.png' %}" alt="Locked" class="locked-ton-img">
+        <form action="{% url 'shop:buy_ton_tree' %}" method="post" class="buy-ton-form">
+            {% csrf_token %}
+            <button type="submit" class="buy-ton-btn">
+                Купить TON дерево
+            </button>
+        </form>
+    </div>
+{% endif %}
+
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        document.querySelectorAll('.custom-message').forEach(function(el) {
+            el.style.transition = "opacity 0.5s";
+            el.style.opacity = 0;
+            setTimeout(() => el.remove(), 700);
+        });
+    }, 2600);
+});
+</script>
+
+{% endblock %}

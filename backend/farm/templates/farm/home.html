@@ -1,0 +1,36 @@
+{% extends "farm/base.html" %}
+{% block title %}Главная{% endblock %}
+{% block content %}
+<h1>Ваши деревья</h1>
+<div class="tree-list">
+    {% for tree in trees %}
+        <div class="tree-card">
+            <img src="{% static 'farm/icons/tree.svg' %}" alt="Tree" class="tree-icon">
+            <div>Тип: {{ tree.tree_type.name }}</div>
+            <div>Уровень: {{ tree.level }}</div>
+            <div><a href="{% url 'tree_detail' tree.id %}">Подробнее</a></div>
+        </div>
+    {% empty %}
+        <p>У вас пока нет деревьев.</p>
+    {% endfor %}
+</div>
+
+<h2>Типы деревьев</h2>
+<div class="tree-types-list">
+    {% for item in tree_types_with_info %}
+        <div class="tree-type-card">
+            <div>{{ item.tree_type.name }}</div>
+            <div>Доход в час: {{ item.tree_type.hourly_income }}</div>
+            {% if not item.is_owned %}
+                <form method="post" action="{% url 'create_tree' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="tree_type_id" value="{{ item.tree_type.id }}">
+                    <button type="submit">Купить</button>
+                </form>
+            {% else %}
+                <span class="owned">Куплено</span>
+            {% endif %}
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

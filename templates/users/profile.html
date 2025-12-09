@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Мой профиль{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/modern-profile.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="profile-header">
+        <div class="profile-header-content">
+            <div class="profile-avatar">
+                {% if photo_url %}
+                    <img src="{{ photo_url }}" alt="{{ user.get_full_name }}">
+                {% else %}
+                    <div class="profile-avatar-placeholder">
+                        {{ user.first_name|first }}{% if user.last_name %}{{ user.last_name|first }}{% endif %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="profile-info">
+                <h1 class="profile-name">{{ user.get_full_name }}</h1>
+                {% if user.username %}
+                    <p class="profile-username">@{{ user.username }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="balance-card">
+        <h2 class="balance-card-title"><i class="fas fa-wallet"></i> Ваш баланс</h2>
+        <div class="balance-item">
+            <div class="balance-token">
+                <div class="token-icon cf" style="position:relative; width:54px; height:54px; display:inline-flex; align-items:center; justify-content:center; padding: 30px">
+    <img src="{% static 'images/coin.png' %}" style="position:absolute; left:0; top:0; width:100%; height:100%; opacity:0.85; z-index:1;">
+</div>
+                <div class="token-info">
+                    <span class="token-name">FLORA Токены</span>
+                    <span class="token-description">Основная игровая валюта</span>
+                </div>
+            </div>
+            <div class="token-amount">{{ cf_balance|floatformat:1 }}</div>
+        </div>
+        <div class="balance-item">
+            <div class="balance-token">
+                <div class="token-icon ton" style="position:relative; width:54px; height:54px; display:inline-flex; align-items:center; justify-content:center;padding: 30px">
+    <img src="{% static 'images/ton.png' %}" style="position:absolute; left:0; top:0; width:100%; height:100%; opacity:0.85; z-index:1;">
+
+</div>
+                <div class="token-info">
+                    <span class="token-name">TON Токены</span>
+                    <span class="token-description">Торговая валюта</span>
+                </div>
+            </div>
+            <div class="token-amount">{{ ton_balance|floatformat:1 }}</div>
+        </div>
+    </div>
+<div class="ton-section" style="margin: 2rem auto 1rem; padding: 1.5rem; border-radius: 1.1rem; background: #233; max-width: 400px; text-align: center;">
+    <div id="ton-connect"></div>
+    <div id="wallet-status"></div>
+    <div id="ton-topup-block" style="display:none;">
+        <input type="number" id="topup-amount" min="0.01" step="0.01" placeholder="Сумма TON">
+        <button id="send-ton-btn">Пополнить TON</button>
+    </div>
+    <div id="ton-result"></div>
+</div>
+
+        <div class="trees-section">
+            <h2 class="balance-card-title"><i class="fas fa-tree"></i> Ваши деревья</h2>
+            {% for tree in trees %}
+            <div class="tree-item">
+                <div class="tree-info">
+                    <div class="tree-icon {{ tree.type|lower }}" style="width:38px;height:38px;position:relative;display:inline-flex;align-items:center;justify-content:center;background: none !important">
+                {% if tree.type == 'CF' %}
+                    <img src="{% static 'images/coin.png' %}" alt="FLORA" style="width:100%;height:100%;object-fit:contain;">
+                {% elif tree.type == 'TON' %}
+                    <img src="{% static 'images/ton.png' %}" alt="TON" style="width:100%;height:100%;object-fit:contain;">
+                {% endif %}
+            </div>
+                    <div class="tree-details">
+                        <span class="tree-type">{{ tree.get_type_display }}</span>
+                        <span class="tree-level">Уровень {{ tree.level }}</span>
+                    </div>
+                </div>
+                <div class="tree-income">
+                    <i class="fas fa-coins"></i> {{ tree.income_per_hour|floatformat:1 }}/час
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-center" style="color: rgba(255, 255, 255, 0.6);">У вас пока нет деревьев</p>
+            {% endfor %}
+        </div>
+
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const copyBtn = document.getElementById('copy-btn');
+        const refLink = document.getElementById('ref-link');
+        if (copyBtn && refLink) {
+            copyBtn.addEventListener('click', function() {
+                const tempInput = document.createElement('input');
+                tempInput.value = refLink.textContent.trim();
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempInput);
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<i class="fas fa-check"></i> Скопировано!';
+                copyBtn.classList.add('copied');
+
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalText;
+                    copyBtn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+    });
+
+</script>
+    <!-- TON Connect UI SDK -->
+<script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // TON Connect setup
+    const tonConnectRootId = 'ton-connect';
+    const tonConnectManifest = 'https://flora.diy/static/tonconnect-manifest.json'; // путь к manifest.json
+    const tonRecipient = 'UQAW1dSI8WjwEXnAQ98MJVYyOQ8D7egvHmKxAvH_XWRLjr-r';   // сюда будут приходить TON
+
+    if (typeof TON_CONNECT_UI === "undefined") {
+        alert("TON_CONNECT_UI не загружен. Проверь ссылку на скрипт!");
+        return;
+    }
+
+    const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+        manifestUrl: tonConnectManifest,
+        buttonRootId: tonConnectRootId
+    });
+
+    let walletConnected = false;
+    let wallet = null;
+    const userTgId = "{{ user.telegram_id }}";
+    const walletStatus = document.getElementById('wallet-status');
+    const topupBlock = document.getElementById('ton-topup-block');
+    const sendTonBtn = document.getElementById('send-ton-btn');
+    const topupAmount = document.getElementById('topup-amount');
+    const resultBlock = document.getElementById('ton-result');
+
+    tonConnectUI.onStatusChange(async w => {
+    wallet = w;
+    if (wallet && wallet.account) {
+        walletConnected = true;
+        walletStatus.innerHTML = 'Кошелек подключен: <b>' + wallet.account.address.slice(0, 8) + '...</b>';
+        topupBlock.style.display = '';
+        // Сохраняем в БД
+        try {
+            await fetch("/save_wallet/", {
+                method: "POST",
+                headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                body: "address=" + encodeURIComponent(wallet.account.address)
+            });
+        } catch(e) { /* ничего */ }
+    } else {
+        walletConnected = false;
+        walletStatus.textContent = 'Кошелек не подключён';
+        topupBlock.style.display = 'none';
+    }
+    resultBlock.textContent = '';
+});
+
+    if (sendTonBtn) {
+        sendTonBtn.onclick = async function() {
+            if (!walletConnected || !wallet || !wallet.account) {
+                alert("Сначала подключите TON кошелек!");
+                return;
+            }
+            const amount = parseFloat(topupAmount.value);
+            if (!amount || amount < 0.01) {
+                alert('Введите сумму TON (например, 0.05)');
+                return;
+            }
+            const amountNano = Math.round(amount * 1e9);
+            const memo = "flora_" + userTgId;
+            try {
+                await tonConnectUI.sendTransaction({
+                    validUntil: Math.floor(Date.now() / 1000) + 600,
+                    messages: [{
+                        address: tonRecipient,
+                        amount: amountNano.toString(),
+                        comment: memo // вот здесь пишется MEMO для автозачисления!
+                    }]
+                });
+                resultBlock.textContent = '✅ Транзакция отправлена! После подтверждения сетью баланс обновится автоматически.';
+            } catch (e) {
+                resultBlock.textContent = 'Ошибка или отмена: ' + (e.message || e);
+            }
+        }
+    }
+});
+</script>
+
+{% endblock %}

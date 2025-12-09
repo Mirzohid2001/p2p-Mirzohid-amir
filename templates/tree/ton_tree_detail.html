@@ -1,0 +1,377 @@
+    {% extends 'base.html' %}
+    {% load static %}
+    {% load humanize %}
+
+    {% block title %}TON Дерево{% endblock %}
+
+    {% block content %}
+    <style>
+    .container, .container-fluid {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
+    }
+    /* Используем стили как для CF-дерева */
+    .tree-figma-bg {
+      min-height: 80vh;
+      min-width: 90vw;
+      background: url('{% static "images/bg.png" %}') center bottom/cover no-repeat, #4336a7;
+      padding-bottom: 70px;
+      position: relative;
+      margin: 0;
+    }
+    .tree-header-row { display: flex; align-items: center; padding: 18px 18px 8px 12px;}
+    .tree-back-btn { display: flex; align-items: center; margin-right: 8px; border-radius: 100px; background: transparent; padding: 4px; border: none; }
+    .tree-header-title { color: #fff; font-weight: bold; font-size: 1.25rem; letter-spacing: 0.5px; }
+    .tree-main-row { display: flex; flex-direction: row; align-items: flex-start; margin: 18px 0 0 0; width: 100%; gap: 20px;}
+    .tree-btns-col { display: flex; flex-direction: column; gap: 3px; min-width: 80px; margin-left: 10px;}
+    .tree-btn {
+      width: 100%; padding: 10px 0; border: none; border-radius: 25px;
+      background: linear-gradient(90deg, #3a247a 10%, #368fff 100%);
+      color: #fff; font-size: 0.85rem; font-weight: 500;
+      box-shadow: 0 2px 12px 0 #0002; cursor: pointer;
+      transition: background 0.15s; outline: none;
+    }
+    .tree-btn:active, .tree-btn:focus { background: linear-gradient(90deg, #4631c7 20%, #2e57f5 100%);}
+    .tree-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+    .tree-info-card {
+      background: rgba(34, 38, 82, 0.12);
+      border: 1.5px solid #d2d5e7;
+      border-radius: 15px;
+      padding: 16px 22px 16px 18px;
+      min-width: 195px; box-shadow: 0 2px 12px #0f256121;
+      color: #3d3970; font-size: 1.1rem; margin-left: 0; margin-top: 3px; position: relative; z-index: 2;
+    }
+    .info-row { display: flex; flex-direction: row; justify-content: flex-start; align-items: baseline; margin-bottom: 7px;}
+    .info-label { min-width: 90px; font-weight: 400; color: #3a247a; font-size: 0.9rem; margin-right: 3px;}
+    .info-value { font-weight: 400; color: #fff; font-size: 0.9rem;}
+    .grown-chip { background: #1a4b8d; color: #e9fffa; border-radius: 16px; padding: 5px 13px; position: absolute; left: 12px; top: 14px; font-size: 0.93rem; font-weight: 500; }
+    .grown-chip.ton { background: #1897e6; color: #fff2b2; }
+    .tree-image-wrap { width: 100px; min-height: 200px; position: relative; display: flex; flex-direction: column; align-items: center; margin-top: 14px; margin-bottom: 30px;}
+    .tree-img { width: 50vw; max-width: 350px; min-width: 160px; height: auto; display: block; margin: 0 auto 8px auto; z-index: 1; position: relative;}
+    .custom-modal {
+      display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100vw; height: 100vh;
+      background: rgba(44, 50, 81, 0.48); justify-content: center; align-items: center;
+    }
+    .custom-modal.active { display: flex; }
+    .custom-modal-content {
+      background: linear-gradient(90deg,#3a247a 10%, #368fff 100%);
+      padding: 32px 24px 24px 24px; border-radius: 20px; box-shadow: 0 6px 28px #23286948;
+      min-width: 270px; max-width: 94vw; position: relative; text-align: center;
+    }
+    .custom-modal-close { position: absolute; right: 16px; top: 10px; font-size: 2rem; color: #aaa; cursor: pointer; }
+    .modal-status.active { color: #27be6c; font-weight: bold; margin-bottom: 9px; }
+    .modal-status.not-active { color: #a4a4be; font-weight: bold; margin-bottom: 9px; }
+    .modal-action-btn { background: linear-gradient(90deg,#3a247a 10%, #368fff 100%); color: #fff; border: none; border-radius: 13px; padding: 10px 32px; font-size: 1.1rem; margin-top: 18px; cursor: pointer; font-weight: 600; box-shadow: 0 2px 12px #3a247a22; transition: background 0.13s; }
+    .modal-action-btn:active { background: linear-gradient(90deg,#4823b7 20%, #259aff 100%);}
+    </style>
+
+    <div class="tree-figma-bg">
+
+      <!-- Хедер -->
+      <div class="tree-header-row">
+        <a href="/" class="tree-back-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+          </svg>
+        </a>
+        <span class="tree-header-title">TON Дерево</span>
+      </div>
+
+      <!-- Статус раздачи -->
+      {% if active_distribution %}
+      <div>
+        <b>TON пул:</b>
+        <span>{{ active_distribution.total_amount|floatformat:2 }} TON</span> &nbsp;|&nbsp;
+        <b>Осталось:</b> <span>{{ active_distribution.left_to_distribute|floatformat:2 }} TON</span>
+      </div>
+    {% else %}
+      <div>Раздача TON не активна</div>
+    {% endif %}
+
+
+      <!-- Основной блок с кнопками и инфо -->
+      <div class="tree-main-row">
+        <div class="tree-btns-col">
+          <button class="tree-btn btn-water" data-tree-id="{{ tree.id }}" {% if not can_water or is_auto_watered %}disabled{% endif %}>Полить</button>
+          <button class="tree-btn btn-collect" data-tree-id="{{ tree.id }}" {% if pending_income <= 0 %}disabled{% endif %}>Собрать</button>
+          <button class="tree-btn btn-use-item open-modal-btn" data-modal="autowater-modal">Автополив</button>
+          <button class="tree-btn btn-use-item open-modal-btn" data-modal="fertilizer-modal">Удобрение</button>
+          <button class="tree-btn btn-upgrade" data-tree-id="{{ tree.id }}">Улучшить</button>
+        </div>
+        <div class="tree-info-card">
+          <div class="info-row">
+            <span class="info-label">Уровень:</span>
+            <span class="info-value">{{ tree.level }}</span>
+          </div>
+          <div class="info-row">
+  <span class="info-label">TON за полив:</span>
+  <span class="info-value">
+    <b>
+      {% if ton_per_water %}{{ ton_per_water|floatformat:2 }}{% else %}0.00{% endif %}
+    </b> TON
+  </span>
+</div>
+<div class="info-row">
+  <span class="info-label">Осталось в пуле:</span>
+  <span class="info-value">
+    <b>
+      {% if ton_left %}{{ ton_left|floatformat:2 }}{% else %}0.00{% endif %}
+    </b> TON
+  </span>
+</div>
+          <div class="info-row">
+            <span class="info-label">Автополив:</span>
+            <span class="info-value">
+              {% if is_auto_watered %} Активен {% else %} Не активен {% endif %}
+            </span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Удобрение:</span>
+            <span class="info-value">
+              {% if is_fertilized %} Активно {% else %} Не активно {% endif %}
+            </span>
+          </div>
+          {% if pending_income > 0 %}
+          <div class="info-row" style="margin-top: 12px;">
+            <span class="info-label" style="color:#1ec97f; font-weight:600;">К сбору:</span>
+            <span class="info-value" style="color:#22e488; font-weight:700; font-size:1.15em;">
+              {{ pending_income|floatformat:6 }} TON
+            </span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Картинка дерева -->
+      <div class="tree-image-wrap">
+        <img src="{% static 'images/tree_' %}{{ tree.level }}.png" class="tree-img" alt="TON Tree">
+      </div>
+
+    </div>
+
+    <!-- Модалки автополив / удобрение / статус -->
+    <div id="autowater-modal" class="custom-modal">
+      <div class="custom-modal-content">
+        <span class="custom-modal-close" data-modal-close>&times;</span>
+        <h3>Автополив</h3>
+        {% if is_auto_watered %}
+          <div class="modal-status active">Активен</div>
+          <div>До окончания: <span id="modal-autowater-timer"></span></div>
+          <div class="modal-datetime">До {{ tree.auto_water_until|date:"d.m.Y H:i" }}</div>
+        {% else %}
+          <div class="modal-status not-active">Не активен</div>
+          {% if user_has_autowater_item %}
+            <div class="modal-info">Есть в инвентаре:</div>
+            <div style="display: flex; flex-direction: column; gap: 12px; align-items:center;">
+              {% for purchase in autowater_purchases %}
+                <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.12); border-radius: 12px; padding: 8px 15px;">
+                  <img src="{% static 'images/watering_can.png' %}" alt="Автополив" style="width: 40px; height: 40px; border-radius: 8px;">
+                  <span style="font-weight:600;">Автополив</span>
+                  {% if purchase.valid_until %}
+                    <span style="margin-left:10px; color: #5ec2ef;">До {{ purchase.valid_until|date:"d.m.Y H:i" }}</span>
+                  {% endif %}
+                  <button class="modal-action-btn use-autowater-btn"
+                          data-purchase-id="{{ purchase.id }}" style="margin-left: 18px; font-size: 0.8rem; padding: 4px 8px;">Использовать</button>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="modal-info" style="color: #d4373d">Нет в инвентаре</div>
+            <button class="modal-action-btn" onclick="window.location.href='{% url 'shop:shop' %}'">Купить автополив</button>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+
+    <div id="fertilizer-modal" class="custom-modal">
+      <div class="custom-modal-content">
+        <span class="custom-modal-close" data-modal-close>&times;</span>
+        <h3>Удобрение</h3>
+        {% if is_fertilized %}
+          <div class="modal-status active">Активно</div>
+          <div>До окончания: <span id="modal-fertilizer-timer"></span></div>
+          <div class="modal-datetime">До {{ tree.fertilized_until|date:"d.m.Y H:i" }}</div>
+        {% else %}
+          <div class="modal-status not-active">Не активно</div>
+          {% if user_has_fertilizer_item %}
+            <div class="modal-info">Есть в инвентаре:</div>
+            <div style="display: flex; flex-direction: column; gap: 8px; align-items:center;">
+              {% for purchase in fertilizer_purchases %}
+                <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.12); border-radius: 12px; padding: 8px 15px;">
+                  <img src="{% static 'images/Seed.png' %}" alt="Удобрение" style="width: 40px; height: 40px; border-radius: 8px;">
+                  <span style="font-weight:600;">Удобрение 24ч</span>
+                  {% if purchase.valid_until %}
+                    <span style="margin-left:10px; color: #5ec2ef;">До {{ purchase.valid_until|date:"d.m.Y H:i" }}</span>
+                  {% endif %}
+                  <button class="modal-action-btn use-fertilizer-btn"
+                          data-purchase-id="{{ purchase.id }}" style="margin-left: 15px; font-size: 0.8rem;padding: 4px 8px;">Использовать</button>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="modal-info" style="color: #d4373d">Нет в инвентаре</div>
+            <button class="modal-action-btn" onclick="window.location.href='{% url 'shop:shop' %}'">Купить удобрение</button>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+
+    <div id="status-modal" class="custom-modal">
+      <div class="custom-modal-content" id="status-modal-content">
+        <span class="custom-modal-close" onclick="hideStatusModal()">&times;</span>
+        <div id="status-modal-body"></div>
+        <button class="modal-action-btn" onclick="hideStatusModal()">OK</button>
+      </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+
+      document.querySelectorAll('.btn-water').forEach(btn => {
+        btn.onclick = function() {
+          let treeId = this.dataset.treeId;
+          fetch(`/tree/${treeId}/water/`, {
+            method: "POST",
+            headers: {'X-CSRFToken': '{{ csrf_token }}'}
+          })
+          .then(r => r.json())
+          .then(data => {
+            showStatusModal(data.message || data.error);
+            if (data.status === "success") location.reload();
+          });
+        }
+      });
+
+      document.querySelectorAll('.btn-upgrade').forEach(btn => {
+        btn.onclick = function() {
+          let treeId = this.dataset.treeId;
+          fetch(`/tree/${treeId}/upgrade/`, {
+            method: "POST",
+            headers: {'X-CSRFToken': '{{ csrf_token }}'}
+          })
+          .then(r => r.json())
+          .then(data => {
+            showStatusModal(data.message || data.error);
+            if (data.status === "success") location.reload();
+          });
+        }
+      });
+
+      document.querySelectorAll('.open-modal-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          let id = btn.dataset.modal;
+          let modal = document.getElementById(id);
+          if (modal) modal.classList.add('active');
+        });
+      });
+
+      document.querySelectorAll('.custom-modal').forEach(modal => {
+        modal.addEventListener('click', function(e) {
+          if (e.target === this) {
+            modal.classList.remove('active');
+          }
+        });
+      });
+      document.querySelectorAll('.custom-modal-close').forEach(btn => {
+        btn.addEventListener('click', function() {
+          this.closest('.custom-modal').classList.remove('active');
+        });
+      });
+
+      document.querySelectorAll('.use-autowater-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          let purchaseId = this.dataset.purchaseId;
+          fetch(`/shop/use/${purchaseId}/`, {
+            method: "POST",
+            headers: {'X-CSRFToken': '{{ csrf_token }}'}
+          })
+          .then(r => r.json())
+          .then(data => {
+            showStatusModal(data.message || data.error);
+            if (data.status === "success") location.reload();
+          });
+        });
+      });
+
+      document.querySelectorAll('.use-fertilizer-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          let purchaseId = this.dataset.purchaseId;
+          fetch(`/shop/use/${purchaseId}/`, {
+            method: "POST",
+            headers: {'X-CSRFToken': '{{ csrf_token }}'}
+          })
+          .then(r => r.json())
+          .then(data => {
+            showStatusModal(data.message || data.error);
+            if (data.status === "success") location.reload();
+          });
+        });
+      });
+
+      document.querySelectorAll('.btn-collect').forEach(btn => {
+        btn.onclick = function() {
+          let treeId = this.dataset.treeId;
+          fetch(`/tree/${treeId}/collect_income/`, {
+            method: "POST",
+            headers: {'X-CSRFToken': '{{ csrf_token }}'}
+          })
+          .then(r => r.json())
+          .then(data => {
+            showStatusModal(data.message || data.error);
+            if (data.status === "success") location.reload();
+          });
+        }
+      });
+
+      // Таймеры для автополива и удобрения
+      {% if is_auto_watered and auto_water_time_left %}
+        let autoSec = {{ auto_water_time_left }};
+        function updateModalAutoTimer() {
+          if (autoSec >= 0 && document.getElementById('modal-autowater-timer')) {
+            let h = Math.floor(autoSec / 3600), m = Math.floor((autoSec % 3600) / 60), s = autoSec % 60;
+            document.getElementById('modal-autowater-timer').textContent = `${h}ч ${m}м ${s}с`;
+            autoSec--;
+            setTimeout(updateModalAutoTimer, 1000);
+          }
+        }
+        updateModalAutoTimer();
+      {% endif %}
+
+      {% if is_fertilized and fertilizer_time_left %}
+        let fertSec = {{ fertilizer_time_left }};
+        function updateModalFertTimer() {
+          if (fertSec >= 0 && document.getElementById('modal-fertilizer-timer')) {
+            let h = Math.floor(fertSec / 3600), m = Math.floor((fertSec % 3600) / 60), s = fertSec % 60;
+            document.getElementById('modal-fertilizer-timer').textContent = `${h}ч ${m}м ${s}с`;
+            fertSec--;
+            setTimeout(updateModalFertTimer, 1000);
+          }
+        }
+        updateModalFertTimer();
+      {% endif %}
+
+      function showStatusModal(message, type="") {
+        let modal = document.getElementById('status-modal');
+        let body = document.getElementById('status-modal-body');
+        body.innerHTML = message;
+        let content = modal.querySelector('.custom-modal-content');
+        content.className = 'custom-modal-content';
+        if (type === "success") content.classList.add('modal-success');
+        if (type === "error") content.classList.add('modal-error');
+        modal.classList.add('active');
+        setTimeout(hideStatusModal, 2200);
+      }
+
+      function hideStatusModal() {
+        document.getElementById('status-modal').classList.remove('active');
+      }
+
+    });
+    </script>
+    {% endblock %}

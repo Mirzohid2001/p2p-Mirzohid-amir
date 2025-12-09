@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="py-6">
+    <div class="container mx-auto px-4">
+        <div class="card p-6 mb-6 max-w-lg mx-auto">
+            <h1 class="text-2xl font-bold mb-6">Информация о пользователе</h1>
+            
+            <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Имя пользователя:</span>
+                    <span class="font-bold">{{ user_info.username }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Telegram ID:</span>
+                    <span class="font-bold">{{ user_info.telegram_id }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">CF баланс:</span>
+                    <span class="font-bold">{{ user_info.cf_balance }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">TON баланс:</span>
+                    <span class="font-bold">{{ user_info.ton_balance }}</span>
+                </div>
+                
+                <hr class="my-4">
+                
+                <h2 class="text-xl font-bold mb-4">Информация для администратора</h2>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Настройка ID админа:</span>
+                    <span class="font-bold">{{ admin_info.admin_id_setting }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Вы админ?</span>
+                    {% if user_info.is_admin %}
+                    <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full">Да</span>
+                    {% else %}
+                    <span class="bg-red-100 text-red-700 px-3 py-1 rounded-full">Нет</span>
+                    {% endif %}
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">ID совпадает с настройкой:</span>
+                    {% if admin_info.match %}
+                    <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full">Да</span>
+                    {% else %}
+                    <span class="bg-red-100 text-red-700 px-3 py-1 rounded-full">Нет</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="mt-8">
+                <p class="text-sm text-gray-600 mb-4">
+                    Чтобы стать администратором, добавьте свой Telegram ID ({{ user_info.telegram_id }}) в настройки проекта:
+                </p>
+                <div class="bg-gray-100 p-4 rounded-lg">
+                    <code>ADMIN_USER_ID={{ user_info.telegram_id }}</code>
+                </div>
+                <p class="text-sm text-gray-600 mt-2">
+                    Это можно сделать в файле .env или непосредственно в settings.py
+                </p>
+            </div>
+            
+            <div class="mt-6">
+                <a href="/" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg inline-block">
+                    Вернуться на главную
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

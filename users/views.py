@@ -1,0 +1,169 @@
+# users/views.py
+from django.contrib import messages
+from django.shortcuts import render, redirect, get_object_or_404
+from django.utils.crypto import get_random_string
+
+from cryptofarm import settings
+from trees.views import get_current_user
+from .models import User, TonDepositRequest
+from trees.models import Tree
+from referrals.models import Referral, ReferralBonus
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+
+def telegram_login(request):
+    tg_id = request.GET.get("tg_id")
+    if not tg_id:
+        return render(request, "users/telegram_login.html")
+
+    try:
+        tg_id_int = int(tg_id)
+    except ValueError:
+        return redirect("home")
+
+    user, created = User.objects.get_or_create(
+        telegram_id=tg_id_int,
+        defaults={
+            "username": "",
+            "first_name": "",
+            "last_name": "",
+            "photo_url": "",
+            "cf_balance": 100.00,
+            "ton_balance": 0.00
+        }
+    )
+
+    if created:
+        Tree.objects.create(user=user, type="CF")
+        user.cf_balance = 100
+        user.save()
+        ref_code = request.GET.get("ref")
+        if ref_code:
+            try:
+                ref_id_int = int(ref_code)
+                referrer = User.objects.filter(telegram_id=ref_id_int).first()
+            except (ValueError, User.DoesNotExist):
+                referrer = None
+
+            if referrer and referrer != user:
+
+                already_has_ref = Referral.objects.filter(invited=user).exists()
+                if not already_has_ref:
+                    user.referred_by = referrer
+                    user.save()
+
+                    referral = Referral.objects.create(
+                        inviter=referrer,
+                        invited=user,
+                        bonus_cf=10
+                    )
+                    ReferralBonus.objects.create(
+                        referral=referral,
+                        bonus_type="signup",
+                        amount=10,
+                        description=f"Бонус за регистрацию {user}"
+                    )
+                    referrer.cf_balance += 10
+                    referrer.save()
+    else:
+        if not Tree.objects.filter(user=user).exists():
+            Tree.objects.create(user=user, type="CF")
+
+    request.session["telegram_id"] = tg_id_int
+    return redirect("home")
+
+def profile_view(request):
+    telegram_id = request.session.get("telegram_id") or request.GET.get("telegram_id")
+    if not telegram_id:
+        return redirect('/telegram_login/')
+
+    user = get_object_or_404(User, telegram_id=telegram_id)
+
+    cf_balance = user.cf_balance
+    ton_balance = user.ton_balance
+    trees = user.trees.all() if hasattr(user, 'trees') else []
+    referral_code = user.referral_code
+    photo_url = user.photo_url
+
+    # Referal statistika va ro‘yxat
+    direct_referrals = Referral.objects.filter(inviter=user)
+    referral_count = direct_referrals.count()
+    bonuses = ReferralBonus.objects.filter(referral__inviter=user)
+    referral_rewards = sum(b.amount for b in bonuses)
+    referrals_info = [{
+        'username': r.invited.username,
+        'first_name': r.invited.first_name,
+        'last_name': r.invited.last_name,
+        'joined': r.date_joined,
+    } for r in direct_referrals]
+
+    context = {
+        "user": user,
+        "cf_balance": cf_balance,
+        "ton_balance": ton_balance,
+        "trees": trees,
+        "referral_code": referral_code,
+        "photo_url": photo_url,
+        "referral_count": referral_count,
+        "referral_rewards": referral_rewards,
+        "referrals_info": referrals_info,
+        'recipient-address': 'UQAW1dSI8WjwEXnAQ98MJVYyOQ8D7egvHmKxAvH_XWRLjr-r'
+    }
+    return render(request, "users/profile.html", context)
+
+def deposit_ton(request):
+    user = get_current_user(request)  # или request.user
+    if not user:
+        messages.error(request, "Сначала авторизуйтесь!")
+        return redirect("telegram_login")
+
+    if request.method == "POST":
+        try:
+            amount = float(request.POST.get("amount", 0))
+        except (TypeError, ValueError):
+            messages.error(request, "Некорректная сумма")
+            return redirect("profile")
+
+        if amount <= 0:
+            messages.error(request, "Сумма должна быть больше 0")
+            return redirect("profile")
+
+
+        memo = f"p2p_{user.telegram_id}_{get_random_string(6)}_{amount:.4f}"
+        ton_wallet_address = settings.PROJECT_TON_WALLET  # пропиши свой адрес
+        deeplink = f"https://t.me/wallet?startapp=ton_transfer_{ton_wallet_address}_{amount}"
+
+        TonDepositRequest.objects.create(
+            user=user,
+            amount=amount,
+            memo=memo,
+        )
+
+        messages.info(request,
+            f"Переведите <b>{amount} TON</b> на адрес <code>{ton_wallet_address}</code> "
+            f"с комментарием <b>{memo}</b>.<br>"
+            f"Это важно — иначе пополнение не зачтётся.<br>"
+            f"<a href='{deeplink}' target='_blank'>Открыть Telegram Wallet</a>"
+        )
+        return redirect("profile")
+    return redirect("profile")
+
+@csrf_exempt
+def save_wallet(request):
+    if request.method == "POST":
+        telegram_id = request.session.get("telegram_id")
+        address = request.POST.get("address")
+        if not telegram_id or not address:
+            return JsonResponse({"error": "No session or address"}, status=400)
+        user = User.objects.filter(telegram_id=telegram_id).first()
+        if user:
+            user.ton_wallet = address
+            user.save()
+            return JsonResponse({"success": True})
+        return JsonResponse({"error": "No user"}, status=404)
+    return JsonResponse({"error": "Bad method"}, status=405)
+
+
+def get_ton_balance(request):
+
+    return JsonResponse({'balance': f'{request.user.ton_balance:.8f}'})

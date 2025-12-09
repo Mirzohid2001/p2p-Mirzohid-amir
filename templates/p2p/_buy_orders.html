@@ -1,0 +1,18 @@
+{% for order in orders %}
+  <div class="order-row" style="background:rgba(255,255,255,0.07);border-radius:9px;padding:13px 10px;margin-bottom:8px;">
+    <div>
+      <b>
+        @{{ order.user.username|default:order.user.first_name|slice:":2" }}***
+      </b>
+    </div>
+    <div style="margin: 5px 0;">
+      <b>{{ order.cf_amount|floatformat:2 }} FL</b>  =
+      <span style="color:#7de67b">{{ order.total_ton|floatformat:3 }} TON</span>
+      <span style="color:#d9d9ff;">({{ order.price_rub|floatformat:2 }} ₽/FL)</span>
+    </div>
+    <button class="p2p-modal-btn btn-buy-order" data-order-id="{{ order.id }}">Купить</button>
+
+  </div>
+{% empty %}
+  <div style="color:#ffc2c2;">Нет активных ордеров на продажу</div>
+{% endfor %}
