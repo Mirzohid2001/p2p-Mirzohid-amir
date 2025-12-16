@@ -1,14 +1,16 @@
 /* RPS Game Styles */
 .rps-container {
-    max-width: 600px;
+    max-width: 100%;
     margin: 0 auto;
-    padding: 20px;
+    padding: 4px 1px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .rps-header {
     text-align: center;
-    padding: 20px;
-    margin-bottom: 20px;
+    padding: 12px 8px;
+    margin-bottom: 8px;
     background: var(--blue-gradient);
 }
 
@@ -30,8 +32,8 @@
 
 /* Статистика */
 .rps-stats {
-    padding: 20px;
-    margin-bottom: 20px;
+    padding: 12px 8px;
+    margin-bottom: 8px;
 }
 
 .rps-stats h2 {
@@ -80,8 +82,8 @@
 
 /* Турнир */
 .rps-tournament {
-    padding: 20px;
-    margin-bottom: 20px;
+    padding: 12px 8px;
+    margin-bottom: 8px;
 }
 
 .rps-tournament h2 {
@@ -126,8 +128,8 @@
 
 /* Таблица лидеров */
 .rps-leaderboard {
-    padding: 20px;
-    margin-bottom: 20px;
+    padding: 12px 8px;
+    margin-bottom: 8px;
 }
 
 .rps-leaderboard h2 {
@@ -182,7 +184,9 @@
 /* Кнопка поиска игры */
 .rps-actions {
     text-align: center;
-    margin-top: 30px;
+    margin-top: 20px;
+    margin-bottom: 12px;
+    padding: 0 4px;
 }
 
 .btn-find-game {
@@ -209,14 +213,24 @@
 
 /* Игровой экран */
 .rps-game-container {
-    max-width: 600px;
+    max-width: 100%;
     margin: 0 auto;
-    padding: 20px;
+    padding: 4px 1px 0;
+    padding-bottom: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.rps-game-container .card {
+    margin-bottom: 0;
 }
 
 .rps-betting {
-    padding: 30px;
+    padding: 16px 8px 10px;
     text-align: center;
+    margin-bottom: 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .rps-betting h2 {
@@ -300,13 +314,14 @@
 
 /* Игровой экран — стеклянный стиль */
 .rps-game-screen {
-    padding: 20px 16px 18px;
-    min-height: calc(100vh - 60px);
+    padding: 10px 4px 8px;
     box-sizing: border-box;
     border-radius: 20px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%);
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04), 0 12px 36px rgba(0,0,0,0.28);
+    margin-bottom: 0;
+    width: 100%;
 }
 
 .game-header {
@@ -320,6 +335,11 @@
     border-radius: 12px;
     border: 1px solid rgba(255,255,255,0.1);
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+    flex-wrap: wrap;
+}
+
+.game-header .btn-back-small {
+    flex-shrink: 0;
 }
 
 .game-bank {
@@ -350,9 +370,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 24px;
-    margin: 20px 0 16px;
-    padding: 0 18px;
+    gap: 8px;
+    margin: 10px 0 6px;
+    padding: 0 1px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .player-card {
@@ -447,12 +469,14 @@
 /* Выбор хода */
 .game-actions {
     margin-top: 18px;
+    margin-bottom: 0;
     display: flex;
     justify-content: center;
 }
 
 .move-panel {
     margin-top: 16px;
+    margin-bottom: 0;
     display: flex;
     justify-content: center;
     gap: 10px;
@@ -500,8 +524,9 @@
 /* Результат игры */
 .game-result {
     margin-top: 40px;
+    margin-bottom: 0;
     text-align: center;
-    padding: 30px;
+    padding: 30px 30px 20px;
     background: rgba(255, 255, 255, 0.1);
     border-radius: 20px;
 }
@@ -543,6 +568,104 @@
 
 .btn-back:hover {
     transform: translateY(-2px);
+}
+
+.btn-back-small {
+    display: inline-block;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    text-decoration: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-back-small:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.betting-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.betting-header h2 {
+    margin: 0;
+}
+
+.btn-cancel-search,
+.btn-cancel-game {
+    margin-top: 15px;
+    padding: 10px 20px;
+    background: rgba(255, 90, 143, 0.2);
+    color: #FF5A8F;
+    border: 1px solid #FF5A8F;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-cancel-search:hover,
+.btn-cancel-game:hover {
+    background: rgba(255, 90, 143, 0.3);
+    transform: translateY(-1px);
+}
+
+.btn-cancel-search:active,
+.btn-cancel-game:active {
+    transform: translateY(0);
+}
+
+.btn-play-again {
+    margin-top: 15px;
+    padding: 12px 24px;
+    background: var(--blue-gradient);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-play-again:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(61, 80, 199, 0.4);
+}
+
+.btn-play-again:active {
+    transform: translateY(0);
+}
+
+.result-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+    margin-bottom: 0;
+    flex-wrap: wrap;
+}
+
+.game-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    margin-bottom: 0;
+    padding-top: 20px;
+    padding-bottom: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Анимации для ходов */
@@ -745,6 +868,8 @@
 /* Улучшенные результаты */
 .game-result {
     animation: fadeIn 0.5s ease-out;
+    margin-bottom: 0;
+    padding-bottom: 20px;
 }
 
 @keyframes fadeIn {
@@ -830,8 +955,9 @@
 
 /* Топ-5 игроков */
 .rps-top-players {
-    padding: 20px;
-    margin-top: 20px;
+    padding: 12px 8px;
+    margin-top: 8px;
+    margin-bottom: 8px;
 }
 
 .rps-top-players h2 {
@@ -953,8 +1079,9 @@
 
 /* История последних игр */
 .rps-recent-games {
-    padding: 20px;
-    margin-top: 20px;
+    padding: 12px 8px;
+    margin-top: 8px;
+    margin-bottom: 0;
 }
 
 .rps-recent-games h2 {
@@ -1052,6 +1179,31 @@
 
 /* Адаптивность */
 @media (max-width: 600px) {
+    .rps-container {
+        padding: 4px 1px;
+    }
+    
+    .rps-header,
+    .rps-stats,
+    .rps-tournament,
+    .rps-leaderboard,
+    .rps-top-players,
+    .rps-recent-games {
+        padding: 10px 6px;
+    }
+    
+    .rps-game-container {
+        padding: 4px 1px 0;
+    }
+    
+    .rps-game-screen {
+        padding: 10px 4px 8px;
+    }
+    
+    .rps-betting {
+        padding: 16px 6px 10px;
+    }
+    
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
     }
@@ -1063,8 +1215,8 @@
     .game-players {
         flex-direction: row;
         flex-wrap: nowrap;
-        gap: 18px;
-        padding: 0 14px;
+        gap: 12px;
+        padding: 0 8px;
     }
     
     .vs-divider {
@@ -1091,7 +1243,7 @@
         max-width: 320px;
         min-width: 180px;
         min-height: 330px;
-        padding: 18px;
+        padding: 16px 12px;
     }
     
     .player-move {

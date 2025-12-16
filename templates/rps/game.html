@@ -13,7 +13,10 @@
     {% if not game %}
     <!-- Выбор ставки -->
     <div class="rps-betting card">
-        <h2>💰 Выберите ставку</h2>
+        <div class="betting-header">
+            <h2>💰 Выберите ставку</h2>
+            <a href="{% url 'rps:home' %}" class="btn-back">← Назад</a>
+        </div>
         <div class="balance-info">
             <span>Ваш баланс: <strong>{{ user.cf_balance|floatformat:0|intcomma }} FL</strong></span>
         </div>
@@ -29,12 +32,14 @@
                 <p>Поиск противника...</p>
                 <p class="timer" id="search-timer">10</p>
             </div>
+            <button class="btn-cancel-search" id="btn-cancel-search" style="display: none;">Отменить поиск</button>
         </div>
     </div>
     {% else %}
     <!-- Игровой экран -->
     <div class="rps-game-screen card">
         <div class="game-header">
+            <a href="{% url 'rps:home' %}" class="btn-back-small">← Назад</a>
             <div class="game-bank">
                 <span>Банк игры: <strong id="game-bank">{{ game.game_bank|floatformat:0|intcomma }} FL</strong></span>
             </div>
@@ -96,6 +101,9 @@
                 <span>Ножницы</span>
             </button>
         </div>
+        <div class="game-actions">
+            <button class="btn-cancel-game" id="btn-cancel-game">Отменить игру</button>
+        </div>
         {% endif %}
 
         {% if game.status == 'finished' %}
@@ -116,7 +124,10 @@
                     <p>Попробуйте еще раз!</p>
                 </div>
             {% endif %}
-            <a href="{% url 'rps:home' %}" class="btn-back">Вернуться</a>
+            <div class="result-actions">
+                <a href="{% url 'rps:home' %}" class="btn-back">← Вернуться</a>
+                <button class="btn-play-again" id="btn-play-again">🔄 Начать заново</button>
+            </div>
         </div>
         {% endif %}
     </div>

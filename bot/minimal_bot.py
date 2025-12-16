@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 TOKEN = "8026375224:AAEi4Epjn6MviJMsUEjnsHnHfgGNZTucSYs"
 API_URL = f"https://api.telegram.org/bot{TOKEN}"
 
-WEBAPP_URL_BASE = "https://f04b84cf7a5d.ngrok-free.app/telegram_login/"
+WEBAPP_URL_BASE = "https://7dd46f1ab537.ngrok-free.app/telegram_login/"
 
 last_update_id = 0
 

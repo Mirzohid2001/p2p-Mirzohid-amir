@@ -21,6 +21,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Кнопка отмены поиска
+    const cancelSearchBtn = document.getElementById('btn-cancel-search');
+    if (cancelSearchBtn) {
+        cancelSearchBtn.addEventListener('click', function() {
+            cancelGameSearch();
+        });
+    }
+    
     // Если мы на странице игры
     if (typeof gameId !== 'undefined' && gameId) {
         currentGameId = gameId;
@@ -33,6 +41,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 const move = this.dataset.move;
                 makeMove(move);
             });
+        });
+        
+        // Кнопка отмены игры
+        const cancelGameBtn = document.getElementById('btn-cancel-game');
+        if (cancelGameBtn) {
+            cancelGameBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Cancel game button clicked, gameId:', currentGameId);
+                cancelGame();
+            });
+        } else {
+            console.warn('Кнопка отмены игры не найдена');
+        }
+    }
+    
+    // Кнопка "Начать заново"
+    const playAgainBtn = document.getElementById('btn-play-again');
+    if (playAgainBtn) {
+        playAgainBtn.addEventListener('click', function() {
+            window.location.href = '/rps/game/';
         });
     }
 });
@@ -47,8 +76,12 @@ function startGameSearch(betAmount) {
     
     const searchStatus = document.getElementById('search-status');
     const searchTimerEl = document.getElementById('search-timer');
+    const cancelSearchBtn = document.getElementById('btn-cancel-search');
     
     searchStatus.style.display = 'block';
+    if (cancelSearchBtn) {
+        cancelSearchBtn.style.display = 'block';
+    }
     searchTimer = 10;
     searchTimerEl.textContent = searchTimer;
     
@@ -183,6 +216,117 @@ function connectBot(betAmount) {
     });
 }
 
+// Отмена поиска игры
+function cancelGameSearch() {
+    // Останавливаем таймер поиска
+    if (searchInterval) {
+        clearInterval(searchInterval);
+        searchInterval = null;
+    }
+    
+    // Удаляем из очереди на сервере
+    fetch('/rps/api/search/cancel/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+        }
+    }).catch(error => {
+        console.error('Error canceling search:', error);
+    });
+    
+    // Скрываем статус поиска
+    const searchStatus = document.getElementById('search-status');
+    const cancelSearchBtn = document.getElementById('btn-cancel-search');
+    if (searchStatus) {
+        searchStatus.style.display = 'none';
+    }
+    if (cancelSearchBtn) {
+        cancelSearchBtn.style.display = 'none';
+    }
+    
+    // Восстанавливаем кнопки ставок
+    resetBetButtons();
+    
+    showNotification('Поиск отменен', 'info');
+}
+
+// Отмена активной игры
+function cancelGame() {
+    console.log('cancelGame called, currentGameId:', currentGameId);
+    
+    if (!currentGameId) {
+        console.error('currentGameId не установлен');
+        showNotification('Ошибка: ID игры не найден', 'error');
+        return;
+    }
+    
+    if (!confirm('Вы уверены, что хотите отменить игру? Ставки будут возвращены.')) {
+        return;
+    }
+    
+    showLoading();
+    
+    console.log('Отправка запроса на отмену игры:', currentGameId);
+    
+    fetch('/rps/api/game/cancel/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify({
+            game_id: currentGameId
+        })
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || `HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Response data:', data);
+        hideLoading();
+        
+        if (data.error) {
+            showNotification(data.error, 'error');
+            return;
+        }
+        
+        if (data.success) {
+            showNotification(data.message || 'Игра отменена, ставки возвращены', 'success');
+            
+            // Останавливаем опросы
+            if (gameStatusInterval) {
+                clearInterval(gameStatusInterval);
+                gameStatusInterval = null;
+            }
+            if (moveTimerInterval) {
+                clearInterval(moveTimerInterval);
+                moveTimerInterval = null;
+            }
+            if (searchInterval) {
+                clearInterval(searchInterval);
+                searchInterval = null;
+            }
+            
+            // Переходим на главную страницу
+            setTimeout(() => {
+                window.location.href = '/rps/';
+            }, 1500);
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        console.error('Error canceling game:', error);
+        showNotification('Ошибка при отмене игры: ' + error.message, 'error');
+    });
+}
+
 // Сброс кнопок ставок
 function resetBetButtons() {
     const betButtons = document.querySelectorAll('.bet-btn');
@@ -253,6 +397,16 @@ function updateGameStatus(data) {
         const gameBank = document.getElementById('game-bank');
         if (gameBank) {
             gameBank.textContent = `${data.game_bank.toFixed(0)} FL`;
+        }
+    }
+    
+    // Показываем/скрываем кнопку отмены в зависимости от статуса
+    const cancelBtn = document.getElementById('btn-cancel-game');
+    if (cancelBtn) {
+        if (data.status === 'playing' || data.status === 'betting') {
+            cancelBtn.style.display = 'block';
+        } else {
+            cancelBtn.style.display = 'none';
         }
     }
     

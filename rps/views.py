@@ -533,6 +533,82 @@ def api_game_status(request, game_id):
 
 
 @csrf_exempt
+def api_cancel_search(request):
+    """API для отмены поиска игры"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    user = request.user
+    
+    # Удаляем пользователя из очереди
+    GameQueue.objects.filter(user=user).delete()
+    
+    return JsonResponse({
+        'success': True,
+        'message': 'Поиск отменен',
+    })
+
+
+@csrf_exempt
+def api_cancel_game(request):
+    """API для отмены активной игры"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    user = request.user
+    
+    try:
+        data = json.loads(request.body)
+        game_id = data.get('game_id')
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid data'}, status=400)
+    
+    game = get_object_or_404(Game.objects.select_for_update(), id=game_id)
+    
+    # Проверяем, что пользователь участвует в игре
+    is_player1 = (game.player1 == user)
+    is_player2 = (game.player2 == user) if game.player2 else False
+    
+    if not is_player1 and not (is_player2 or game.is_bot_game):
+        return JsonResponse({'error': 'Not your game'}, status=403)
+    
+    # Проверяем, что игра еще не завершена или отменена
+    if game.status in ['finished', 'cancelled']:
+        return JsonResponse({'error': 'Игра уже завершена или отменена'}, status=400)
+    
+    # Отменяем игру и возвращаем ставки
+    with transaction.atomic():
+        # Возвращаем ставку игрока 1
+        if game.player1:
+            game.player1.cf_balance += game.player1_bet
+            game.player1.save(update_fields=['cf_balance'])
+        
+        # Возвращаем ставку игрока 2 или бота
+        if game.player2:
+            game.player2.cf_balance += game.player2_bet
+            game.player2.save(update_fields=['cf_balance'])
+        elif game.is_bot_game:
+            from .models import BotPool
+            bot_pool = BotPool.get_pool()
+            bot_pool.return_balance(game.player2_bet)
+        
+        # Удаляем из очереди, если есть
+        queue_users = [game.player1]
+        if game.player2:
+            queue_users.append(game.player2)
+        GameQueue.objects.filter(user__in=queue_users).delete()
+        
+        # Отменяем игру
+        game.status = 'cancelled'
+        game.save()
+    
+    return JsonResponse({
+        'success': True,
+        'message': 'Игра отменена, ставки возвращены',
+    })
+
+
+@csrf_exempt
 def api_connect_bot(request):
     """API для подключения бота после 10 секунд поиска"""
     if request.method != 'POST':
