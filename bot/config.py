@@ -10,7 +10,7 @@ except:
 # Настройки бота
 BOT_TOKEN = os.getenv("BOT_TOKEN", "7920987349:AAGm0Ed0uefXGMQ-VC6KyqaQhUXRnvRQ02w")
 # Используем постоянный домен для WebApp
-WEBAPP_URL = os.getenv("WEBAPP_URL", "https://7dd46f1ab537.ngrok-free.app")
+WEBAPP_URL = os.getenv("WEBAPP_URL", "https://93d886f71258.ngrok-free.app")
 ADMIN_USER_ID = os.getenv("ADMIN_USER_ID", "")
 
 # Проверка обязательных параметров

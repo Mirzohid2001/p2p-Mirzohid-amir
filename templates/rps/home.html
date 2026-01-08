@@ -18,6 +18,14 @@
         </div>
     </div>
 
+    <!-- Кнопка поиска игры -->
+    <div class="rps-actions">
+        <a href="{% url 'rps:game' %}" class="btn-find-game">
+            <i class="fa fa-search"></i>
+            Найти игру
+        </a>
+    </div>
+
     <!-- Статистика пользователя -->
     <div class="rps-stats card">
         <h2>📊 Ваша статистика</h2>
@@ -90,14 +98,6 @@
         <p class="no-tournament">Турнир не активен. Ожидайте запуска нового турнира.</p>
     </div>
     {% endif %}
-
-    <!-- Кнопка поиска игры -->
-    <div class="rps-actions">
-        <a href="{% url 'rps:game' %}" class="btn-find-game">
-            <i class="fa fa-search"></i>
-            Найти игру
-        </a>
-    </div>
     
     <!-- Топ-5 игроков -->
     <div class="rps-top-players card">
@@ -135,21 +135,21 @@
                     {% if game.result == 'draw' %}
                         <div class="game-result-icon">🤝</div>
                         <div class="game-info">
-                            <div class="game-opponent">vs {{ game.player2|default:"Бот" }}</div>
+                            <div class="game-opponent">vs {% if game.is_bot_game %}{{ game.bot_name|default:"Бот" }}{% else %}{{ game.player2|default:"Бот" }}{% endif %}</div>
                             <div class="game-details">{{ game.bet_amount|floatformat:0|intcomma }} FL • {{ game.finished_at|date:"d.m H:i" }}</div>
                         </div>
                         <div class="game-amount draw">0 FL</div>
                     {% elif game.result == 'player1_win' %}
                         <div class="game-result-icon">🎉</div>
                         <div class="game-info">
-                            <div class="game-opponent">vs {{ game.player2|default:"Бот" }}</div>
+                            <div class="game-opponent">vs {% if game.is_bot_game %}{{ game.bot_name|default:"Бот" }}{% else %}{{ game.player2|default:"Бот" }}{% endif %}</div>
                             <div class="game-details">{{ game.bet_amount|floatformat:0|intcomma }} FL • {{ game.finished_at|date:"d.m H:i" }}</div>
                         </div>
                         <div class="game-amount win">+{{ game.game_bank|floatformat:0|intcomma }} FL</div>
                     {% else %}
                         <div class="game-result-icon">😔</div>
                         <div class="game-info">
-                            <div class="game-opponent">vs {{ game.player2|default:"Бот" }}</div>
+                            <div class="game-opponent">vs {% if game.is_bot_game %}{{ game.bot_name|default:"Бот" }}{% else %}{{ game.player2|default:"Бот" }}{% endif %}</div>
                             <div class="game-details">{{ game.bet_amount|floatformat:0|intcomma }} FL • {{ game.finished_at|date:"d.m H:i" }}</div>
                         </div>
                         <div class="game-amount loss">-{{ game.bet_amount|floatformat:0|intcomma }} FL</div>

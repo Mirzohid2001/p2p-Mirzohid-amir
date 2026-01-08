@@ -57,11 +57,18 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Кнопка "Начать заново"
-    const playAgainBtn = document.getElementById('btn-play-again');
-    if (playAgainBtn) {
-        playAgainBtn.addEventListener('click', function() {
-            window.location.href = '/rps/game/';
+    // Кнопка "Выйти"
+    const exitBtn = document.getElementById('btn-exit');
+    if (exitBtn) {
+        exitBtn.addEventListener('click', function() {
+            window.location.href = '/rps/';
+        });
+    }
+    
+    const exitBtnCancelled = document.getElementById('btn-exit-cancelled');
+    if (exitBtnCancelled) {
+        exitBtnCancelled.addEventListener('click', function() {
+            window.location.href = '/rps/';
         });
     }
 });
@@ -69,15 +76,18 @@ document.addEventListener('DOMContentLoaded', function() {
 // Поиск игры
 function startGameSearch(betAmount) {
     const betButtons = document.querySelectorAll('.bet-btn');
-    betButtons.forEach(btn => {
-        btn.disabled = true;
-        btn.style.opacity = '0.5';
-    });
+    const betOptions = document.querySelector('.bet-options');
+    
+    // Скрываем кнопки ставок
+    if (betOptions) {
+        betOptions.style.display = 'none';
+    }
     
     const searchStatus = document.getElementById('search-status');
     const searchTimerEl = document.getElementById('search-timer');
     const cancelSearchBtn = document.getElementById('btn-cancel-search');
     
+    // Показываем индикатор поиска
     searchStatus.style.display = 'block';
     if (cancelSearchBtn) {
         cancelSearchBtn.style.display = 'block';
@@ -330,6 +340,13 @@ function cancelGame() {
 // Сброс кнопок ставок
 function resetBetButtons() {
     const betButtons = document.querySelectorAll('.bet-btn');
+    const betOptions = document.querySelector('.bet-options');
+    
+    // Показываем кнопки ставок обратно
+    if (betOptions) {
+        betOptions.style.display = 'grid';
+    }
+    
     betButtons.forEach(btn => {
         btn.disabled = false;
         btn.style.opacity = '1';
@@ -351,8 +368,8 @@ function startGameStatusPolling() {
                 
                 updateGameStatus(data);
                 
-                // Если игра завершена, останавливаем опрос
-                if (data.status === 'finished') {
+                // Если игра завершена или отменена, останавливаем опрос
+                if (data.status === 'finished' || data.status === 'cancelled') {
                     clearInterval(gameStatusInterval);
                     if (moveTimerInterval) {
                         clearInterval(moveTimerInterval);
@@ -391,6 +408,14 @@ function updateGameStatus(data) {
                 player2Move.innerHTML = `<div class="move-icon move-${data.player2_move}">${moveEmoji2}</div>`;
             }
         }
+    
+    // Обновляем имя бота, если это игра с ботом
+    if (data.is_bot_game && data.bot_name) {
+        const player2Card = document.querySelector('.player-card.player-2 .player-name');
+        if (player2Card) {
+            player2Card.textContent = data.bot_name;
+        }
+    }
     
     // Обновляем банк
     if (data.game_bank) {
@@ -623,6 +648,49 @@ function hideLoading() {
     if (overlay) {
         overlay.remove();
     }
+}
+
+// Начать новую игру с тем же соперником
+function startRematch(gameId) {
+    if (!gameId) {
+        showNotification('Ошибка: ID игры не найден', 'error');
+        return;
+    }
+    
+    showLoading();
+    
+    fetch('/rps/api/rematch/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+        },
+        body: JSON.stringify({
+            game_id: gameId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoading();
+        
+        if (data.error) {
+            showNotification(data.error, 'error');
+            return;
+        }
+        
+        if (data.success && data.game_id) {
+            showNotification('Новая игра создана!', 'success');
+            // Переходим к новой игре
+            setTimeout(() => {
+                window.location.href = `/rps/game/${data.game_id}/`;
+            }, 500);
+        }
+    })
+    .catch(error => {
+        hideLoading();
+        console.error('Error:', error);
+        showNotification('Ошибка при создании новой игры', 'error');
+    });
 }
 
 // Добавляем CSS для уведомлений

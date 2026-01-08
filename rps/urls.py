@@ -18,5 +18,6 @@ urlpatterns = [
     path('api/leaderboard/', views.api_leaderboard, name='api_leaderboard'),
     path('api/recent-games/', views.api_recent_games, name='api_recent_games'),
     path('api/top-players/', views.api_top_players, name='api_top_players'),
+    path('api/rematch/', views.api_rematch, name='api_rematch'),
 ]
 

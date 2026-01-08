@@ -184,7 +184,39 @@ def generate_fake_candles(n=90, base=15.0, seed=777):
     return candles
 
 def price_history_json(request):
-    candles = generate_fake_candles()
+    # Используем реальные данные из PriceHistory
+    price_history = PriceHistory.objects.all().order_by('date')
+    
+    if price_history.exists():
+        # Если есть реальные данные, используем их
+        candles = []
+        prev_price = None
+        for ph in price_history:
+            price = float(ph.price)
+            # Создаем datetime для timestamp
+            dt = datetime.datetime.combine(ph.date, datetime.time.min)
+            if timezone.is_naive(dt):
+                dt = timezone.make_aware(dt)
+            
+            # Для свечей нужны open, high, low, close
+            # Используем цену как close, и создаем небольшие вариации для high/low
+            # open берем из предыдущей цены или текущей
+            open_price = prev_price if prev_price else price
+            high_price = max(open_price, price) * 1.005  # Немного выше максимума
+            low_price = min(open_price, price) * 0.995   # Немного ниже минимума
+            
+            candles.append({
+                "time": int(dt.timestamp()),
+                "open": round(open_price, 2),
+                "high": round(high_price, 2),
+                "low": round(low_price, 2),
+                "close": round(price, 2)
+            })
+            prev_price = price
+    else:
+        # Если данных нет, генерируем фейковые данные
+        candles = generate_fake_candles()
+    
     return JsonResponse({"history": candles})
 @require_POST
 def buy_order(request):

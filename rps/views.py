@@ -15,40 +15,42 @@ from .models import Tournament, TournamentParticipant, Game, GameQueue, BotPool
 # Таймаут на совершение хода: 10 секунд
 MOVE_TIMEOUT_SECONDS = 10
 
+# Список случайных имен для ботов
+BOT_NAMES = [
+    'Alex', 'Max', 'Sam', 'Jordan', 'Taylor', 'Casey', 'Morgan', 'Riley',
+    'Avery', 'Quinn', 'Dakota', 'Sage', 'River', 'Phoenix', 'Skyler',
+    'Cameron', 'Drew', 'Blake', 'Hayden', 'Reese', 'Parker', 'Finley',
+    'Rowan', 'Emery', 'Kai', 'Logan', 'Jamie', 'Dylan', 'Aiden', 'Noah',
+    'Ethan', 'Liam', 'Mason', 'Lucas', 'Oliver', 'Aria', 'Emma', 'Mia',
+    'Sophia', 'Isabella', 'Olivia', 'Charlotte', 'Amelia', 'Harper',
+    'Evelyn', 'Abigail', 'Emily', 'Elizabeth', 'Sofia', 'Avery', 'Ella'
+]
 
-def _resolve_timeout_win(game: Game, winner: User):
-    """Завершает игру по таймауту, если второй игрок не сделал ход."""
-    game.result = 'player1_win' if winner == game.player1 else 'player2_win'
-    game.winner = winner
-    game.status = 'finished'
+
+def generate_bot_name():
+    """Генерирует случайное имя для бота"""
+    return random.choice(BOT_NAMES)
+
+
+def _resolve_timeout_cancel(game: Game, inactive_user=None):
+    """Отменяет игру по таймауту, если игрок не сделал ход. Возвращает ставки."""
+    game.status = 'cancelled'
     game.finished_at = timezone.now()
-
-    # Банк уже сформирован при создании игры, просто начисляем победителю
-    winner.cf_balance += game.game_bank
-    winner.save(update_fields=['cf_balance'])
-
-    # Обновляем статистику турнира
-    if game.tournament and game.tournament.is_active():
-        participant1, _ = TournamentParticipant.objects.get_or_create(
-            tournament=game.tournament,
-            user=game.player1
-        )
-        participant2 = None
-        if game.player2:
-            participant2, _ = TournamentParticipant.objects.get_or_create(
-                tournament=game.tournament,
-                user=game.player2
-            )
-
-        if winner == game.player1:
-            participant1.add_points('win')
-            if participant2:
-                participant2.add_points('loss')
-        else:
-            if participant2:
-                participant2.add_points('win')
-            participant1.add_points('loss')
-
+    
+    # Возвращаем ставки обоим игрокам
+    if game.player1:
+        game.player1.cf_balance += game.player1_bet
+        game.player1.save(update_fields=['cf_balance'])
+    
+    if game.player2:
+        game.player2.cf_balance += game.player2_bet
+        game.player2.save(update_fields=['cf_balance'])
+    elif game.is_bot_game:
+        # Возвращаем баланс бота в пул
+        from .models import BotPool
+        bot_pool = BotPool.get_pool()
+        bot_pool.return_balance(game.player2_bet)
+    
     game.save()
     return game
 
@@ -487,30 +489,18 @@ def api_game_status(request, game_id):
             return JsonResponse({'error': 'Not your game'}, status=403)
     
     # Если есть один ход и вышло время — завершаем по таймауту
-    if game.status != 'finished' and game.move_timer_start:
+    if game.status != 'finished' and game.status != 'cancelled' and game.move_timer_start:
         elapsed = (timezone.now() - game.move_timer_start).total_seconds()
         if elapsed >= MOVE_TIMEOUT_SECONDS:
             if game.player1_move and not game.player2_move:
-                _resolve_timeout_win(game, game.player1)
+                # Игрок 1 сделал ход, игрок 2 нет - отменяем игру
+                _resolve_timeout_cancel(game, game.player2 if game.player2 else None)
             elif game.player2_move and not game.player1_move:
-                _resolve_timeout_win(game, game.player2)
+                # Игрок 2 сделал ход, игрок 1 нет - отменяем игру
+                _resolve_timeout_cancel(game, game.player1)
             else:
-                # Никто не сделал ход — техническая ничья
-                game.result = 'draw'
-                game.status = 'finished'
-                game.finished_at = timezone.now()
-                # Возврат ставок
-                if game.player1:
-                    game.player1.cf_balance += game.player1_bet
-                    game.player1.save(update_fields=['cf_balance'])
-                if game.player2:
-                    game.player2.cf_balance += game.player2_bet
-                    game.player2.save(update_fields=['cf_balance'])
-                elif game.is_bot_game:
-                    from .models import BotPool
-                    bot_pool = BotPool.get_pool()
-                    bot_pool.return_balance(game.player2_bet)
-                game.save()
+                # Никто не сделал ход — отменяем игру
+                _resolve_timeout_cancel(game, None)
     
     is_player1 = (game.player1 == user)
     
@@ -520,6 +510,7 @@ def api_game_status(request, game_id):
         'player1_id': game.player1.telegram_id,
         'player2_id': game.player2.telegram_id if game.player2 else None,
         'is_bot_game': game.is_bot_game,
+        'bot_name': game.bot_name if game.is_bot_game else None,
         'bet_amount': float(game.bet_amount),
         'game_bank': float(game.game_bank),
         'is_player1': is_player1,
@@ -726,6 +717,7 @@ def api_connect_bot(request):
             player1=user,
             player2=None,
             is_bot_game=True,
+            bot_name=generate_bot_name(),  # Генерируем случайное имя для бота
             bot_balance=bot_balance,
             bet_amount=bet_amount,
             player1_bet=bet_amount,
@@ -862,4 +854,146 @@ def api_top_players(request):
     return JsonResponse({
         'players': players_list,
     })
+
+
+@csrf_exempt
+def api_rematch(request):
+    """API для создания новой игры с тем же соперником"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    user = request.user
+    
+    try:
+        data = json.loads(request.body)
+        game_id = data.get('game_id')
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid request'}, status=400)
+    
+    if not game_id:
+        return JsonResponse({'error': 'Game ID required'}, status=400)
+    
+    # Получаем завершенную игру
+    try:
+        old_game = Game.objects.get(id=game_id)
+    except Game.DoesNotExist:
+        return JsonResponse({'error': 'Game not found'}, status=404)
+    
+    # Проверяем, что пользователь участвовал в игре
+    if old_game.player1 != user and (not old_game.player2 or old_game.player2 != user):
+        return JsonResponse({'error': 'Not your game'}, status=403)
+    
+    # Проверяем, что игра завершена или отменена
+    if old_game.status not in ['finished', 'cancelled']:
+        return JsonResponse({'error': 'Game is not finished'}, status=400)
+    
+    # Определяем соперника и ставку
+    if old_game.is_bot_game:
+        # Для игры с ботом - создаем новую игру с ботом
+        bet_amount = old_game.bet_amount
+        
+        # Проверяем баланс
+        user.refresh_from_db()
+        if user.cf_balance < bet_amount:
+            return JsonResponse({'error': 'Недостаточно средств'}, status=400)
+        
+        # Получаем пул ботов
+        bot_pool = BotPool.get_pool()
+        bot_balance = bot_pool.get_bot_balance()
+        
+        if bot_balance < bet_amount:
+            return JsonResponse({'error': 'Бот временно недоступен'}, status=400)
+        
+        # Создаем новую игру с ботом
+        active_tournament = Tournament.objects.filter(status='active').first()
+        from django.conf import settings
+        expires_at = timezone.now() + timedelta(days=settings.GAME_SETTINGS.get('ORDER_EXPIRY', 3))
+        
+        with transaction.atomic():
+            # Списываем ставку пользователя
+            user.cf_balance -= bet_amount
+            user.save(update_fields=['cf_balance'])
+            
+            # Используем баланс из пула ботов
+            bot_pool.use_balance(bet_amount)
+            
+            # Создаем игру с тем же именем бота
+            new_game = Game.objects.create(
+                player1=user,
+                player2=None,
+                is_bot_game=True,
+                bot_name=old_game.bot_name or generate_bot_name(),  # Используем то же имя бота
+                bot_balance=bot_balance,
+                bet_amount=bet_amount,
+                player1_bet=bet_amount,
+                player2_bet=bet_amount,
+                game_bank=bet_amount * 2,
+                tournament=active_tournament,
+                game_type='pve',
+                status='betting',
+                expires_at=expires_at,
+                move_timer_start=timezone.now(),
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'game_id': new_game.id,
+            'is_bot_game': True,
+        })
+    else:
+        # Для PvP игры - создаем новую игру с тем же соперником
+        opponent = old_game.player2 if old_game.player1 == user else old_game.player1
+        bet_amount = old_game.bet_amount
+        
+        # Проверяем балансы
+        user.refresh_from_db()
+        opponent.refresh_from_db()
+        
+        if user.cf_balance < bet_amount:
+            return JsonResponse({'error': 'Недостаточно средств'}, status=400)
+        
+        if opponent.cf_balance < bet_amount:
+            return JsonResponse({'error': 'У соперника недостаточно средств'}, status=400)
+        
+        # Проверяем, не находится ли соперник уже в активной игре
+        opponent_active_game = Game.objects.filter(
+            (Q(player1=opponent) | Q(player2=opponent)),
+            status__in=['waiting', 'betting', 'playing']
+        ).first()
+        
+        if opponent_active_game:
+            return JsonResponse({'error': 'Соперник уже в игре'}, status=400)
+        
+        # Создаем новую игру
+        active_tournament = Tournament.objects.filter(status='active').first()
+        from django.conf import settings
+        expires_at = timezone.now() + timedelta(days=settings.GAME_SETTINGS.get('ORDER_EXPIRY', 3))
+        
+        with transaction.atomic():
+            # Списываем ставки
+            user.cf_balance -= bet_amount
+            opponent.cf_balance -= bet_amount
+            user.save(update_fields=['cf_balance'])
+            opponent.save(update_fields=['cf_balance'])
+            
+            # Создаем игру
+            new_game = Game.objects.create(
+                player1=user,
+                player2=opponent,
+                bet_amount=bet_amount,
+                player1_bet=bet_amount,
+                player2_bet=bet_amount,
+                game_bank=bet_amount * 2,
+                tournament=active_tournament,
+                game_type='pvp',
+                status='betting',
+                expires_at=expires_at,
+                move_timer_start=timezone.now(),
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'game_id': new_game.id,
+            'is_bot_game': False,
+        })
 

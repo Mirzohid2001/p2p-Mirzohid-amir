@@ -20,12 +20,6 @@
         <div class="balance-info">
             <span>Ваш баланс: <strong>{{ user.cf_balance|floatformat:0|intcomma }} FL</strong></span>
         </div>
-        <div class="bet-options">
-            <button class="bet-btn" data-bet="10">10 FL</button>
-            <button class="bet-btn" data-bet="50">50 FL</button>
-            <button class="bet-btn" data-bet="100">100 FL</button>
-            <button class="bet-btn" data-bet="500">500 FL</button>
-        </div>
         <div class="search-status" id="search-status" style="display: none;">
             <div class="searching-animation">
                 <div class="spinner"></div>
@@ -33,6 +27,12 @@
                 <p class="timer" id="search-timer">10</p>
             </div>
             <button class="btn-cancel-search" id="btn-cancel-search" style="display: none;">Отменить поиск</button>
+        </div>
+        <div class="bet-options">
+            <button class="bet-btn" data-bet="10">10 FL</button>
+            <button class="bet-btn" data-bet="50">50 FL</button>
+            <button class="bet-btn" data-bet="100">100 FL</button>
+            <button class="bet-btn" data-bet="500">500 FL</button>
         </div>
     </div>
     {% else %}
@@ -69,7 +69,7 @@
 
             <div class="player-card player-2">
                 <div class="player-name">
-                    {% if game.is_bot_game %}Бот{% else %}{{ game.player2 }}{% endif %}
+                    {% if game.is_bot_game %}{{ game.bot_name|default:"Бот" }}{% else %}{{ game.player2 }}{% endif %}
                 </div>
                 <div class="player-move" id="player2-move">
                     {% if game.status == 'finished' and game.player2_move %}
@@ -125,8 +125,17 @@
                 </div>
             {% endif %}
             <div class="result-actions">
-                <a href="{% url 'rps:home' %}" class="btn-back">← Вернуться</a>
-                <button class="btn-play-again" id="btn-play-again">🔄 Начать заново</button>
+                <button class="btn-exit" id="btn-exit">🚪 Выйти</button>
+            </div>
+        </div>
+        {% elif game.status == 'cancelled' %}
+        <div class="game-result" id="game-result">
+            <div class="result-message result-draw">
+                <h2>⏱️ Игра отменена</h2>
+                <p>Один из игроков не сделал выбор. Ставки возвращены.</p>
+            </div>
+            <div class="result-actions">
+                <button class="btn-exit" id="btn-exit-cancelled">🚪 Выйти</button>
             </div>
         </div>
         {% endif %}

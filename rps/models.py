@@ -109,6 +109,7 @@ class Game(models.Model):
     player1 = models.ForeignKey(User, on_delete=models.CASCADE, related_name='games_as_player1')
     player2 = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='games_as_player2')
     is_bot_game = models.BooleanField(default=False)
+    bot_name = models.CharField(max_length=50, null=True, blank=True)  # Случайное имя для бота
     bot_balance = models.DecimalField(max_digits=15, decimal_places=2, default=1000)
     
     # Ставки
