@@ -183,41 +183,76 @@ def generate_fake_candles(n=90, base=15.0, seed=777):
         date += datetime.timedelta(days=1)
     return candles
 
+
+def _demo_candles_same_for_all(n=72, base=2.0, interval_minutes=60):
+    """
+    Красивые свечи (рост/падение), одинаковые для всех пользователей.
+    Детерминированно по дате: в течение суток у всех одинаково.
+    Последняя свеча close привязана к base.
+    """
+    now = timezone.now().replace(second=0, microsecond=0)
+    day_anchor = now.date().toordinal()
+
+    rng = random.Random(777 + day_anchor)
+
+    step = datetime.timedelta(minutes=interval_minutes)
+    start = now - step * n
+
+    candles = []
+    prev_close = float(base)
+
+    vol = max(0.01, float(base) * 0.006)  # амплитуда
+
+    for i in range(n):
+        t = start + step * i
+        open_ = prev_close
+
+        # блоковый дрейф (серии рост/падение)
+        block = (i // 6) % 6
+        drift = {0: 0.15, 1: 0.08, 2: -0.05, 3: -0.18, 4: 0.10, 5: -0.02}.get(block, 0.0)
+        drift = drift * vol * 0.12
+
+        change = rng.uniform(-vol, vol) * 0.55 + drift
+        close = max(0.01, open_ + change)
+
+        wick_up = abs(rng.uniform(0.05, 1.0)) * vol * 0.35
+        wick_dn = abs(rng.uniform(0.05, 1.0)) * vol * 0.35
+
+        high = max(open_, close) + wick_up
+        low = max(0.01, min(open_, close) - wick_dn)
+
+        candles.append({
+            "time": int(t.timestamp()),
+            "open": round(open_, 2),
+            "high": round(high, 2),
+            "low": round(low, 2),
+            "close": round(close, 2),
+        })
+
+        prev_close = close
+
+    # сдвиг так, чтобы последняя close == base
+    if candles:
+        delta = float(base) - float(candles[-1]["close"])
+        for c in candles:
+            c["open"] = round(max(0.01, c["open"] + delta), 2)
+            c["high"] = round(max(c["high"] + delta, c["open"], c["close"]), 2)
+            c["low"]  = round(min(c["low"] + delta, c["open"], c["close"]), 2)
+            c["close"] = round(max(0.01, c["close"] + delta), 2)
+        candles[-1]["close"] = round(float(base), 2)
+
+    return candles
+
+
 def price_history_json(request):
-    # Используем реальные данные из PriceHistory
-    price_history = PriceHistory.objects.all().order_by('date')
-    
-    if price_history.exists():
-        # Если есть реальные данные, используем их
-        candles = []
-        prev_price = None
-        for ph in price_history:
-            price = float(ph.price)
-            # Создаем datetime для timestamp
-            dt = datetime.datetime.combine(ph.date, datetime.time.min)
-            if timezone.is_naive(dt):
-                dt = timezone.make_aware(dt)
-            
-            # Для свечей нужны open, high, low, close
-            # Используем цену как close, и создаем небольшие вариации для high/low
-            # open берем из предыдущей цены или текущей
-            open_price = prev_price if prev_price else price
-            high_price = max(open_price, price) * 1.005  # Немного выше максимума
-            low_price = min(open_price, price) * 0.995   # Немного ниже минимума
-            
-            candles.append({
-                "time": int(dt.timestamp()),
-                "open": round(open_price, 2),
-                "high": round(high_price, 2),
-                "low": round(low_price, 2),
-                "close": round(price, 2)
-            })
-            prev_price = price
-    else:
-        # Если данных нет, генерируем фейковые данные
-        candles = generate_fake_candles()
-    
+    cf_price_rub = get_today_cf_price()  # как и было — реальная “текущая” цена
+    candles = _demo_candles_same_for_all(
+        n=72,
+        base=float(cf_price_rub),
+        interval_minutes=60
+    )
     return JsonResponse({"history": candles})
+
 @require_POST
 def buy_order(request):
     settings = P2PSettings.objects.first()

@@ -22,7 +22,7 @@
         <!-- Декоративные элементы -->
         <div style="position: absolute; top: 0; left: 0; width: 200px; height: 200px; background: radial-gradient(circle, rgba(90, 255, 117, 0.1) 0%, transparent 70%); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none;"></div>
         <div style="position: absolute; bottom: 0; right: 0; width: 150px; height: 150px; background: radial-gradient(circle, rgba(61, 80, 199, 0.15) 0%, transparent 70%); border-radius: 50%; transform: translate(50%, 50%); pointer-events: none;"></div>
-        
+
         <!-- Заголовок графика -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; position: relative; z-index: 1;">
             <h3 style="color: #fff; font-size: 18px; font-weight: 700; margin: 0; text-shadow: 0 2px 10px rgba(90, 255, 117, 0.3);">
@@ -32,10 +32,10 @@
                 {{ cf_price_rub }} ₽
             </div>
         </div>
-        
+
         <!-- График -->
         <div id="candlestick-chart" style="width: 100%; height: 200px; max-width: 100%; position: relative; z-index: 1; border-radius: 12px; overflow: hidden;"></div>
-        
+
         <!-- Индикатор загрузки -->
         <div id="chart-loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255, 255, 255, 0.6); font-size: 14px; z-index: 0;">
             <div style="display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(90, 255, 117, 0.3); border-top-color: #5AFF75; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 10px; vertical-align: middle;"></div>
@@ -280,15 +280,15 @@ document.addEventListener('DOMContentLoaded', function() {
   const chartContainer = document.getElementById('candlestick-chart');
   const chartLoading = document.getElementById('chart-loading');
   const containerWidth = chartContainer.offsetWidth || 320;
-  
-  fetch("{% url 'p2p:price_history_json' %}")
+
+  fetch("{% url 'p2p:price_history_json' %}?v=" + Date.now())
       .then(r => r.json())
       .then(data => {
         // Скрываем индикатор загрузки
         if (chartLoading) {
           chartLoading.style.display = 'none';
         }
-        
+
         const chart = LightweightCharts.createChart(chartContainer, {
           width: containerWidth,
           height: 200,
@@ -298,19 +298,19 @@ document.addEventListener('DOMContentLoaded', function() {
             fontSize: 11,
             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
           },
-          grid: { 
-            vertLines: { 
+          grid: {
+            vertLines: {
               color: 'rgba(255, 255, 255, 0.06)',
               style: 1,
               visible: true,
-            }, 
-            horzLines: { 
+            },
+            horzLines: {
               color: 'rgba(255, 255, 255, 0.06)',
               style: 1,
               visible: true,
-            } 
+            }
           },
-          rightPriceScale: { 
+          rightPriceScale: {
             visible: true,
             borderColor: 'rgba(255, 255, 255, 0.12)',
             scaleMargins: {
@@ -320,7 +320,7 @@ document.addEventListener('DOMContentLoaded', function() {
             entireTextOnly: false,
             ticksVisible: true,
           },
-          timeScale: { 
+          timeScale: {
             visible: true,
             borderColor: 'rgba(255, 255, 255, 0.12)',
             timeVisible: true,
@@ -353,7 +353,7 @@ document.addEventListener('DOMContentLoaded', function() {
             pinch: true,
           },
         });
-        
+
         const candleSeries = chart.addCandlestickSeries({
           upColor: '#5AFF75',
           downColor: '#FF5A8F',
@@ -376,25 +376,12 @@ document.addEventListener('DOMContentLoaded', function() {
           low: x.low,
           close: x.close,
         }));
-        
+
         candleSeries.setData(candles);
-        
+
         // Добавляем красную линию для падающих периодов (более заметная)
-        const fallingLineSeries = chart.addLineSeries({
-          color: '#FF1744', // Яркий красный
-          lineWidth: 3, // Толще
-          lineStyle: 0, // сплошная линия
-          priceFormat: {
-            type: 'price',
-            precision: 2,
-            minMove: 0.01,
-          },
-          title: 'Падение',
-          visible: true,
-          priceLineVisible: false,
-          lastValueVisible: false,
-        });
-        
+
+
         // Вычисляем точки для красной линии (показываем все точки, но выделяем падения)
         const fallingPoints = [];
         for (let i = 0; i < candles.length; i++) {
@@ -413,7 +400,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
           }
         }
-        
+
         // Если есть падающие точки, добавляем линию
         if (fallingPoints.length > 0) {
           fallingLineSeries.setData(fallingPoints);
@@ -425,36 +412,23 @@ document.addEventListener('DOMContentLoaded', function() {
           }));
           fallingLineSeries.setData(allLowPoints);
         }
-        
+
         // Добавляем дополнительную красную пунктирную линию для визуализации падения
-        const trendLineSeries = chart.addLineSeries({
-          color: 'rgba(255, 23, 68, 0.6)', // Более яркий красный с прозрачностью
-          lineWidth: 2,
-          lineStyle: 2, // пунктирная линия
-          priceFormat: {
-            type: 'price',
-            precision: 2,
-            minMove: 0.01,
-          },
-          title: 'Тренд падения',
-          visible: true,
-          priceLineVisible: false,
-          lastValueVisible: false,
-        });
-        
+
+
         // Вычисляем линию минимумов для визуализации падения
         const trendPoints = candles.map(c => ({
           time: c.time,
           value: c.low, // Показываем минимальные цены
         }));
-        
+
         if (trendPoints.length > 0) {
           trendLineSeries.setData(trendPoints);
         }
-        
+
         // Автоматическое масштабирование
         chart.timeScale().fitContent();
-        
+
         // Обновление индикатора цены при наведении
         chart.subscribeCrosshairMove(param => {
           if (param.point === undefined || !param.time || param.point.x < 0 || param.point.x > containerWidth || param.point.y < 0 || param.point.y > 200) {
@@ -472,7 +446,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
           }
         });
-        
+
         // Обработка изменения размера окна
         let resizeTimeout;
         window.addEventListener('resize', () => {
