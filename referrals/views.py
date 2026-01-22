@@ -49,7 +49,7 @@ def referral_program(request):
         motivation_text = f"Пригласите ещё <b>{referal_to_next_badge}</b> друзей — получите <b>50 CF бонус</b> и новый бейдж! 🚀"
     
     # Формируем реферальную ссылку
-    bot_username = "testpaystarsbot"
+    bot_username = "FloraCoinBot"
     if user.telegram_id:
         referral_link = f"https://t.me/{bot_username}?start={user.telegram_id}"
     else:

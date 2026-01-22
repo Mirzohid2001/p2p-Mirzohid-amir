@@ -1,0 +1,15 @@
+[0;1;32m●[0m flora-bot.service - Flora Telegram Bot (minimal_bot.py)
+     Loaded: loaded (/etc/systemd/system/flora-bot.service; enabled; vendor preset: enabled)
+     Active: [0;1;32mactive (running)[0m since Wed 2026-01-21 22:45:46 UTC; 4s ago
+   Main PID: 1630 (python)
+      Tasks: 2 (limit: 14211)
+     Memory: 44.5M
+        CPU: 781ms
+     CGroup: /system.slice/flora-bot.service
+             └─1630 /var/www/p2p-Mirzohid-amir/venv/bin/python /var/www/p2p-Mirzohid-amir/bot/minimal_bot.py
+
+Jan 21 22:45:46 149326.com systemd[1]: Started Flora Telegram Bot (minimal_bot.py).
+Jan 21 22:45:47 149326.com python[1630]: 2026-01-22 01:45:47,021 - INFO - ✅ Bot started (polling)
+Jan 21 22:45:47 149326.com python[1630]: 2026-01-22 01:45:47,195 - INFO - HTTP Request: POST https://api.telegram.org/bot8115886493:AAGzdOT6XtBZ-Y_4Ff7cXvMNFlroW8pb0D8/getMe "HTTP/1.1 200 OK"
+Jan 21 22:45:47 149326.com python[1630]: 2026-01-22 01:45:47,246 - INFO - HTTP Request: POST https://api.telegram.org/bot8115886493:AAGzdOT6XtBZ-Y_4Ff7cXvMNFlroW8pb0D8/deleteWebhook "HTTP/1.1 200 OK"
+Jan 21 22:45:47 149326.com python[1630]: 2026-01-22 01:45:47,249 - INFO - Application started
