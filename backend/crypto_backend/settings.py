@@ -37,7 +37,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-g2hzgr-(0@jw=!uwxjm4*r^mtv
 
 DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = ['flora.diy', 'api.flora.diy', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['flora.diy', 'api.flora.diy', 'localhost', '127.0.0.1','https://02bea0eef0a5.ngrok-free.app']
 
 CACHES = {
     'default': {
@@ -294,5 +294,4 @@ ADMINS = [
 
 
 
- # Redis settings
 

@@ -22,6 +22,7 @@ class Tree(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     auto_water_until = models.DateTimeField(null=True, blank=True)
     last_collected = models.DateTimeField(null=True, blank=True)
+    water_reminder_sent_at = models.DateTimeField(null=True, blank=True)
 
     BRANCH_DROP_CHANCE = 0.5
     WATER_DURATION = 5
@@ -178,7 +179,9 @@ class Tree(models.Model):
             self.save(update_fields=["branches_collected"])
 
         self.last_watered = now
-        self.save(update_fields=["last_watered"])
+        self.water_reminder_sent_at = None
+        self.save(update_fields=["last_watered", "water_reminder_sent_at"])
+
 
         return {
             "branch_dropped": branch_dropped,

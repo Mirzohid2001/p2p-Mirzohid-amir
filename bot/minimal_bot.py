@@ -65,7 +65,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "PUT_YOUR_TOKEN_HERE")
-WEBAPP_URL_BASE = os.getenv("WEBAPP_URL_BASE", "https://flora.diy/telegram_login/")
+WEBAPP_URL_BASE = os.getenv("WEBAPP_URL_BASE", "https://02bea0eef0a5.ngrok-free.app/telegram_login/")
 
 ADMIN_IDS = [1010942377, 455168812]
 class AdminOnly(MessageFilter):
@@ -412,9 +412,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         sent = 0
         failed = 0
 
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("🌱 Играть", web_app=WebAppInfo(url=_webapp_url(telegram_id)))]
-        ])
+
 
         await update.message.reply_text(
             f"🚀 Начинаю рассылку...\nПолучателей: {len(user_ids)}"
@@ -430,8 +428,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await context.bot.send_photo(
                         chat_id=uid,
                         photo=photo,
-                        caption=caption,
-                        reply_markup=keyboard
+                        caption=caption
+
                     )
                     sent += 1
                 except Exception:
@@ -445,8 +443,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 try:
                     await context.bot.send_message(
                         chat_id=uid,
-                        text=text_to_send,
-                        reply_markup=keyboard
+                        text=text_to_send
+
                     )
                     sent += 1
                 except Exception:

@@ -151,6 +151,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const sendTonBtn = document.getElementById('send-ton-btn');
     const topupAmount = document.getElementById('topup-amount');
     const resultBlock = document.getElementById('ton-result');
+    function log(msg) {
+    resultBlock.innerHTML += msg + "<br>";
+}
+
 
     tonConnectUI.onStatusChange(async w => {
     wallet = w;
@@ -175,6 +179,17 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
     if (sendTonBtn) {
+        function textCommentToPayloadBase64(comment) {
+  const textBytes = new TextEncoder().encode(comment);
+  const payload = new Uint8Array(4 + textBytes.length);
+  payload[0]=0; payload[1]=0; payload[2]=0; payload[3]=0; // op=0
+  payload.set(textBytes, 4);
+
+  let bin = "";
+  for (let i=0; i<payload.length; i++) bin += String.fromCharCode(payload[i]);
+  return btoa(bin);
+}
+
         sendTonBtn.onclick = async function() {
             if (!walletConnected || !wallet || !wallet.account) {
                 alert("Сначала подключите TON кошелек!");
@@ -187,15 +202,22 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             const amountNano = Math.round(amount * 1e9);
             const memo = "flora_" + userTgId;
+
+            resultBlock.innerHTML = ""; // очистить лог
+log("walletConnected=" + walletConnected);
+log("recipient=" + tonRecipient);
+log("amountNano=" + amountNano);
+log("sending...");
+
             try {
                 await tonConnectUI.sendTransaction({
-                    validUntil: Math.floor(Date.now() / 1000) + 600,
-                    messages: [{
-                        address: tonRecipient,
-                        amount: amountNano.toString(),
-                        comment: memo // вот здесь пишется MEMO для автозачисления!
-                    }]
-                });
+  validUntil: Math.floor(Date.now() / 1000) + 600,
+  messages: [{
+    address: tonRecipient,
+    amount: amountNano.toString()
+  }]
+});
+
                 resultBlock.textContent = '✅ Транзакция отправлена! После подтверждения сетью баланс обновится автоматически.';
             } catch (e) {
                 resultBlock.textContent = 'Ошибка или отмена: ' + (e.message || e);

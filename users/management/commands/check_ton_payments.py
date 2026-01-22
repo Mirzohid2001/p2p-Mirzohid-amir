@@ -2,10 +2,15 @@ import time
 import requests
 from decimal import Decimal
 from django.core.management.base import BaseCommand
-from users.models import User
-from users.models import TonProcessedTx  # если модель в другом app
+from tonsdk.utils import Address
+from users.models import TonProcessedTx, User
 
-TON_ADDRESS = '0:16d5d488f168f01179c043df0c255632390f03ede82f1e62b102f1ff5d644b8e' # в формате 0:...
+TON_ADDRESS_FRIENDLY = "UQANsmKdVv0iRQHPyy-zlsuGwy1RzRgsD5dTDf9JgiAIYNU0"
+
+TON_ADDRESS = Address(
+    TON_ADDRESS_FRIENDLY
+).to_string(is_user_friendly=False)
+# TON_ADDRESS = '0:16d5d488f168f01179c043df0c255632390f03ede82f1e62b102f1ff5d644b8e'
 TONAPI_TOKEN = 'AFTVO4WU53DURMIAAAAPFEGJ4KJR4WP5NK55EHL4NZHSKFQ52TBCLCFBDKNK3IMP4ACVIWI'
 API_URL = f'https://tonapi.io/v2/blockchain/accounts/{TON_ADDRESS}/transactions'
 

@@ -239,8 +239,8 @@ def api_search_game(request):
     # Проверяем активный турнир
     active_tournament = Tournament.objects.filter(status='active').first()
     
-    # Ищем подходящую игру в очереди
-    expires_at = timezone.now() + timezone.timedelta(seconds=10)
+
+    expires_at = timezone.now() + timezone.timedelta(seconds=5)
     queue_item, created = GameQueue.objects.get_or_create(
         user=user,
         defaults={

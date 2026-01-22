@@ -351,7 +351,7 @@
 
 /* Игровой экран — стеклянный стиль */
 .rps-game-screen {
-    padding: 10px 4px 8px;
+    padding: 8px 4px 6px;
     box-sizing: border-box;
     border-radius: 20px;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -366,8 +366,8 @@
     justify-content: space-between;
     align-items: center;
     gap: 12px;
-    margin-bottom: 18px;
-    padding: 12px 14px;
+    margin-bottom: 10px;
+    padding: 10px 12px;
     background: rgba(255, 255, 255, 0.06);
     border-radius: 12px;
     border: 1px solid rgba(255,255,255,0.1);
@@ -408,17 +408,17 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    margin: 10px 0 6px;
-    padding: 0 1px;
+    margin: 6px 0 6px;
+    padding: 0;
     width: 100%;
     box-sizing: border-box;
 }
 
 .player-card {
     flex: 1 1 0;
-    max-width: 200px;
+    max-width: 170px;
     text-align: center;
-    padding: 12px;
+    padding: 10px;
     background: rgba(255, 255, 255, 0.06);
     border-radius: 15px;
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -427,8 +427,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    min-height: 180px;
+    gap: 6px;
+    min-height: 150px;
     backdrop-filter: blur(5px);
 }
 
@@ -443,8 +443,8 @@
 }
 
 .player-move {
-    width: 70px;
-    height: 70px;
+    width: 62px;
+    height: 62px;
     margin: 0 auto;
     display: flex;
     align-items: center;
@@ -456,7 +456,7 @@
 }
 
 .move-placeholder {
-    font-size: 45px;
+    font-size: 40px;
     color: rgba(255, 255, 255, 0.3);
 }
 
@@ -512,24 +512,24 @@
 }
 
 .move-panel {
-    margin-top: 16px;
+    margin-top: 10px;
     margin-bottom: 0;
     display: flex;
     justify-content: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .move-btn {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 12px 14px;
+    padding: 10px 10px;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.18);
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.2s;
-    min-width: 96px;
+    min-width: 88px;
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
 }
 
@@ -544,10 +544,10 @@
 }
 
 .move-btn .move-icon {
-    width: 56px;
-    height: 56px;
-    margin-bottom: 8px;
-    font-size: 38px;
+    width: 50px;
+    height: 50px;
+    margin-bottom: 6px;
+    font-size: 34px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1251,7 +1251,7 @@
 /* Адаптивность */
 @media (max-width: 600px) {
     .rps-container {
-        padding: 4px 1px;
+        padding: 2px 1px 0;
     }
     
     .rps-header,
@@ -1268,7 +1268,7 @@
     }
     
     .rps-game-screen {
-        padding: 10px 4px 8px;
+        padding: 8px 3px 6px;
     }
     
     .rps-betting {
@@ -1310,9 +1310,9 @@
     }
     
     .player-card {
-        flex: 0 0 50%;
-        max-width: 320px;
-        min-width: 180px;
+        flex: 1 1 0;
+        max-width: none;
+        min-width: 150px;
         min-height: 330px;
         padding: 16px 12px;
     }

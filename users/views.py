@@ -107,7 +107,7 @@ def profile_view(request):
         "referral_count": referral_count,
         "referral_rewards": referral_rewards,
         "referrals_info": referrals_info,
-        'recipient-address': 'UQAW1dSI8WjwEXnAQ98MJVYyOQ8D7egvHmKxAvH_XWRLjr-r'
+        "recipient_address": "UQANsmKdVv0iRQHPyy-zlsuGwy1RzRgsD5dTDf9JgiAIYNU0"
     }
     return render(request, "users/profile.html", context)
 
@@ -165,5 +165,12 @@ def save_wallet(request):
 
 
 def get_ton_balance(request):
+    telegram_id = request.session.get("telegram_id")
+    if not telegram_id:
+        return JsonResponse({"error": "no session"}, status=401)
 
-    return JsonResponse({'balance': f'{request.user.ton_balance:.8f}'})
+    user = User.objects.filter(telegram_id=telegram_id).first()
+    if not user:
+        return JsonResponse({"error": "no user"}, status=404)
+
+    return JsonResponse({"balance": f"{user.ton_balance:.8f}"})

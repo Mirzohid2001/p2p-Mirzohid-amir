@@ -5,7 +5,7 @@ let gameStatusInterval = null;
 let moveTimerInterval = null;
 let isMoveTimerRunning = false;
 let currentGameId = null;
-let searchTimer = 10;
+let searchTimer = 5;
 let moveTimer = 8;
 
 // Инициализация
@@ -92,7 +92,7 @@ function startGameSearch(betAmount) {
     if (cancelSearchBtn) {
         cancelSearchBtn.style.display = 'block';
     }
-    searchTimer = 10;
+    searchTimer = 5;
     searchTimerEl.textContent = searchTimer;
     
     // Вибрация при начале поиска
@@ -187,7 +187,7 @@ function connectBot(betAmount) {
     const searchStatus = document.getElementById('search-status');
     const searchTimerEl = document.getElementById('search-timer');
     
-    searchTimerEl.textContent = 'Подключение бота...';
+    searchTimerEl.textContent = 'Подключение ...';
     
     fetch('/rps/api/bot/connect/', {
         method: 'POST',
@@ -209,7 +209,7 @@ function connectBot(betAmount) {
         }
         
         if (data.bot_connected) {
-            showNotification('Бот подключен!', 'success');
+            showNotification('Подключен!', 'success');
             if (navigator.vibrate) {
                 navigator.vibrate([100, 50, 100]);
             }

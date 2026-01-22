@@ -277,12 +277,13 @@ def buy_order(request):
     # Рассчитываем сколько TON требуется
     price_in_ton = order.price_in_ton  # уже float с округлением
     total_ton = Decimal(price_in_ton) * order.cf_amount
+    total_ton_display = f"{total_ton:.5f}"
 
     buyer.refresh_from_db()
     seller.refresh_from_db()
 
     if buyer.ton_balance < total_ton:
-        return JsonResponse({"success": False, "msg": f"Недостаточно TON. Нужно {total_ton} TON, у вас {buyer.ton_balance}."})
+        return JsonResponse({"success": False, "msg": f"Недостаточно TON. Нужно {total_ton_display} TON, у вас {buyer.ton_balance}."})
 
     with transaction.atomic():
         # Списываем TON с покупателя
