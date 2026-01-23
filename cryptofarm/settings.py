@@ -204,5 +204,5 @@ CACHES = {
 }
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://02bea0eef0a5.ngrok-free.app",
+    "https://flora.diy",
 ]
