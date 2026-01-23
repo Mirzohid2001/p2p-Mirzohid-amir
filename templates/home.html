@@ -5,14 +5,173 @@
 {% block title %}CryptoFarm — Мои деревья{% endblock %}
 
 {% block content %}
+<style>
+.cf-summary-actions{
+  display:flex;
+  justify-content:center;
+  margin: 10px 0 14px 0;
+}
 
+.cf-help-btn{
+  border:none;
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  background: rgba(255,255,255,0.85);
+  color:#111;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+}
+
+.custom-modal{
+  display:none;
+  position:fixed;
+  z-index:9999;
+  inset:0;
+  background: rgba(0,0,0,0.35);
+  justify-content:center;
+  align-items:center;
+  padding: 16px;
+}
+
+.custom-modal.active{
+  display:flex;
+}
+
+/* сама карточка */
+.custom-modal-content{
+  width: 92vw;
+  max-width: 420px;
+  background: #f7f8ff;
+  border-radius: 16px;
+  padding: 14px 14px 12px 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+  position:relative;
+  color:#111;
+}
+
+/* крестик */
+.custom-modal-close{
+  position:absolute;
+  top:10px;
+  right:10px;
+  width: 36px;
+  height: 36px;
+  border:none;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.06);
+  color:#111;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.instruction-title{
+  margin: 0 0 10px 0;
+  font-size: 1rem;
+  font-weight: 900;
+  color:#111;
+}
+
+.instruction-text{
+  max-height: 62vh;
+  overflow:auto;
+  padding-right: 6px;
+}
+
+.instruction-text h4{
+  margin: 10px 0 6px 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+.instruction-text h5{
+  margin: 8px 0 4px 0;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.instruction-text p,
+.instruction-text li{
+  font-size: 0.88rem;
+  line-height: 1.35;
+  color:#111;
+}
+
+.instruction-text ul{ margin: 0 0 8px 18px; }
+.instruction-text ol{ margin: 6px 0 8px 18px; }
+
+.instruction-hr{
+  border: none;
+  border-top: 1px solid rgba(0,0,0,0.12);
+  margin: 10px 0;
+}
+
+.instruction-badge{
+  display:inline-block;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(47,128,255,0.12);
+  font-weight: 800;
+  font-size: 0.85rem;
+  margin: 6px 0 6px 0;
+}
+.instruction-badge.warn{
+  background: rgba(255,90,143,0.12);
+}
+
+.instruction-table{
+  width:100%;
+  border-collapse: collapse;
+  margin: 6px 0 10px 0;
+  font-size: 0.88rem;
+}
+.instruction-table th,
+.instruction-table td{
+  border: 1px solid rgba(0,0,0,0.12);
+  padding: 6px 8px;
+  text-align: left;
+}
+.instruction-table th{
+  font-weight: 900;
+  background: rgba(0,0,0,0.04);
+}
+
+.rps-table-title{
+  margin-top: 6px;
+  font-weight: 800;
+  font-size: 0.88rem;
+}
+
+.instruction-ok{
+  width:100%;
+  margin-top: 10px;
+  border:none;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background:#2f80ff;
+  color:#fff;
+  font-weight: 900;
+  font-size: 0.9rem;
+}
+.cf-summary-actions{
+  position: relative;
+  z-index: 50;
+}
+.cf-help-btn{
+  position: relative;
+  z-index: 51;
+  cursor: pointer;
+}
+
+</style>
 <!-- Суммарная панель -->
 <div class="cf-summary-block">
     <div>Создано FL: {{ total_created_cf|intcomma }}</div>
     <div>Выращено: {{ all_cf_grown|floatformat:0|intcomma }}</div>
     <div>Осталось: {{ cf_left|floatformat:0|intcomma }}</div>
 </div>
-
+<div class="cf-summary-actions">
+  <button type="button" class="cf-help-btn" id="open-instruction">Инструкция</button>
+</div>
 {% if messages %}
 <div class="messages-wrap">
     {% for message in messages %}
@@ -66,7 +225,7 @@
                 Выращено: {{ user.ton_balance|floatformat:1|intcomma }} TON
             </div>
             <img class="tree-img"
-                src="{% static 'images/ton_' %}{{ ton_tree.level }}.png"
+                src="{% static 'images/ton_' %}{{ ton_tree.level }}.PNG"
                 alt="TON Tree">
             <div class="tree-info-block">
                 <div>Уровень: {{ ton_tree.level }}</div>
@@ -88,13 +247,135 @@
         <form action="{% url 'shop:buy_ton_tree' %}" method="post" class="buy-ton-form">
             {% csrf_token %}
             <button type="submit" class="buy-ton-btn">
-                Купить TON дерево
+                Купить TON дерево за 1TON
             </button>
         </form>
     </div>
-{% endif %}
 
+
+{% endif %}
 </div>
+<div class="custom-modal" id="instruction-modal">
+  <div class="custom-modal-content">
+    <button type="button" class="custom-modal-close" id="close-instruction" aria-label="Close">×</button>
+
+    <h3 class="instruction-title">📋 Инструкция к игре</h3>
+
+<div class="instruction-text">
+  <h4>1. Начало игры</h4>
+  <p>При первом запуске игры откройте меню <b>«Дерева»</b>.</p>
+
+  <h4>2. Меню слева (управление деревом)</h4>
+
+  <h5>2.1. Полить</h5>
+  <ul>
+    <li>Поливает дерево в течение <b>5 часов</b> за каждый полив</li>
+    <li>Во время полива случайным образом выпадают <b>ветки</b></li>
+    <li>После остановки полива вы получите уведомление</li>
+  </ul>
+
+  <div class="rps-table-title">Уровни добычи монет FL в час</div>
+  <table class="instruction-table">
+    <thead>
+      <tr><th>Уровень</th><th>Доход (FL/час)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td>1 FL</td></tr>
+      <tr><td>2</td><td>1,5 FL</td></tr>
+      <tr><td>3</td><td>2 FL</td></tr>
+      <tr><td>4</td><td>2,5 FL</td></tr>
+      <tr><td>5</td><td>3 FL</td></tr>
+    </tbody>
+  </table>
+
+  <h5>2.2. Собрать</h5>
+  <ul>
+    <li>Собирает накопленные монеты <b>FL</b></li>
+    <li>Можно не использовать — при поливе сбор происходит автоматически</li>
+  </ul>
+
+  <h5>2.3. Автополив</h5>
+  <ul>
+    <li>Поливает дерево автоматически <b>24</b> или <b>48 часов</b></li>
+    <li>Для использования нужна <b>лейка</b>, которая продаётся в магазине</li>
+  </ul>
+
+  <h5>2.4. Удобрение</h5>
+  <ul>
+    <li>Увеличивает сбор монет <b>×2</b> на <b>24 часа</b></li>
+  </ul>
+
+  <h5>2.5. Улучшить</h5>
+  <ul>
+    <li>Улучшает уровень дерева, если хватает <b>веток</b></li>
+  </ul>
+
+  <h5>2.6. Дерево TON</h5>
+  <ul>
+    <li>Имеет те же функции, что и дерево FL</li>
+    <li>Добывает монеты TON только во время <b>акций</b></li>
+    <li><b>ВНИМАНИЕ:</b> TON нельзя добывать бесконечно — только в периоды акций</li>
+  </ul>
+
+  <h4>3. Меню снизу (нижняя панель)</h4>
+
+  <h5>3.1. P2P (Рынок)</h5>
+  <ul>
+    <li>Будет открыт после раздачи всех монет</li>
+    <li><b>Ордер на рынке нельзя отменить</b> после выставления</li>
+    <li>Покупка монеты FL доступна только за TON</li>
+  </ul>
+
+  <h5>3.2. Рефералы</h5>
+  <ul>
+    <li>Содержит вашу реферальную ссылку</li>
+    <li>Кнопка <b>«Пригласить друга»</b> копирует ссылку в буфер обмена</li>
+    <li>Для отправки: выберите контакт → удерживайте поле ввода → <b>«Отправить»</b></li>
+    <li>Там же есть <b>задания</b>, за выполнение которых можно получить FL</li>
+  </ul>
+
+  <h5>3.3. Профиль</h5>
+  <ul>
+    <li>Баланс FL и TON</li>
+    <li>Можно подключить TON-кошелёк для покупок</li>
+    <li>Показывает деревья и доход/час</li>
+  </ul>
+
+  <h5>3.4. Магазин</h5>
+  <ul>
+    <li>Товары для ускорения дохода, автополива и улучшений</li>
+    <li>Есть инвентарь со всеми купленными товарами</li>
+  </ul>
+
+  <hr class="instruction-hr">
+
+  <div class="instruction-badge">✅ Ключевые моменты</div>
+  <ol class="instruction-ol">
+    <li><b>Ветки</b> — ресурс для улучшения дерева, выпадают случайно при поливе</li>
+    <li><b>Лейка</b> — нужна для автополива, покупается в магазине</li>
+    <li><b>Акции</b> — временные события для добычи TON</li>
+    <li><b>Рефералы</b> — приглашайте друзей и получайте бонусы</li>
+    <li><b>Задания</b> — дополнительные способы получения FL</li>
+  </ol>
+
+  <div class="instruction-badge warn">⚠️ Важные предупреждения</div>
+  <ul class="instruction-warn">
+    <li><b>Ордер на P2P</b> нельзя отменить после выставления</li>
+    <li><b>TON-дерево</b> работает только во время акций</li>
+    <li><b>Автополив</b> требует наличия лейки</li>
+    <li><b>Удобрение</b> требует наличие удобрения</li>
+    <li><b>Улучшение</b> требует наличие веток</li>
+  </ul>
+</div>
+
+
+
+
+    <button type="button" class="instruction-ok" id="ok-instruction">Понятно</button>
+  </div>
+</div>
+
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(function() {
@@ -104,6 +385,43 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => el.remove(), 700);
         });
     }, 2600);
+});
+</script>
+<script>
+
+document.addEventListener('DOMContentLoaded', function () {
+  const modal = document.getElementById('instruction-modal');
+  const openBtn = document.getElementById('open-instruction');
+  const closeBtn = document.getElementById('close-instruction');
+  const okBtn = document.getElementById('ok-instruction');
+console.log("instruction script loaded");
+
+  function openModal(){
+      console.log("open modal click");
+
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal(){
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  if (openBtn) openBtn.addEventListener('click', openModal);
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+  if (okBtn) okBtn.addEventListener('click', closeModal);
+
+  // закрытие по клику на фон
+  if (modal) {
+    modal.addEventListener('click', function(e){
+      if (e.target === modal) closeModal();
+    });
+  }
+
+  // закрытие по Esc
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && modal.classList.contains('active')) closeModal();
+  });
 });
 </script>
 

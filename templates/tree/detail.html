@@ -397,6 +397,82 @@ body, html {
   background: linear-gradient(90deg,#3a247a 10%, #368fff 100%) !important;
 }
 
+/* ===== LIGHT MODAL (без градиента) ===== */
+.custom-modal {
+  background: rgba(0,0,0,0.35); /* затемнение фона */
+}
+
+.custom-modal-content{
+  background: #f4f6ff !important;     /* один светлый цвет */
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+  color: #111 !important;
+  padding: 18px 16px 16px 16px;      /* меньше высота */
+  border-radius: 16px;
+  min-width: 260px;
+  max-width: 92vw;
+}
+
+/* заголовок в модалке */
+.custom-modal-content h3{
+  color: #111 !important;
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+}
+
+/* крестик */
+.custom-modal-close{
+  color: #333 !important;
+  font-size: 1.6rem;
+  top: 10px;
+  right: 14px;
+}
+
+/* строки внутри модалки */
+.inline-inventory-row{
+  background: #ffffff !important;
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  border-radius: 14px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+/* текст "Автополив 24ч" */
+.inline-inventory-title{
+  color: #111 !important;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/* серый текст типа "До окончания..." */
+.custom-modal-content div,
+.custom-modal-content span{
+  color: #111 !important;
+}
+
+/* кнопка Купить/Активировать */
+.inline-inventory-btn{
+  background: #2f80ff !important; /* один цвет */
+  color: #fff !important;
+  border-radius: 10px;
+  padding: 7px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.inline-inventory-btn:active,
+.inline-inventory-btn:focus{
+  background: #2568d6 !important;
+}
+
+/* убираем твои success/error градиенты чтобы не перекрашивало */
+.modal-success,
+.modal-error{
+  background: #f4f6ff !important;
+}
 
 
 </style>

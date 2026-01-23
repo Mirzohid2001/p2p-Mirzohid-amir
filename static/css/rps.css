@@ -336,7 +336,7 @@
 }
 
 .search-status .timer {
-    font-size: 48px;
+    font-size: 18px;
     font-weight: 900;
     color: #5AFF75;
     text-shadow: 0 0 20px rgba(90, 255, 117, 0.8), 0 0 40px rgba(90, 255, 117, 0.4);
@@ -1230,7 +1230,7 @@
 }
 
 .search-status .timer {
-    font-size: 48px;
+    font-size: 18px;
     font-weight: bold;
     color: var(--accent);
     text-shadow: 0 0 20px rgba(90, 255, 117, 0.5);
@@ -1321,5 +1321,68 @@
         width: 98px;
         height: 98px;
     }
+}
+
+/* ===== Compact layout for small screens ===== */
+@media (max-width: 480px) {
+
+  /* общий контейнер */
+  .rps-game-screen.card{
+    padding: 10px 10px !important;
+  }
+
+  /* верхняя панель */
+  .game-header{
+    padding: 8px 10px !important;
+    gap: 8px !important;
+  }
+  .game-bank span{
+    font-size: 14px !important;
+  }
+
+  /* арена */
+  .game-arena{
+    gap: 10px !important;
+    padding: 8px 0 !important;
+  }
+
+  /* карточки игроков — главное */
+  .player-card{
+    padding: 10px 8px !important;
+    min-height: 190px !important;   /* было больше — из-за этого огромные пустые зоны */
+    border-radius: 16px !important;
+  }
+
+  /* имя игрока */
+  .player-name{
+    font-size: 14px !important;
+    margin: 4px 0 8px !important;
+    line-height: 1.1 !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* круг с ходом / вопросом */
+  .player-move{
+    margin-top: 6px !important;
+  }
+  .move-placeholder{
+    width: 90px !important;
+    height: 90px !important;
+    font-size: 34px !important;
+  }
+  .move-icon{
+    width: 90px !important;
+    height: 90px !important;
+    font-size: 38px !important;
+  }
+
+  /* VS */
+  .vs-badge{
+    font-size: 14px !important;
+    padding: 6px 10px !important;
+    border-radius: 12px !important;
+  }
 }
 
