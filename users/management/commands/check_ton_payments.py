@@ -6,7 +6,15 @@ from tonsdk.utils import Address
 from users.models import TonProcessedTx, User
 
 TON_ADDRESS_FRIENDLY = "UQANsmKdVv0iRQHPyy-zlsuGwy1RzRgsD5dTDf9JgiAIYNU0"
+from tonsdk.utils import Address
 
+def to_raw(addr: str) -> str:
+    if not addr:
+        return ""
+    try:
+        return Address(addr).to_string(is_user_friendly=False)
+    except Exception:
+        return str(addr)
 TON_ADDRESS = Address(
     TON_ADDRESS_FRIENDLY
 ).to_string(is_user_friendly=False)
