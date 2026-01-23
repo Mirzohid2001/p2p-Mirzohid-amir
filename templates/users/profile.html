@@ -9,18 +9,7 @@
 
 {% block content %}
 <div class="profile-container">
-    <div class="profile-header">
-        <div class="profile-header-content">
 
-
-            <div class="profile-info">
-                <h1 class="profile-name">{{ user.get_full_name }}</h1>
-                {% if user.username %}
-                    <p class="profile-username">@{{ user.username }}</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
 
     <div class="balance-card">
         <h2 class="balance-card-title"><i class="fas fa-wallet"></i> Ваш баланс</h2>
