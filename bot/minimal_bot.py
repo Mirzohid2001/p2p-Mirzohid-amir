@@ -128,15 +128,28 @@ def db_get_trees_to_remind(limit: int = 500):
 
     qs = (
         Tree.objects.select_related("user")
+        # напоминать только тем, кого вообще можно уведомить
+        .filter(user__telegram_id__isnull=False)
+
+        # напоминать только если полив уже был хотя бы раз
+        .filter(last_watered__isnull=False)
+
         # автополив НЕ активен
         .filter(Q(auto_water_until__isnull=True) | Q(auto_water_until__lte=now))
-        # полив был давно или вообще не было
-        .filter(Q(last_watered__isnull=True) | Q(last_watered__lte=due_time))
+
+        # вода закончилась
+        .filter(last_watered__lte=due_time)
+
         # напоминание ещё не отправляли после последнего полива
-        .filter(Q(water_reminder_sent_at__isnull=True) | Q(last_watered__isnull=True) | Q(water_reminder_sent_at__lt=F("last_watered")))
+        .filter(Q(water_reminder_sent_at__isnull=True) | Q(water_reminder_sent_at__lt=F("last_watered")))
+
         .order_by("id")
     )
     return list(qs[:limit])
+
+@sync_to_async
+def db_mark_reminded(tree_id, ts):
+    Tree.objects.filter(id=tree_id).update(water_reminder_sent_at=ts)
 async def notify_water_due_job(context: ContextTypes.DEFAULT_TYPE):
     now = timezone.now()
     trees = await db_get_trees_to_remind()
@@ -157,9 +170,7 @@ async def notify_water_due_job(context: ContextTypes.DEFAULT_TYPE):
             continue
 
         # помечаем в БД что напоминание отправлено
-        await sync_to_async(Tree.objects.filter(id=tree.id).update)(
-            water_reminder_sent_at=now
-        )
+        await db_mark_reminded(tree.id, now)
 
 @sync_to_async
 def db_get_or_create_user(telegram_id: int, username: str, first_name: str, last_name: str) -> Tuple[TelegramUser, bool]:
