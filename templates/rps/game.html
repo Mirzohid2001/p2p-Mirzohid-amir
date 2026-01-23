@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load mask %}
 {% load humanize %}
 
 {% block title %}Игра — Камень-Ножницы-Бумага{% endblock %}
@@ -50,7 +51,7 @@
 
         <div class="game-arena">
             <div class="player-card player-1">
-                <div class="player-name">{{ game.player1 }}</div>
+                <div class="player-name">{{ game.player1|mask_last:3 }}</div>
                 <div class="player-move" id="player1-move">
                     {% if game.player1_move %}
                         <div class="move-icon move-{{ game.player1_move }}">
@@ -69,7 +70,7 @@
 
             <div class="player-card player-2">
                 <div class="player-name">
-                    {% if game.is_bot_game %}{{ game.bot_name|default:"Бот" }}{% else %}{{ game.player2 }}{% endif %}
+                    {% if game.is_bot_game %}{{ game.bot_name|default:"Бот" }}{% else %}{{ game.player2|mask_last:3 }}{% endif %}
                 </div>
                 <div class="player-move" id="player2-move">
                     {% if game.status == 'finished' and game.player2_move %}

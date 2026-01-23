@@ -58,7 +58,8 @@ INSTALLED_APPS = [
     'staking',
     'notifications',
     'admin_panel',
-    'rps',  # Камень-Ножницы-Бумага
+    'rps',
+
 
 ]
 

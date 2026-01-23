@@ -639,6 +639,19 @@ async def tyrnir_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Окончание: {end_date.strftime('%d.%m.%Y %H:%M')}\n\n"
         f"🏆 Start of a new tournament."
     )
+def mask_username(username: str, visible: int = 3) -> str:
+    if not username:
+        return "unknown"
+
+    prefix = "@"
+    name = username[1:] if username.startswith("@") else username
+    if len(name) <= visible:
+        masked = "*" * len(name)
+    else:
+        masked = name[:-visible] + "*" * visible
+
+    return prefix + masked
+
 
 async def priz_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -668,7 +681,11 @@ async def priz_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if idx in rewards:
             amt = rewards[idx]
             await reward_participant(participant, amt)
-            msg += f"{idx}. {participant.user} — {amt} FL\n"
+            username = getattr(participant.user, "username", None)
+            masked_name = mask_username(username or str(participant.user))
+
+            msg += f"{idx}. {masked_name} — {amt} FL\n"
+
             count += 1
 
     await mark_tournament_rewarded(completed)

@@ -5,7 +5,8 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .models import Referral, ReferralBonus, Task, TaskCompletion
 from django.db import models
-
+from django.db.models import Sum
+from decimal import Decimal
 from .utils import get_telegram_user
 
 
@@ -32,9 +33,10 @@ def referral_program(request):
     referral_count = direct_referrals.count()
     
     # Получаем информацию о бонусах
-    bonuses = ReferralBonus.objects.filter(referral__inviter=user)
-    referral_rewards = sum(b.amount for b in bonuses)
-    
+    referral_rewards = Referral.objects.filter(inviter=user).aggregate(
+        s=Sum('bonus_cf')
+    )['s'] or Decimal('0')
+
     # Вычисляем прогресс до следующего уровня
     next_bonus_step = 5
     current_level = referral_count // next_bonus_step

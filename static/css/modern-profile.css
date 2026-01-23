@@ -533,3 +533,26 @@
     position: absolute; right: 1em; top: 1em; cursor: pointer;
     font-size: 1.3em; color: #aaa;
 }
+
+.ton-section,
+.ton-section * {
+    color: #ffffff !important;
+
+}
+
+/* Placeholder тоже белый */
+.ton-section input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+.ton-section {
+    background: linear-gradient(135deg, #1f2b4d, #233a66);
+    box-shadow: 0 0 30px rgba(80,120,255,0.25);
+}
+
+.balance-card,
+.tree-item,
+.ton-section {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+

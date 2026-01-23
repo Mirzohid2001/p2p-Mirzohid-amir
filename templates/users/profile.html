@@ -11,15 +11,7 @@
 <div class="profile-container">
     <div class="profile-header">
         <div class="profile-header-content">
-            <div class="profile-avatar">
-                {% if photo_url %}
-                    <img src="{{ photo_url }}" alt="{{ user.get_full_name }}">
-                {% else %}
-                    <div class="profile-avatar-placeholder">
-                        {{ user.first_name|first }}{% if user.last_name %}{{ user.last_name|first }}{% endif %}
-                    </div>
-                {% endif %}
-            </div>
+
 
             <div class="profile-info">
                 <h1 class="profile-name">{{ user.get_full_name }}</h1>
