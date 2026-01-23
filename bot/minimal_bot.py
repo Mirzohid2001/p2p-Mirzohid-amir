@@ -57,7 +57,11 @@ from db_helpers import (
     deactivate_bot_admin,
     get_all_bot_admins,
 )
+from asgiref.sync import sync_to_async
+from django.db.models import Q, F
+from django.utils import timezone
 
+from trees.models import Tree
 # ──────────────────────────────────────────────────────────────────────────────
 # Config
 # ──────────────────────────────────────────────────────────────────────────────
@@ -109,10 +113,53 @@ async def _is_admin(user_id: int) -> bool:
 
 # ──────────────────────────────────────────────────────────────────────────────
 # DB wrappers (важно для async PTB)
-# ──────────────────────────────────────────────────────────────────────────────
+# ────────────
+#
+# ──────────────────────────────────────────────────────────────────
 @sync_to_async
 def db_user_exists(telegram_id: int) -> bool:
     return TelegramUser.objects.filter(telegram_id=telegram_id).exists()
+
+
+@sync_to_async
+def db_get_trees_to_remind(limit: int = 500):
+    now = timezone.now()
+    due_time = now - timezone.timedelta(hours=Tree.WATER_DURATION)
+
+    qs = (
+        Tree.objects.select_related("user")
+        # автополив НЕ активен
+        .filter(Q(auto_water_until__isnull=True) | Q(auto_water_until__lte=now))
+        # полив был давно или вообще не было
+        .filter(Q(last_watered__isnull=True) | Q(last_watered__lte=due_time))
+        # напоминание ещё не отправляли после последнего полива
+        .filter(Q(water_reminder_sent_at__isnull=True) | Q(last_watered__isnull=True) | Q(water_reminder_sent_at__lt=F("last_watered")))
+        .order_by("id")
+    )
+    return list(qs[:limit])
+async def notify_water_due_job(context: ContextTypes.DEFAULT_TYPE):
+    now = timezone.now()
+    trees = await db_get_trees_to_remind()
+
+    for tree in trees:
+        tg_id = getattr(tree.user, "telegram_id", None)
+        if not tg_id:
+            continue
+
+        tree_name = "🌱 FLORA" if tree.type == "CF" else "💎 TON"
+
+        try:
+            await context.bot.send_message(
+                chat_id=tg_id,
+                text=f"💧 Пора поливать! {tree_name}-дерево высохло — полейте, чтобы снова шёл доход."
+            )
+        except Exception:
+            continue
+
+        # помечаем в БД что напоминание отправлено
+        await sync_to_async(Tree.objects.filter(id=tree.id).update)(
+            water_reminder_sent_at=now
+        )
 
 @sync_to_async
 def db_get_or_create_user(telegram_id: int, username: str, first_name: str, last_name: str) -> Tuple[TelegramUser, bool]:
@@ -710,6 +757,12 @@ def main():
     )
 
     app = Application.builder().token(BOT_TOKEN).request(request).build()
+    app.job_queue.run_repeating(
+        notify_water_due_job,
+        interval=60,  # проверка каждую минуту
+        first=10,
+        name="notify_water_due"
+    )
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command,filters=ADMIN_ONLY))
