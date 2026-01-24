@@ -12,7 +12,7 @@ from telegram import (
     Update,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
-    WebAppInfo,
+    WebAppInfo, BotCommand, MenuButtonWebApp,
 )
 from telegram.ext import (
     Application,
@@ -164,7 +164,8 @@ async def notify_water_due_job(context: ContextTypes.DEFAULT_TYPE):
         try:
             await context.bot.send_message(
                 chat_id=tg_id,
-                text=f"💧 Пора поливать! {tree_name}-дерево высохло — полейте, чтобы снова шёл доход."
+                text=f"💧 Пора поливать! {tree_name}-дерево высохло — полейте, чтобы снова шёл доход.",
+                reply_markup=_play_keyboard(tg_id)
             )
         except Exception:
             continue
@@ -486,7 +487,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await context.bot.send_photo(
                         chat_id=uid,
                         photo=photo,
-                        caption=caption
+                        caption=caption,
+                        reply_markup=_play_keyboard(uid)
 
                     )
                     sent += 1
@@ -501,8 +503,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 try:
                     await context.bot.send_message(
                         chat_id=uid,
-                        text=text_to_send
-
+                        text=text_to_send,
+                        reply_markup=_play_keyboard(uid)
                     )
                     sent += 1
                 except Exception:
@@ -750,6 +752,24 @@ async def priz_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg += f"\n✅ Выдано наград: {count}"
     await update.message.reply_text(msg)
 
+async def post_init(application: Application):
+    # команды в списке / (не обязательно, но удобно)
+    await application.bot.set_my_commands([
+        BotCommand("start", "Открыть игру"),
+        BotCommand("play", "Открыть игру"),
+        BotCommand("ref", "Реферальная ссылка"),
+        BotCommand("help", "Справка"),
+    ])
+
+    # кнопка меню слева (Menu Button) -> открывает WebApp
+    await application.bot.set_chat_menu_button(
+        menu_button=MenuButtonWebApp(
+            text="Играть",
+            web_app=WebAppInfo(url=WEBAPP_URL_BASE)
+        )
+    )
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Main
 # ──────────────────────────────────────────────────────────────────────────────
@@ -767,13 +787,14 @@ def main():
         pool_timeout=30.0,
     )
 
-    app = Application.builder().token(BOT_TOKEN).request(request).build()
+    app = Application.builder().token(BOT_TOKEN).request(request).post_init(post_init).build()
     app.job_queue.run_repeating(
         notify_water_due_job,
         interval=60,  # проверка каждую минуту
         first=10,
         name="notify_water_due"
     )
+
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command,filters=ADMIN_ONLY))

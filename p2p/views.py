@@ -198,15 +198,13 @@ def generate_fake_candles(n=90, base=15.0, seed=777):
     return candles
 
 
-def _demo_candles_same_for_all(n=72, base=2.0, interval_minutes=60):
+def _demo_candles_same_for_all(n=72, base=2.0, interval_minutes=60,red_ratio=0.30):
     """
-    Красивые свечи (рост/падение), одинаковые для всех пользователей.
-    Детерминированно по дате: в течение суток у всех одинаково.
-    Последняя свеча close привязана к base.
+    Свечи как на скрине: большие фитили/размах, есть красные, но общий тренд вверх.
+    Гарантия: close[i] >= close[i-1] всегда.
     """
     now = timezone.now().replace(second=0, microsecond=0)
     day_anchor = now.date().toordinal()
-
     rng = random.Random(777 + day_anchor)
 
     step = datetime.timedelta(minutes=interval_minutes)
@@ -215,25 +213,51 @@ def _demo_candles_same_for_all(n=72, base=2.0, interval_minutes=60):
     candles = []
     prev_close = float(base)
 
-    vol = max(0.01, float(base) * 0.006)  # амплитуда
+    # Под 5₽ даёт диапазон примерно 4.8–5.2 при 72 свечах
+    body_vol = max(0.02, float(base) * 0.010)   # размер тела
+    wick_vol = max(0.03, float(base) * 0.030)   # размер фитилей (больше тела)
 
     for i in range(n):
         t = start + step * i
-        open_ = prev_close
 
-        # блоковый дрейф (серии рост/падение)
-        block = (i // 6) % 6
-        drift = {0: 0.15, 1: 0.08, 2: -0.05, 3: -0.18, 4: 0.10, 5: -0.02}.get(block, 0.0)
-        drift = drift * vol * 0.12
+        # Плавный тренд вверх "ступеньками" (как на картинке)
+        block = (i // 8) % 6
+        drift_map = {0: 0.20, 1: 0.12, 2: 0.06, 3: 0.18, 4: 0.10, 5: 0.14}
+        drift = drift_map.get(block, 0.12) * body_vol
 
-        change = rng.uniform(-vol, vol) * 0.55 + drift
-        close = max(0.01, open_ + change)
+        # Гэп вверх — ключ для красных свечей без падения тренда
+        gap = rng.uniform(0.2, 1.2) * body_vol + drift
 
-        wick_up = abs(rng.uniform(0.05, 1.0)) * vol * 0.35
-        wick_dn = abs(rng.uniform(0.05, 1.0)) * vol * 0.35
+        open_ = prev_close + gap
+
+        make_red = (rng.random() < red_ratio)
+
+        if make_red:
+            # красная: close < open, но close >= prev_close
+            red_body = rng.uniform(0.3, 1.2) * body_vol
+            close = max(prev_close, open_ - red_body)
+            # чтобы точно была красной
+            if close >= open_:
+                close = max(prev_close, open_ - max(0.01, body_vol * 0.6))
+        else:
+            # зелёная: close >= open
+            green_body = rng.uniform(0.3, 1.4) * body_vol
+            close = open_ + green_body
+
+        # Большие фитили как на скрине
+        wick_up = rng.uniform(0.2, 2.2) * wick_vol
+        wick_dn = rng.uniform(0.2, 2.2) * wick_vol
+        if rng.random() < 0.12:  # 12% свечей со шпилькой
+            if rng.random() < 0.5:
+                wick_up *= rng.uniform(2.5, 6.0)  # сильная шпилька вверх
+            else:
+                wick_dn *= rng.uniform(2.5, 6.0)
 
         high = max(open_, close) + wick_up
         low = max(0.01, min(open_, close) - wick_dn)
+
+        # ГЛАВНОЕ: тренд не падает
+        close = max(close, prev_close)
 
         candles.append({
             "time": int(t.timestamp()),
@@ -245,14 +269,32 @@ def _demo_candles_same_for_all(n=72, base=2.0, interval_minutes=60):
 
         prev_close = close
 
-    # сдвиг так, чтобы последняя close == base
+    # Сдвиг так, чтобы последняя close == base (и при этом не ломаем UP-тренд)
     if candles:
-        delta = float(base) - float(candles[-1]["close"])
+        last_close = float(candles[-1]["close"])
+        delta = float(base) - last_close
+
+        prev = None
         for c in candles:
-            c["open"] = round(max(0.01, c["open"] + delta), 2)
-            c["high"] = round(max(c["high"] + delta, c["open"], c["close"]), 2)
-            c["low"]  = round(min(c["low"] + delta, c["open"], c["close"]), 2)
-            c["close"] = round(max(0.01, c["close"] + delta), 2)
+            o = max(0.01, float(c["open"]) + delta)
+            cl = max(0.01, float(c["close"]) + delta)
+            hi = float(c["high"]) + delta
+            lo = float(c["low"]) + delta
+
+            if prev is not None:
+                cl = max(cl, prev)
+
+            hi = max(hi, o, cl)
+            lo = min(lo, o, cl)
+            lo = max(0.01, lo)
+
+            c["open"] = round(o, 2)
+            c["close"] = round(cl, 2)
+            c["high"] = round(hi, 2)
+            c["low"] = round(lo, 2)
+
+            prev = cl
+
         candles[-1]["close"] = round(float(base), 2)
 
     return candles
