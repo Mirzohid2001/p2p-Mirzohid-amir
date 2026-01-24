@@ -154,36 +154,62 @@ class Tree(models.Model):
         amount_ton = Decimal('0')
         user = self.user
 
+        # ✅ TON: запрещаем полив без активного пула
+        if self.type == "TON":
+            from .models import TonDistribution
+            dist = TonDistribution.objects.filter(is_active=True).last()
+            if not dist:
+                return {
+                    "ok": False,
+                    "message": "⛔ Раздача TON сейчас не активна. Полив TON-дерева доступен только во время акции.",
+                    "branch_dropped": False,
+                    "amount_cf": 0.0,
+                    "amount_ton": 0.0,
+                    "branches_collected": self.branches_collected,
+                    "last_watered": self.last_watered.strftime("%d.%m.%Y %H:%M") if self.last_watered else "Никогда",
+                    "pending_income": float(self.get_pending_income()),
+                    "water_percent": self.get_water_percent(),
+                }
+
+            # пул есть — начисляем TON
+            amount_ton = dist.accrue(user, self)
+
+            # если пул на нуле (на всякий) — тоже не обновляем воду
+            if amount_ton <= 0:
+                return {
+                    "ok": False,
+                    "message": "⛔ TON в пуле закончился. Дождитесь следующей акции.",
+                    "branch_dropped": False,
+                    "amount_cf": 0.0,
+                    "amount_ton": 0.0,
+                    "branches_collected": self.branches_collected,
+                    "last_watered": self.last_watered.strftime("%d.%m.%Y %H:%M") if self.last_watered else "Никогда",
+                    "pending_income": float(self.get_pending_income()),
+                    "water_percent": self.get_water_percent(),
+                }
+
+        # CF логика как была
         if self.type == "CF":
             amount_cf = self.get_pending_income()
             if amount_cf > 0:
                 user.cf_balance += amount_cf
                 user.save(update_fields=["cf_balance"])
 
-
-        elif self.type == "TON":
-
-            from .models import TonDistribution
-
-            active_qs = TonDistribution.objects.filter(is_active=True)
-
-            if active_qs.exists():
-                dist = active_qs.last()
-
-                amount_ton = dist.accrue(user, self)
-
+        # Ветки — только CF
         branch_dropped = False
         if self.type == "CF" and random.random() < self.BRANCH_DROP_CHANCE:
             branch_dropped = True
             self.branches_collected += 1
             self.save(update_fields=["branches_collected"])
 
+        # ✅ last_watered обновляем только если полив реально разрешён (TON уже прошёл проверки выше)
         self.last_watered = now
         self.water_reminder_sent_at = None
         self.save(update_fields=["last_watered", "water_reminder_sent_at"])
 
-
         return {
+            "ok": True,
+            "message": "Дерево успешно полито",
             "branch_dropped": branch_dropped,
             "amount_cf": float(amount_cf),
             "amount_ton": float(amount_ton),

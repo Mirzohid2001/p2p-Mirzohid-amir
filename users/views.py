@@ -107,7 +107,7 @@ def profile_view(request):
         "referral_count": referral_count,
         "referral_rewards": referral_rewards,
         "referrals_info": referrals_info,
-        "recipient_address": "UQANsmKdVv0iRQHPyy-zlsuGwy1RzRgsD5dTDf9JgiAIYNU0"
+        "recipient_address": "UQBU1JGsNcCvjklTgOatusKvT6Gc1c_69q8v7j8FZR_OOyUZ"
     }
     return render(request, "users/profile.html", context)
 

@@ -19,13 +19,27 @@ import requests
 
 def get_today_cf_price():
     today = timezone.now().date()
+
+    # если цена уже есть за сегодня — просто вернём
+    today_obj = PriceHistory.objects.filter(date=today).first()
+    if today_obj:
+        return float(today_obj.price)
+
     prev = PriceHistory.objects.filter(date__lt=today).order_by('-date').first()
-    price = (prev.price if prev else 1) + 1
-    price_obj, created = PriceHistory.objects.get_or_create(
-        date=today,
-        defaults={'price': price}
-    )
-    return float(price_obj.price)
+    prev_price = float(prev.price) if prev else 1.0
+
+    # проверяем рынок
+    settings = P2PSettings.objects.first()
+    market_open = settings.is_market_open if settings else True
+
+    # если рынок закрыт — НЕ повышаем и НЕ создаём запись за сегодня
+    if not market_open:
+        return prev_price
+
+    # рынок открыт — создаём цену +1
+    new_price = prev_price + 1
+    PriceHistory.objects.create(date=today, price=new_price)
+    return float(new_price)
 
 def get_ton_to_rub():
     try:

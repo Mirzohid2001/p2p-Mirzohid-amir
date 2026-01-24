@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 from tonsdk.utils import Address
 from users.models import TonProcessedTx, User
 
-TON_ADDRESS_FRIENDLY = "UQAW1dSI8WjwEXnAQ98MJVYyOQ8D7egvHmKxAvH_XWRLjr-r"
+TON_ADDRESS_FRIENDLY = "UQBU1JGsNcCvjklTgOatusKvT6Gc1c_69q8v7j8FZR_OOyUZ"
 from tonsdk.utils import Address
 
 def to_raw(addr: str) -> str:

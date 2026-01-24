@@ -227,11 +227,35 @@ def water_tree(request, tree_id):
     if request.method != "POST":
         return JsonResponse({"status": "error", "message": "Требуется метод POST"}, status=400)
 
+    # ✅ ВАЖНО: TON дерево можно поливать только при активной раздаче
+    if tree.type == "TON":
+        active_dist = TonDistribution.objects.filter(is_active=True).last()
+        if not active_dist:
+            return JsonResponse({
+                "status": "error",
+                "message": "⛔ Раздача TON сейчас не активна. Полив TON-дерева доступен только во время акции."
+            }, status=400)
+
+        # (опционально) если раздача уже закончилась по факту
+        if hasattr(active_dist, "left_to_distribute") and active_dist.left_to_distribute <= 0:
+            return JsonResponse({
+                "status": "error",
+                "message": "⛔ Раздача TON завершена. Дождитесь следующей акции."
+            }, status=400)
+
     result = tree.water()
+    if not result.get("ok", True):
+        return JsonResponse({
+            "status": "error",
+            "message": result.get("message", "Нельзя полить сейчас"),
+            "last_watered": result.get("last_watered"),
+            "water_percent": result.get("water_percent", 0),
+            "pending_income": result.get("pending_income", 0),
+        }, status=400)
+
     if result.get("branch_dropped", False):
         messages.success(request, "🌿 Поздравляем! Вам выпала ветка!")
 
-    # Форматируем дату так же, как в шаблоне
     last_watered_str = localtime(tree.last_watered).strftime("%d.%m.%Y %H:%M") if tree.last_watered else "Никогда"
 
     response_data = {
@@ -247,7 +271,6 @@ def water_tree(request, tree_id):
         "last_watered": last_watered_str,
     }
     return JsonResponse(response_data)
-
 
 
 def upgrade_tree(request, tree_id):
