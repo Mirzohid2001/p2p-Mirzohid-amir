@@ -440,8 +440,13 @@ body, html {
             {% endif %}
           </div>
           {% if p.item.type == "auto_water" or p.item.type == "fertilizer" %}
-            <button type="button" class="inventory-use-btn" data-purchase-id="{{ p.id }}">Активировать</button>
-          {% endif %}
+  <a href="/"
+     class="inventory-use-btn"
+     style="text-decoration:none;display:inline-block;text-align:center;">
+    Активировать
+  </a>
+{% endif %}
+
         </div>
       {% endfor %}
     </div>
@@ -488,30 +493,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  document.querySelectorAll('.inventory-use-btn').forEach(function(btn) {
-  btn.addEventListener('click', function(e) {
-    e.preventDefault();
-    if (btn.disabled) return;
-    btn.disabled = true;
-    let purchaseId = btn.getAttribute('data-purchase-id');
-    fetch(`/shop/use/${purchaseId}/`, {
-      method: "POST",
-      headers: { "X-CSRFToken": '{{ csrf_token }}' }
-    })
-    .then(res => res.json())
-    .then(data => {
-    showShopMessage(data);
-    if (data.status === "success") {
-        setTimeout(function() {
-            location.reload();
-        }, 900);
-    }
-})
-
-    .catch(() => showShopMessage({status: "error", message: "Ошибка сети"}))
-    .finally(() => { btn.disabled = false; });
-  });
-});
 
 
   function showShopMessage(data) {
