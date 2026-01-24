@@ -63,6 +63,7 @@ body, html {
 }
 .modal-success {
   background: linear-gradient(90deg,#31c54e 10%, #45e7b1 100%) !important;
+    color: #000000 !important;
 }
 .modal-error {
   background: linear-gradient(90deg,#c53931 10%, #e76a45 100%) !important;
@@ -403,7 +404,7 @@ body, html {
 }
 
 .custom-modal-content{
-  background: #f4f6ff !important;     /* один светлый цвет */
+  background: #2568d6 !important;     /* один светлый цвет */
   border: 1px solid rgba(0,0,0,0.08);
   box-shadow: 0 10px 30px rgba(0,0,0,0.18);
   color: #111 !important;
@@ -415,7 +416,7 @@ body, html {
 
 /* заголовок в модалке */
 .custom-modal-content h3{
-  color: #111 !important;
+  color: #fff !important;
   font-size: 1rem;
   font-weight: 700;
   margin: 0 0 12px 0;
@@ -441,7 +442,7 @@ body, html {
 
 /* текст "Автополив 24ч" */
 .inline-inventory-title{
-  color: #111 !important;
+  color: #fff !important;
   font-size: 0.85rem;
   font-weight: 700;
 }
@@ -449,12 +450,14 @@ body, html {
 /* серый текст типа "До окончания..." */
 .custom-modal-content div,
 .custom-modal-content span{
-  color: #111 !important;
+    background: #2568d6 !important;
+  color: #fff !important;
 }
+
 
 /* кнопка Купить/Активировать */
 .inline-inventory-btn{
-  background: #2f80ff !important; /* один цвет */
+  background: #2568d6 !important; /* один цвет */
   color: #fff !important;
   border-radius: 10px;
   padding: 7px 14px;
@@ -471,9 +474,17 @@ body, html {
 /* убираем твои success/error градиенты чтобы не перекрашивало */
 .modal-success,
 .modal-error{
-  background: #f4f6ff !important;
+  background: #2568d6  !important;
+    color: white !important;
 }
-
+#status-modal-body{
+  padding-right: 36px;
+  word-break: break-word;
+  line-height: 1.3;
+}
+.custom-modal-content{
+  padding-top: 26px; /* чуть ниже от крестика */
+}
 
 </style>
 
@@ -535,6 +546,7 @@ body, html {
       <span class="info-label">Уровень:</span>
       <span class="info-value">{{ tree.level }}</span>
     </div>
+
     <div class="info-row">
       <span class="info-label">TON за полив:</span>
 <span class="info-value">
@@ -547,10 +559,25 @@ body, html {
     </b> TON
   </span>
     </div>
+
     <div class="info-row">
       <span class="info-label">Осталось в пуле:</span>
       <span class="info-value"><b>{% if ton_left %}{{ ton_left|floatformat:2 }}{% else %}0.00{% endif %}</b> TON</span>
     </div>
+        <div class="info-row">
+    <span class="info-label">Ветки:</span>
+    <span class="info-value">
+      {{ branches_balance }}
+
+      /
+      {% if tree.level == 1 %}5
+      {% elif tree.level == 2 %}12
+      {% elif tree.level == 3 %}30
+      {% elif tree.level == 4 %}75
+      {% else %}MAX{% endif %}
+    </span>
+  </div>
+
     <div class="info-row">
       <span class="info-label">Автополив:</span>
       <span class="info-value">{% if is_auto_watered %} Активен {% else %} Не активен {% endif %}</span>
@@ -599,7 +626,8 @@ body, html {
     <div class="info-row">
       <span class="info-label">Ветки:</span>
       <span class="info-value">
-        {{ tree.branches_collected }}
+        {{ branches_balance }}
+
         /
         {% if tree.level == 1 %}5
         {% elif tree.level == 2 %}12

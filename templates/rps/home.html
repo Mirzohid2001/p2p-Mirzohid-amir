@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load mask %}
 {% load humanize %}
 
 {% block title %}Камень-Ножницы-Бумага — CryptoFarm{% endblock %}
@@ -84,7 +85,7 @@
             <div class="leaderboard-item {% if participant.user == user %}current-user{% endif %}">
                 <div class="rank">#{{ forloop.counter }}</div>
                 <div class="user-info">
-                    <div class="username">{{ participant.user }}</div>
+                    <div class="username">{{ participant.user|mask_last }}</div>
                     <div class="user-stats">{{ participant.points }} очков • {{ participant.games_played }} игр</div>
                 </div>
             </div>
@@ -98,7 +99,7 @@
         <p class="no-tournament">Турнир не активен. Ожидайте запуска нового турнира.</p>
     </div>
     {% endif %}
-    
+
     <!-- Топ-5 игроков -->
     <div class="rps-top-players card">
         <h2>🏆 Топ-5 игроков</h2>
@@ -107,7 +108,7 @@
             <div class="top-player-item">
                 <div class="player-rank">#{{ player.rank }}</div>
                 <div class="player-info">
-                    <div class="player-name">{{ player.user }}</div>
+                    <div class="player-name">{{ player.user|mask_last }}</div>
                     <div class="player-stats">
                         <span class="stat-win">Побед: {{ player.wins }}</span>
                         <span class="stat-loss">Поражений: {{ player.losses }}</span>
@@ -135,21 +136,21 @@
                     {% if game.result == 'draw' %}
                         <div class="game-result-icon">🤝</div>
                         <div class="game-info">
-                            <div class="game-opponent">vs {% if game.is_bot_game %}{{ game.bot_name|default:"Бот" }}{% else %}{{ game.player2|default:"Бот" }}{% endif %}</div>
+                            <div class="game-opponent">vs {% if game.is_bot_game %}{{ game.bot_name|default:"Бот" }}{% else %}{{ game.player2|mask_last|default:"Бот" }}{% endif %}</div>
                             <div class="game-details">{{ game.bet_amount|floatformat:0|intcomma }} FL • {{ game.finished_at|date:"d.m H:i" }}</div>
                         </div>
                         <div class="game-amount draw">0 FL</div>
                     {% elif game.result == 'player1_win' %}
                         <div class="game-result-icon">🎉</div>
                         <div class="game-info">
-                            <div class="game-opponent">vs {% if game.is_bot_game %}{{ game.bot_name|default:"Бот" }}{% else %}{{ game.player2|default:"Бот" }}{% endif %}</div>
+                            <div class="game-opponent">vs {% if game.is_bot_game %}{{ game.bot_name|default:"Бот" }}{% else %}{{ game.player2|mask_last|default:"Бот" }}{% endif %}</div>
                             <div class="game-details">{{ game.bet_amount|floatformat:0|intcomma }} FL • {{ game.finished_at|date:"d.m H:i" }}</div>
                         </div>
                         <div class="game-amount win">+{{ game.game_bank|floatformat:0|intcomma }} FL</div>
                     {% else %}
                         <div class="game-result-icon">😔</div>
                         <div class="game-info">
-                            <div class="game-opponent">vs {% if game.is_bot_game %}{{ game.bot_name|default:"Бот" }}{% else %}{{ game.player2|default:"Бот" }}{% endif %}</div>
+                            <div class="game-opponent">vs {% if game.is_bot_game %}{{ game.bot_name|default:"Бот" }}{% else %}{{ game.player2|mask_last|default:"Бот" }}{% endif %}</div>
                             <div class="game-details">{{ game.bet_amount|floatformat:0|intcomma }} FL • {{ game.finished_at|date:"d.m H:i" }}</div>
                         </div>
                         <div class="game-amount loss">-{{ game.bet_amount|floatformat:0|intcomma }} FL</div>
@@ -158,21 +159,21 @@
                     {% if game.result == 'draw' %}
                         <div class="game-result-icon">🤝</div>
                         <div class="game-info">
-                            <div class="game-opponent">vs {{ game.player1 }}</div>
+                            <div class="game-opponent">vs {{ game.player1|mask_last }}</div>
                             <div class="game-details">{{ game.bet_amount|floatformat:0|intcomma }} FL • {{ game.finished_at|date:"d.m H:i" }}</div>
                         </div>
                         <div class="game-amount draw">0 FL</div>
                     {% elif game.result == 'player2_win' %}
                         <div class="game-result-icon">🎉</div>
                         <div class="game-info">
-                            <div class="game-opponent">vs {{ game.player1 }}</div>
+                            <div class="game-opponent">vs {{ game.player1|mask_last }}</div>
                             <div class="game-details">{{ game.bet_amount|floatformat:0|intcomma }} FL • {{ game.finished_at|date:"d.m H:i" }}</div>
                         </div>
                         <div class="game-amount win">+{{ game.game_bank|floatformat:0|intcomma }} FL</div>
                     {% else %}
                         <div class="game-result-icon">😔</div>
                         <div class="game-info">
-                            <div class="game-opponent">vs {{ game.player1 }}</div>
+                            <div class="game-opponent">vs {{ game.player1|mask_last }}</div>
                             <div class="game-details">{{ game.bet_amount|floatformat:0|intcomma }} FL • {{ game.finished_at|date:"d.m H:i" }}</div>
                         </div>
                         <div class="game-amount loss">-{{ game.bet_amount|floatformat:0|intcomma }} FL</div>
@@ -198,7 +199,7 @@
                 if (data.players && data.players.length > 0) {
                     const list = document.getElementById('top-players-list');
                     list.innerHTML = '';
-                    
+
                     data.players.forEach(player => {
                         const item = document.createElement('div');
                         item.className = 'top-player-item';
@@ -223,7 +224,7 @@
             })
             .catch(error => console.error('Error loading top players:', error));
     }
-    
+
     // Функция для обновления истории игр
     function updateRecentGames() {
         fetch('/rps/api/recent-games/')
@@ -232,7 +233,7 @@
                 if (data.games && data.games.length > 0) {
                     const list = document.getElementById('recent-games-list');
                     list.innerHTML = '';
-                    
+
                     data.games.forEach(game => {
                         const item = document.createElement('div');
                         item.className = 'recent-game-item';
@@ -253,12 +254,12 @@
             })
             .catch(error => console.error('Error loading recent games:', error));
     }
-    
+
     // Обновление данных при загрузке страницы
     document.addEventListener('DOMContentLoaded', function() {
         updateTopPlayers();
         updateRecentGames();
-        
+
         // Обновление каждые 30 секунд
         setInterval(function() {
             updateTopPlayers();

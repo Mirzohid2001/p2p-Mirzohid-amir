@@ -11,6 +11,7 @@ import random
 
 from users.models import User
 from .models import Tournament, TournamentParticipant, Game, GameQueue, BotPool
+from .templatetags.mask import mask_last
 
 # Таймаут на совершение хода: 10 секунд
 MOVE_TIMEOUT_SECONDS = 10
@@ -757,7 +758,7 @@ def api_leaderboard(request):
     for participant in top_10:
         leaderboard.append({
             'user_id': participant.user.telegram_id,
-            'username': str(participant.user),
+            'username': mask_last(str(participant.user)),
             'points': participant.points,
             'games_played': participant.games_played,
             'wins': participant.wins,
@@ -777,7 +778,7 @@ def api_leaderboard(request):
             if user_participant:
                 leaderboard.append({
                     'user_id': request.user.telegram_id,
-                    'username': str(request.user),
+                    'username': mask_last(str(request.user)),
                     'points': user_participant.points,
                     'games_played': user_participant.games_played,
                     'wins': user_participant.wins,
@@ -796,19 +797,18 @@ def api_leaderboard(request):
 
 @csrf_exempt
 def api_recent_games(request):
-    """API для получения последних игр пользователя"""
     user = request.user
-    
+
     recent_games = Game.objects.filter(
         Q(player1=user) | Q(player2=user),
         status='finished'
     ).order_by('-finished_at')[:5]
-    
+
     games_list = []
     for game in recent_games:
         is_player1 = (game.player1 == user)
         opponent = game.player2 if is_player1 else game.player1
-        
+
         if game.result == 'draw':
             result = 'draw'
             amount = 0
@@ -818,19 +818,24 @@ def api_recent_games(request):
         else:
             result = 'loss'
             amount = float(game.player1_bet if is_player1 else game.player2_bet)
-        
+
+        # ✅ скрываем и игрока, и бота (бот НЕ должен называться "Бот")
+        if game.is_bot_game:
+            bot_display = mask_last(game.bot_name or generate_bot_name())
+            opponent_display = bot_display
+        else:
+            opponent_display = mask_last(str(opponent)) if opponent else "unknown"
+
         games_list.append({
             'id': game.id,
-            'opponent': 'Бот' if game.is_bot_game else str(opponent),
+            'opponent': opponent_display,  # ✅ МАСКА
             'bet_amount': float(game.bet_amount),
             'amount': amount,
             'result': result,
             'date': game.finished_at.strftime('%d.%m %H:%M') if game.finished_at else '',
         })
-    
-    return JsonResponse({
-        'games': games_list,
-    })
+
+    return JsonResponse({'games': games_list})
 
 
 @csrf_exempt
@@ -843,7 +848,7 @@ def api_top_players(request):
         players_list.append({
             'rank': player['rank'],
             'user_id': player['user'].telegram_id,
-            'username': str(player['user']),
+            'username': mask_last(str(player['user'])),
             'wins': player['wins'],
             'losses': player['losses'],
             'draws': player['draws'],

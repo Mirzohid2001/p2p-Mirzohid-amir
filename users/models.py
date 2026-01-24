@@ -18,6 +18,7 @@ class User(models.Model):
     # Балансы токенов
     cf_balance = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     ton_balance = models.DecimalField(max_digits=15, decimal_places=8, default=0)
+    branches_balance = models.PositiveIntegerField(default=0)
 
     # Реферальная система
     referral_code = models.CharField(max_length=20, unique=True, default=generate_referral_code)

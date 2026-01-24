@@ -187,6 +187,7 @@ def tree_detail(request, tree_id):
         "fertilizer_purchases": fertilizer_purchases,
         "user_has_fertilizer_item": bool(fertilizer_purchases),
         "can_collect": pending_income > 0,
+        "branches_balance": user.branches_balance,
     }
 
     # Специфично для TON дерева — добавляем TON данные

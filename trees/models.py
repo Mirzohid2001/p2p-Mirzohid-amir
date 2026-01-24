@@ -52,7 +52,7 @@ class Tree(models.Model):
         if next_level not in levels:
             return False
         required_branches = levels[next_level]["branches"]
-        return self.branches_collected >= required_branches
+        return self.user.branches_balance >= required_branches
 
     def upgrade(self):
         from django.conf import settings
@@ -62,13 +62,23 @@ class Tree(models.Model):
             return False
 
         required_branches = levels[next_level]["branches"]
-        if self.branches_collected < required_branches:
+        if self.user.branches_balance < required_branches:
             return False
 
-        self.branches_collected -= required_branches
+        # списываем ветки у пользователя
+        self.user.branches_balance -= required_branches
+        self.user.save(update_fields=["branches_balance"])
+
+        # апаем дерево
         self.level = next_level
-        self.income_per_hour = Decimal(levels[next_level]["income"])
-        self.save(update_fields=["level", "branches_collected", "income_per_hour"])
+
+        # CF: меняем доход, TON: доход не обязателен (но можно оставить)
+        if self.type == "CF":
+            self.income_per_hour = Decimal(levels[next_level]["income"])
+            self.save(update_fields=["level", "income_per_hour"])
+        else:
+            self.save(update_fields=["level"])
+
         return True
 
     def get_income_per_hour(self):
@@ -197,10 +207,10 @@ class Tree(models.Model):
 
         # Ветки — только CF
         branch_dropped = False
-        if self.type == "CF" and random.random() < self.BRANCH_DROP_CHANCE:
+        if random.random() < self.BRANCH_DROP_CHANCE:
             branch_dropped = True
-            self.branches_collected += 1
-            self.save(update_fields=["branches_collected"])
+            user.branches_balance += 1
+            user.save(update_fields=["branches_balance"])
 
         # ✅ last_watered обновляем только если полив реально разрешён (TON уже прошёл проверки выше)
         self.last_watered = now

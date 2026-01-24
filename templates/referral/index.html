@@ -407,6 +407,15 @@
             <input type="text" id="ref-link-input" class="form-control text-center" style="border-radius:14px;font-size:1.02rem;" value="{{ referral_link }}" readonly>
         </div>
         <button type="button" class="btn btn-primary px-4" style="border-radius:18px;" onclick="copyReferralLink()">Скопировать ссылку</button>
+          {% with share_text="🌱 В FloraCoin ты не просто выращиваешь дерево — ты создаешь свой собственный финансовый оазис." %}
+<a class="btn btn-success px-4 mt-2"
+   style="border-radius:18px;"
+   href="https://t.me/share/url?url={{ referral_link|urlencode }}&text={{ share_text|urlencode }}"
+   target="_blank" rel="noopener">
+  📩 Отправить друзьям в Telegram
+</a>
+{% endwith %}
+
       </div>
     </div>
   </div>
@@ -463,5 +472,30 @@ function checkTask(taskId) {
     });
 }
 </script>
+ <script>
+function shareReferralToTelegram() {
+    const link = "{{ referral_link|escapejs }}";
+    const text = "🌱 Заходи в CryptoFarm по моей ссылке и получи бонус +50 FL! 👇";
+    const shareUrl = "https://t.me/share/url?url=" + encodeURIComponent(link) + "&text=" + encodeURIComponent(text);
+
+    console.log("TG:", window.Telegram, "link:", link, "shareUrl:", shareUrl);
+    alert("shareUrl: " + shareUrl);
+
+    // Telegram WebApp (внутри Telegram)
+    if (window.Telegram && Telegram.WebApp) {
+        try {
+            Telegram.WebApp.openLink(shareUrl);   // ✅ чаще всего надо так
+        } catch (e) {
+            try { Telegram.WebApp.openTelegramLink(shareUrl); } catch (e2) {}
+        }
+        return;
+    }
+
+    // обычный браузер
+    window.open(shareUrl, "_blank");
+}
+</script>
+
+
 
 {% endblock %}

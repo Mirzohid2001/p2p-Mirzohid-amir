@@ -321,7 +321,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try:
                 await context.bot.send_message(
                     res["inviter_tg_id"],
-                    f"🎉 Вам начислено +50 FL за приглашённого пользователя @{res['invited_name']}!"
+                    f"🎉 Вам начислено +50 FL за приглашённого пользователя @{res['invited_name']}!",
+                    reply_markup=_play_keyboard(res["inviter_tg_id"])
                 )
             except Exception:
                 pass

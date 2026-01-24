@@ -136,6 +136,7 @@ def use_shop_item(request, purchase_id):
     return JsonResponse({"status": "error", "message": "Неизвестный предмет."})
 
 
+
 @require_POST
 def buy_fertilizer(request):
     user = get_current_user(request)
@@ -160,21 +161,25 @@ def buy_fertilizer(request):
 @require_POST
 def buy_branches(request):
     user = get_current_user(request)
+
     try:
-        quantity = int(request.POST.get("quantity", 1))  # По умолчанию 1 ветка
+        quantity = int(request.POST.get("quantity", 1))
     except Exception:
         quantity = 1
-    tree = Tree.objects.filter(user=user, type='CF').first()
-    if not tree:
-        return JsonResponse({"status": "error", "message": "У вас нет дерева для улучшения."}, status=400)
+
     ton_price = Decimal('0.1') * quantity
+
     if user.ton_balance < ton_price:
         return JsonResponse({"status": "error", "message": "Недостаточно TON для покупки веток."}, status=400)
-    tree.branches_collected += quantity
-    tree.save(update_fields=["branches_collected"])
+
     user.ton_balance -= ton_price
-    user.save(update_fields=["ton_balance"])
-    return JsonResponse({"status": "success", "message": f"Куплено веток: {quantity}"})
+    user.branches_balance += quantity
+    user.save(update_fields=["ton_balance", "branches_balance"])
+
+    return JsonResponse({
+        "status": "success",
+        "message": f"Куплено веток: {quantity}. Теперь у вас {user.branches_balance} веток."
+    })
 
 
 def buy_ton_tree(request):
