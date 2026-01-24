@@ -756,10 +756,7 @@ async def priz_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def post_init(application: Application):
     # команды в списке / (не обязательно, но удобно)
     await application.bot.set_my_commands([
-        BotCommand("start", "Открыть игру"),
-        BotCommand("play", "Открыть игру"),
-        BotCommand("ref", "Реферальная ссылка"),
-        BotCommand("help", "Справка"),
+        BotCommand("start", "Открыть игру")
     ])
 
     # кнопка меню слева (Menu Button) -> открывает WebApp
