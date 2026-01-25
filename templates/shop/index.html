@@ -403,7 +403,7 @@ body, html {
           id="quantity"
           placeholder="Напишите количество"
           rows="2"></textarea>
-          <button type="submit" class="shop-btn" id="branch-btn">1шт 0.1 TON</button>
+          <button type="submit" class="shop-btn" id="branch-btn">1шт 0.5 TON</button>
         </form>
       </div>
     </div>
@@ -466,7 +466,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (branchInput && branchBtn) {
     branchInput.addEventListener('input', function() {
   let val = Number(branchInput.value) || 1;
-  let price = (val * 0.1).toFixed(2);
+  let price = (val * 0.5).toFixed(2);
   branchBtn.textContent = val + 'шт ' + price + ' TON';
 });
 

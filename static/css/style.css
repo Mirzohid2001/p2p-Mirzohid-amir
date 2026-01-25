@@ -1233,6 +1233,7 @@ input::placeholder, textarea::placeholder {
 }
 .custom-message-success {
     background: linear-gradient(90deg, #37d672 10%, #5fffa1 90%);
+    color: black;
 }
 .custom-message-error, .custom-message-danger {
     background: linear-gradient(90deg, #d84f5e 10%, #ff8f91 90%);

@@ -167,7 +167,7 @@ def buy_branches(request):
     except Exception:
         quantity = 1
 
-    ton_price = Decimal('0.1') * quantity
+    ton_price = Decimal('0.5') * quantity
 
     if user.ton_balance < ton_price:
         return JsonResponse({"status": "error", "message": "Недостаточно TON для покупки веток."}, status=400)
