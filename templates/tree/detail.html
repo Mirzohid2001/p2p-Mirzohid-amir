@@ -559,11 +559,15 @@ body, html {
     </b> TON/час
   </span>
 </div>
-
+<div class="info-row">
+      <span class="info-label">В пуле:</span>
+      <span class="info-value"><b>{% if ton_was %}{{ ton_was|floatformat:2 }}{% else %}0.00{% endif %}</b> TON</span>
+    </div>
     <div class="info-row">
       <span class="info-label">Осталось в пуле:</span>
       <span class="info-value"><b>{% if ton_left %}{{ ton_left|floatformat:2 }}{% else %}0.00{% endif %}</b> TON</span>
     </div>
+
         <div class="info-row">
     <span class="info-label">Ветки:</span>
     <span class="info-value">

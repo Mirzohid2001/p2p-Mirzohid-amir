@@ -97,15 +97,29 @@ class TreeAdmin(admin.ModelAdmin):
     tree_level.admin_order_field = 'level'
 
     def income_per_hour_display(self, obj):
-        """Отображение дохода в час."""
+        now = timezone.now()
+
+        # ✅ TON: показываем TON/час
+        if obj.type == "TON":
+            mult = Decimal("2") if (obj.fertilized_until and obj.fertilized_until > now) else Decimal("1")
+            ton_per_hour = (Decimal(obj.level) * Decimal("0.01") * mult).quantize(Decimal("0.0000"))
+            return format_html(
+                '<span style="color: #0f7fd8; font-weight: bold;">+{} TON/час</span>',
+                ton_per_hour
+            )
+
+        # ✅ CF: показываем FL/час (можно тоже учитывать удобрение)
         try:
-            value = float(obj.income_per_hour)
+            value = Decimal(obj.income_per_hour)
         except Exception:
-            value = 0
-        # форматируем как строку заранее
+            value = Decimal("0")
+
+        if obj.fertilized_until and obj.fertilized_until > now:
+            value = (value * 2)
+
         value_str = f"{value:.2f}"
         return format_html(
-            '<span style="color: #28a745; font-weight: bold;">+{}/час</span>',
+            '<span style="color: #28a745; font-weight: bold;">+{} FL/час</span>',
             value_str
         )
 

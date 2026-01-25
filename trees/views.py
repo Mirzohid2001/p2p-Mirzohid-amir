@@ -197,6 +197,7 @@ def tree_detail(request, tree_id):
         ton_per_hour = base_per_hour * (Decimal("2") if is_fertilized else Decimal("1"))
 
         ton_left = active_dist.left_to_distribute if active_dist else Decimal("0")
+        ton_was = active_dist.total_amount if active_dist else None
 
         context.update({
             "active_distribution": active_dist,
@@ -205,6 +206,7 @@ def tree_detail(request, tree_id):
             "ton_per_hour_base": base_per_hour,  # ✅ правильно
             "ton_left": ton_left,
             "is_fertilized": is_fertilized,
+            "ton_was":ton_was
         })
 
     return render(request, "tree/detail.html", context)
