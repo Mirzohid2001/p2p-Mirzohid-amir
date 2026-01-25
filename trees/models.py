@@ -214,10 +214,14 @@ class Tree(models.Model):
 
 
 class TonDistribution(models.Model):
-    total_amount = models.DecimalField(max_digits=20, decimal_places=8)
-    distributed_amount = models.DecimalField(max_digits=20, decimal_places=8, default=0)
-    is_active = models.BooleanField(default=True)
+    total_amount = models.DecimalField(max_digits=20, decimal_places=8,verbose_name="Всего TON")
+    distributed_amount = models.DecimalField(max_digits=20, decimal_places=8, default=0,verbose_name="Распределено TON")
+    is_active = models.BooleanField(default=True,verbose_name="Активна")
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Раздача TON"
+        verbose_name_plural = "Раздачи TON"
 
     @property
     def left_to_distribute(self):
