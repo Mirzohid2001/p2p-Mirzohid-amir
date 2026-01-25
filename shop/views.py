@@ -192,12 +192,12 @@ def buy_ton_tree(request):
         messages.warning(request, "У вас уже есть TON-дерево.")
         return redirect("home")
 
-    cost_ton = 1  # допустим, 1 TON
+    cost_ton = 5
     if user.ton_balance < cost_ton:
         messages.error(request, "Недостаточно TON для покупки TON-дерева.")
         return redirect("home")
 
-    # Списываем TON и создаём дерево
+
     user.ton_balance -= cost_ton
     user.save(update_fields=["ton_balance"])
     Tree.objects.create(user=user, type="TON")

@@ -548,17 +548,17 @@ body, html {
     </div>
 
     <div class="info-row">
-      <span class="info-label">TON за полив:</span>
-<span class="info-value">
+  <span class="info-label">TON в час:</span>
+  <span class="info-value">
     <b>
       {% if is_fertilized %}
-        {{ ton_per_water_base|floatformat:2 }} × 2 = {{ ton_per_water|floatformat:2 }}
+        {{ ton_per_hour_base|floatformat:2 }} × 2 = {{ ton_per_hour|floatformat:2 }}
       {% else %}
-        {{ ton_per_water|floatformat:2 }}
+        {{ ton_per_hour|floatformat:2 }}
       {% endif %}
-    </b> TON
+    </b> TON/час
   </span>
-    </div>
+</div>
 
     <div class="info-row">
       <span class="info-label">Осталось в пуле:</span>

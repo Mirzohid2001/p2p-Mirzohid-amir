@@ -80,13 +80,9 @@ def home(request):
     ton_tree_infos = []
     for tree in ton_trees:
         is_fertilized = bool(tree.fertilized_until and tree.fertilized_until > timezone.now())
-        ton_per_water = round(tree.level * 0.1, 2)
-        if is_fertilized:
-            ton_per_water *= 2
-        ton_per_water = round(ton_per_water, 4)
-        hours_per_water = 5  # Если поливать можно раз в 5 часов
 
-        ton_per_hour = ton_per_water / hours_per_water
+        base_per_hour = Decimal(tree.level) * Decimal("0.01")  # 0.01..0.05 TON/час
+        ton_per_hour = base_per_hour * (Decimal("2") if is_fertilized else Decimal("1"))
 
         ton_tree_infos.append({
             "id": tree.id,
@@ -94,7 +90,7 @@ def home(request):
             "pending_income": float(tree.get_pending_income()),
             "is_fertilized": is_fertilized,
             "is_auto_watered": bool(tree.auto_water_until and tree.auto_water_until > timezone.now()),
-            "ton_per_hour": ton_per_hour,
+            "ton_per_hour": float(ton_per_hour),  # ✅ показываем TON/час
         })
 
     return render(request, "home.html", {
@@ -194,18 +190,19 @@ def tree_detail(request, tree_id):
     if tree.type == "TON":
         active_dist = TonDistribution.objects.filter(is_active=True).last()
         participants_count = TelegramUser.objects.filter(trees__type="TON").distinct().count() or 0
-        ton_per_water_base = round(tree.level * 0.1, 4)
+
         is_fertilized = bool(tree.fertilized_until and tree.fertilized_until > now)
-        if is_fertilized:
-            ton_per_water = ton_per_water_base * 2
-        else:
-            ton_per_water = ton_per_water_base
-        ton_left = active_dist.left_to_distribute if active_dist else None
+
+        base_per_hour = Decimal(tree.level) * Decimal("0.01")
+        ton_per_hour = base_per_hour * (Decimal("2") if is_fertilized else Decimal("1"))
+
+        ton_left = active_dist.left_to_distribute if active_dist else Decimal("0")
+
         context.update({
             "active_distribution": active_dist,
             "participants_count": participants_count,
-            "ton_per_water": ton_per_water,
-            "ton_per_water_base": ton_per_water_base,
+            "ton_per_hour": ton_per_hour,  # ✅ правильно
+            "ton_per_hour_base": base_per_hour,  # ✅ правильно
             "ton_left": ton_left,
             "is_fertilized": is_fertilized,
         })
@@ -322,26 +319,33 @@ def collect_income(request, tree_id):
         tree.last_cf_accrued = now
         tree.save(update_fields=["last_cf_accrued"])
     elif tree.type == 'TON':
-        user.ton_balance += pending
-        user.save(update_fields=["ton_balance"])
         from trees.models import TonDistribution
         active_dist = TonDistribution.objects.filter(is_active=True).last()
-        if active_dist:
-            active_dist.distributed_amount += pending
-            active_dist.save(update_fields=["distributed_amount"])
-            if active_dist.distributed_amount >= active_dist.total_amount:
-                active_dist.is_active = False
-                active_dist.save(update_fields=["is_active"])
+        if not active_dist or active_dist.left_to_distribute <= 0:
+            return JsonResponse({"status": "error", "message": "⛔ Раздача TON не активна или пул закончился"},
+                                status=400)
+
+        pending = min(pending, active_dist.left_to_distribute)
+
+        user.ton_balance += pending
+        user.save(update_fields=["ton_balance"])
+
+        active_dist.distributed_amount += pending
+        if active_dist.distributed_amount >= active_dist.total_amount:
+            active_dist.is_active = False
+        active_dist.save(update_fields=["distributed_amount", "is_active"])
+
         tree.last_cf_accrued = now
         tree.save(update_fields=["last_cf_accrued"])
 
+
     return JsonResponse({
-        "status": "success",
-        "collected": float(pending),
-        "new_balance_cf": float(user.cf_balance) if tree.type == 'CF' else None,
-        "new_balance_ton": float(user.ton_balance) if tree.type == 'TON' else None,
-        "message": f"Начислено: {float(pending):.4f} {'FL' if tree.type == 'CF' else 'TON'}!"
-    })
+            "status": "success",
+            "collected": float(pending),
+            "new_balance_cf": float(user.cf_balance) if tree.type == 'CF' else None,
+            "new_balance_ton": float(user.ton_balance) if tree.type == 'TON' else None,
+            "message": f"Начислено: {float(pending):.4f} {'FL' if tree.type == 'CF' else 'TON'}!"
+        })
 
 
 

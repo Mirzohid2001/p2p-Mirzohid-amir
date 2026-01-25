@@ -113,10 +113,10 @@ class Tree(models.Model):
             pending_income = income_per_hour * Decimal(hours)
         # TON-дерево
         elif self.type == "TON":
-            # Удобрение удваивает
-            mult = 2 if self.is_fertilized() else 1
-            base = Decimal(self.level) * Decimal('0.1') * Decimal(mult)
-            pending_income = base * Decimal(hours / self.WATER_DURATION)
+            mult = Decimal("2") if self.is_fertilized() else Decimal("1")
+            ton_per_hour = Decimal(self.level) * Decimal("0.01") * mult
+            pending_income = ton_per_hour * Decimal(f"{hours:.10f}")
+
         else:
             pending_income = Decimal('0.0000')
 
@@ -168,10 +168,10 @@ class Tree(models.Model):
         if self.type == "TON":
             from .models import TonDistribution
             dist = TonDistribution.objects.filter(is_active=True).last()
-            if not dist:
+            if not dist or dist.left_to_distribute <= 0:
                 return {
                     "ok": False,
-                    "message": "⛔ Раздача TON сейчас не активна. Полив TON-дерева доступен только во время акции.",
+                    "message": "⛔ Раздача TON сейчас не активна или пул закончился.",
                     "branch_dropped": False,
                     "amount_cf": 0.0,
                     "amount_ton": 0.0,
@@ -181,38 +181,21 @@ class Tree(models.Model):
                     "water_percent": self.get_water_percent(),
                 }
 
-            # пул есть — начисляем TON
-            amount_ton = dist.accrue(user, self)
-
-            # если пул на нуле (на всякий) — тоже не обновляем воду
-            if amount_ton <= 0:
-                return {
-                    "ok": False,
-                    "message": "⛔ TON в пуле закончился. Дождитесь следующей акции.",
-                    "branch_dropped": False,
-                    "amount_cf": 0.0,
-                    "amount_ton": 0.0,
-                    "branches_collected": self.branches_collected,
-                    "last_watered": self.last_watered.strftime("%d.%m.%Y %H:%M") if self.last_watered else "Никогда",
-                    "pending_income": float(self.get_pending_income()),
-                    "water_percent": self.get_water_percent(),
-                }
-
-        # CF логика как была
+        # ✅ CF: при поливе можно сразу начислить накопленное (как у тебя было)
         if self.type == "CF":
             amount_cf = self.get_pending_income()
             if amount_cf > 0:
                 user.cf_balance += amount_cf
                 user.save(update_fields=["cf_balance"])
 
-        # Ветки — только CF
+        # 🌿 ветки (если хочешь — оставь только для CF)
         branch_dropped = False
-        if random.random() < self.BRANCH_DROP_CHANCE:
+        if self.type == "CF" and random.random() < self.BRANCH_DROP_CHANCE:
             branch_dropped = True
             user.branches_balance += 1
             user.save(update_fields=["branches_balance"])
 
-        # ✅ last_watered обновляем только если полив реально разрешён (TON уже прошёл проверки выше)
+        # обновляем воду
         self.last_watered = now
         self.water_reminder_sent_at = None
         self.save(update_fields=["last_watered", "water_reminder_sent_at"])
@@ -222,7 +205,7 @@ class Tree(models.Model):
             "message": "Дерево успешно полито",
             "branch_dropped": branch_dropped,
             "amount_cf": float(amount_cf),
-            "amount_ton": float(amount_ton),
+            "amount_ton": float(amount_ton),  # тут всегда 0, TON выдаётся через collect
             "branches_collected": self.branches_collected,
             "last_watered": now.strftime("%d.%m.%Y %H:%M"),
             "pending_income": float(self.get_pending_income()),
@@ -243,7 +226,8 @@ class TonDistribution(models.Model):
     def accrue(self, user, tree):
         if not self.is_active:
             return Decimal('0')
-        max_per_water = Decimal(tree.level) * Decimal('0.1')  # <-- Основная логика!
+        mult = Decimal("2") if tree.is_fertilized() else Decimal("1")
+        max_per_water = (Decimal(tree.level) * Decimal("0.01") * Decimal(tree.WATER_DURATION) * mult)
         left = self.left_to_distribute
         amount = min(max_per_water, left)
         if amount > 0:
