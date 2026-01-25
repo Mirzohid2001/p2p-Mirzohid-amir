@@ -1137,8 +1137,9 @@
 }
 
 .total-games {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.7);
+    font-size: 15px;
+    font-weight: bold;
+    color: #5AFF75FF;
     word-break: break-word;
 }
 
