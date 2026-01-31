@@ -355,7 +355,7 @@ def collect_income(request, tree_id):
         tree.save(update_fields=["last_cf_accrued"])
 
     if tree.type == "CF":
-        amount_str = fmt_amount(pending, 1)
+        amount_str = fmt_amount(pending, 2)
         currency = "FL"
     else:
         amount_str = fmt_amount(pending, 4)
