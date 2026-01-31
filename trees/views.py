@@ -32,6 +32,20 @@ def get_current_user(request):
     except TelegramUser.DoesNotExist:
         return None
 
+def fmt_amount(x, max_decimals=4):
+    """
+    10.0000 -> 10
+    10.5000 -> 10.5
+    10.123400 -> 10.1234
+    """
+    if x is None:
+        return "0"
+    if not isinstance(x, Decimal):
+        x = Decimal(str(x))
+    q = Decimal("1." + "0" * max_decimals)     # 1.0000
+    s = format(x.quantize(q), "f")             # '10.0000'
+    return s.rstrip("0").rstrip(".")
+
 
 def home(request):
     user = get_current_user(request)
@@ -340,13 +354,20 @@ def collect_income(request, tree_id):
         tree.last_cf_accrued = now
         tree.save(update_fields=["last_cf_accrued"])
 
+    if tree.type == "CF":
+        amount_str = fmt_amount(pending, 0)  # только целое
+        currency = "FL"
+    else:
+        amount_str = fmt_amount(pending, 4)  # до 4 знаков
+        currency = "TON"
+
 
     return JsonResponse({
             "status": "success",
             "collected": float(pending),
             "new_balance_cf": float(user.cf_balance) if tree.type == 'CF' else None,
             "new_balance_ton": float(user.ton_balance) if tree.type == 'TON' else None,
-            "message": f"Начислено: {float(pending):.4f} {'FL' if tree.type == 'CF' else 'TON'}!"
+            "message": f"Начислено: {amount_str} {currency}!"
         })
 
 
