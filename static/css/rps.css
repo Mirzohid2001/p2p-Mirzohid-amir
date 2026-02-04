@@ -77,7 +77,7 @@
 }
 
 .stat-item.stat-loss .stat-value {
-    color: #FF5A8F;
+    color: darkred;
 }
 
 /* Турнир */
@@ -1104,7 +1104,7 @@
 .player-stats {
     display: flex;
     gap: 10px;
-    font-size: 11px;
+    font-size: 12px;
     flex-wrap: wrap;
 }
 
@@ -1113,7 +1113,7 @@
 }
 
 .player-stats .stat-loss {
-    color: #FF5A8F;
+    color: darkred;
 }
 
 .player-stats .stat-draw {

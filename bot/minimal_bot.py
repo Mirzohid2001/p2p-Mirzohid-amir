@@ -69,7 +69,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "PUT_YOUR_TOKEN_HERE")
-WEBAPP_URL_BASE = os.getenv("WEBAPP_URL_BASE", "https://flora.diy/telegram_login/")
+WEBAPP_URL_BASE = os.getenv("WEBAPP_URL_BASE", "https://dc3178a552ab.ngrok-free.app/telegram_login/")
 
 ADMIN_IDS = [1010942377, 455168812]
 class AdminOnly(MessageFilter):
@@ -465,6 +465,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # 1) Админ ждёт сумму для add/sub
     # ───── BROADCAST (text / photo) ─────
+    # ───── BROADCAST (copy original message) ─────
     if telegram_id in BROADCAST_STATES:
         BROADCAST_STATES.pop(telegram_id, None)
 
@@ -472,45 +473,25 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         sent = 0
         failed = 0
 
-
-
         await update.message.reply_text(
             f"🚀 Начинаю рассылку...\nПолучателей: {len(user_ids)}"
         )
 
-        # ─── ЕСЛИ ФОТО ───
-        if update.message.photo:
-            photo = update.message.photo[-1].file_id
-            caption = update.message.caption or ""
+        src_chat_id = update.effective_chat.id
+        src_message_id = update.message.message_id  # ВАЖНО: копируем именно это сообщение
 
-            for uid in user_ids:
-                try:
-                    await context.bot.send_photo(
-                        chat_id=uid,
-                        photo=photo,
-                        caption=caption,
-                        reply_markup=_play_keyboard(uid)
-
-                    )
-                    sent += 1
-                except Exception:
-                    failed += 1
-                await asyncio.sleep(0.05)
-
-        # ─── ЕСЛИ ТЕКСТ ───
-        else:
-            text_to_send = update.message.text or ""
-            for uid in user_ids:
-                try:
-                    await context.bot.send_message(
-                        chat_id=uid,
-                        text=text_to_send,
-                        reply_markup=_play_keyboard(uid)
-                    )
-                    sent += 1
-                except Exception:
-                    failed += 1
-                await asyncio.sleep(0.05)
+        for uid in user_ids:
+            try:
+                msg = await context.bot.copy_message(
+                    chat_id=uid,
+                    from_chat_id=src_chat_id,
+                    message_id=src_message_id,
+                    reply_markup=_play_keyboard(uid),  # можно прикрепить твою кнопку
+                )
+                sent += 1
+            except Exception:
+                failed += 1
+            await asyncio.sleep(0.05)
 
         await update.message.reply_text(
             f"✅ Рассылка завершена!\n\n"
