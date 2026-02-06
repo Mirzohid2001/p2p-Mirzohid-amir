@@ -534,7 +534,12 @@ body, html {
 
   <button class="tree-btn btn-use-item open-modal-btn" data-modal="autowater-modal">Автополив</button>
   <button class="tree-btn btn-use-item open-modal-btn" data-modal="fertilizer-modal">Удобрение</button>
-  <button class="tree-btn btn-upgrade" data-tree-id="{{ tree.id }}">Улучшить</button>
+  {% if tree.level < 5 %}
+  <button class="tree-btn btn-upgrade"
+          data-tree-id="{{ tree.id }}">
+    Улучшить
+  </button>
+{% endif %}
     <button type="button" class="tree-btn btn-earn-more" data-url="{% url 'rps:home' %}">
   Заработать больше
 </button>
