@@ -7,6 +7,13 @@ let isMoveTimerRunning = false;
 let currentGameId = null;
 let searchTimer = 5;
 let moveTimer = 8;
+let gameFinalized = false;
+
+
+function isGameReadyToFinalize(data) {
+  // финал, когда есть result, или когда есть оба хода (для показа)
+  return data.status === 'finished' && (data.result || (data.player1_move && data.player2_move));
+}
 document.addEventListener('click', function (e) {
   const btn = e.target.closest('#btn-rematch, #btn-rematch-cancelled');
   if (!btn) return;
@@ -365,41 +372,34 @@ function resetBetButtons() {
 
 // Опрос статуса игры
 function startGameStatusPolling() {
-    if (!currentGameId) return;
-    
-    gameStatusInterval = setInterval(() => {
-        fetch(`/rps/api/game/${currentGameId}/status/`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    console.error('Error:', data.error);
-                    return;
-                }
-                
-                updateGameStatus(data);
-                
-                // Если игра завершена или отменена, останавливаем опрос
-                if (data.status === 'finished' || data.status === 'cancelled') {
-                    onGameFinishedUI();
-    clearInterval(gameStatusInterval);
-    gameStatusInterval = null;
+  if (!currentGameId) return;
 
-    if (moveTimerInterval) {
-        clearInterval(moveTimerInterval);
-        moveTimerInterval = null;
-    }
-    isMoveTimerRunning = false;
+  gameStatusInterval = setInterval(() => {
+    fetch(`/rps/api/game/${currentGameId}/status/`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) return;
 
-    // ✅ НИКАКОГО reload — просто оставляем результат на экране
-    return;
+        updateGameStatus(data);
+
+        // ✅ cancelled — сразу стоп
+        if (data.status === 'cancelled') {
+          stopAllRpsIntervals();
+          finalizeGameUI(data);
+          return;
+        }
+
+        // ✅ finished — стопаем ТОЛЬКО если реально есть финальные данные
+        if (isGameReadyToFinalize(data) && !gameFinalized) {
+          gameFinalized = true;
+          stopAllRpsIntervals();
+          finalizeGameUI(data);
+        }
+      })
+      .catch(console.error);
+  }, 1200); // можно 1200-1500
 }
 
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
-    }, 1500);
-}
 
 // Обновление статуса игры
 function updateGameStatus(data) {
@@ -413,7 +413,7 @@ function updateGameStatus(data) {
             }
         }
         
-        if (data.status === 'finished' && data.player2_move) {
+        if (data.player2_move) {
             const player2Move = document.getElementById('player2-move');
             if (player2Move) {
                 const moveEmoji2 = data.player2_move === 'rock' ? '✊' : 
@@ -507,6 +507,33 @@ function startMoveTimer() {
         }
     }, 1000);
 }
+
+function finalizeGameUI(data) {
+  onGameFinishedUI();
+
+  // результат (если есть элемент)
+  const resultEl = document.getElementById('game-result');
+  if (resultEl) {
+    let text = 'Игра завершена';
+    if (data.status === 'cancelled') text = 'Игра отменена';
+    if (data.result === 'player1_win') text = 'Вы победили!';
+    if (data.result === 'player2_win') text = 'Вы проиграли';
+    if (data.result === 'draw') text = 'Ничья';
+    resultEl.textContent = text;
+    resultEl.style.display = 'block';
+  }
+
+  // показать кнопки (если они есть в HTML)
+  const rematch = document.getElementById('btn-rematch');
+  const exit = document.getElementById('btn-exit');
+  if (rematch) rematch.style.display = 'inline-flex';
+  if (exit) exit.style.display = 'inline-flex';
+
+  // на всякий случай: скрыть кнопку отмены
+  const cancelBtn = document.getElementById('btn-cancel-game');
+  if (cancelBtn) cancelBtn.style.display = 'none';
+}
+
 function onGameFinishedUI() {
   document.querySelectorAll('.move-btn').forEach(b => b.disabled = true);
 
@@ -565,38 +592,38 @@ function makeMove(move) {
         }
         
         if (data.game_finished) {
-            // Игра завершена
-            clearInterval(gameStatusInterval);
-            clearInterval(moveTimerInterval);
-            
-            // Показываем ход противника с задержкой для драматизма
-            setTimeout(() => {
-                if (data.player2_move) {
-                    const player2Move = document.getElementById('player2-move');
-                    if (player2Move) {
-                        const moveEmoji = data.player2_move === 'rock' ? '✊' : 
-                                         data.player2_move === 'paper' ? '🖐️' : '✌️';
-                        player2Move.innerHTML = `<div class="move-icon move-${data.player2_move}">${moveEmoji}</div>`;
-                    }
-                }
-                
-                // Определяем победителя и добавляем классы
-                const player1Card = document.querySelector('.player-card.player-1');
-                const player2Card = document.querySelector('.player-card.player-2');
-                
-                if (data.result === 'player1_win') {
-                    if (player1Card) player1Card.classList.add('winner');
-                    if (player2Card) player2Card.classList.add('loser');
-                    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-                } else if (data.result === 'player2_win') {
-                    if (player2Card) player2Card.classList.add('winner');
-                    if (player1Card) player1Card.classList.add('loser');
-                    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-                }
-                
-                onGameFinishedUI();
-            }, 500);
-        }
+  if (!gameFinalized) {
+    gameFinalized = true;
+
+    // стопаем всё правильно
+    stopAllRpsIntervals();
+
+    // дорисуем противника, если пришёл ход
+    if (data.player2_move) {
+      const player2Move = document.getElementById('player2-move');
+      if (player2Move) {
+        const moveEmoji = data.player2_move === 'rock' ? '✊' :
+                          data.player2_move === 'paper' ? '🖐️' : '✌️';
+        player2Move.innerHTML = `<div class="move-icon move-${data.player2_move}">${moveEmoji}</div>`;
+      }
+    }
+
+    // подсветка победителя (если result пришёл)
+    const player1Card = document.querySelector('.player-card.player-1');
+    const player2Card = document.querySelector('.player-card.player-2');
+
+    if (data.result === 'player1_win') {
+      player1Card?.classList.add('winner');
+      player2Card?.classList.add('loser');
+    } else if (data.result === 'player2_win') {
+      player2Card?.classList.add('winner');
+      player1Card?.classList.add('loser');
+    }
+
+    finalizeGameUI({ ...data, status: 'finished' });
+  }
+}
+
     })
     .catch(error => {
         hideLoading();
