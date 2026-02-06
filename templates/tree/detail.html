@@ -535,7 +535,13 @@ body, html {
   <button class="tree-btn btn-use-item open-modal-btn" data-modal="autowater-modal">Автополив</button>
   <button class="tree-btn btn-use-item open-modal-btn" data-modal="fertilizer-modal">Удобрение</button>
   <button class="tree-btn btn-upgrade" data-tree-id="{{ tree.id }}">Улучшить</button>
+    <button type="button" class="tree-btn btn-earn-more" data-url="{% url 'rps:home' %}">
+  Заработать больше
+</button>
+
+
 </div>
+
 
 
 
@@ -571,15 +577,18 @@ body, html {
         <div class="info-row">
     <span class="info-label">Ветки:</span>
     <span class="info-value">
-      {{ branches_balance }}
+  {% if tree.level >= 5 %}
+    MAX
+  {% else %}
+    {{ branches_balance }} /
+    {% if tree.level == 1 %}5
+    {% elif tree.level == 2 %}12
+    {% elif tree.level == 3 %}30
+    {% elif tree.level == 4 %}75
+    {% endif %}
+  {% endif %}
+</span>
 
-      /
-      {% if tree.level == 1 %}5
-      {% elif tree.level == 2 %}12
-      {% elif tree.level == 3 %}30
-      {% elif tree.level == 4 %}75
-      {% else %}MAX{% endif %}
-    </span>
   </div>
 
     <div class="info-row">
@@ -630,15 +639,18 @@ body, html {
     <div class="info-row">
       <span class="info-label">Ветки:</span>
       <span class="info-value">
-        {{ branches_balance }}
+  {% if tree.level >= 5 %}
+    MAX
+  {% else %}
+    {{ branches_balance }} /
+    {% if tree.level == 1 %}5
+    {% elif tree.level == 2 %}12
+    {% elif tree.level == 3 %}30
+    {% elif tree.level == 4 %}75
+    {% endif %}
+  {% endif %}
+</span>
 
-        /
-        {% if tree.level == 1 %}5
-        {% elif tree.level == 2 %}12
-        {% elif tree.level == 3 %}30
-        {% elif tree.level == 4 %}75
-        {% else %}MAX{% endif %}
-      </span>
     </div>
     <div class="info-row">
       <span class="info-label">Автополив:</span>
@@ -863,7 +875,11 @@ document.addEventListener('DOMContentLoaded', function() {
       this.closest('.custom-modal').classList.remove('active');
     });
   });
-
+document.addEventListener('click', function(e){
+  const btn = e.target.closest('.btn-earn-more');
+  if (!btn) return;
+  window.location.href = btn.dataset.url;
+});
   // Использовать автополив
   document.querySelectorAll('.use-autowater-btn').forEach(btn => {
     btn.addEventListener('click', function() {

@@ -12,9 +12,25 @@ import random
 from users.models import User
 from .models import Tournament, TournamentParticipant, Game, GameQueue, BotPool
 from .templatetags.mask import mask_last
+import logging
+logger = logging.getLogger(__name__)
 
 # Таймаут на совершение хода: 10 секунд
 MOVE_TIMEOUT_SECONDS = 10
+
+
+def get_current_user(request):
+    """
+    Возвращает текущего залогиненного TelegramUser по session['telegram_id'].
+    """
+    tg_id = request.session.get("telegram_id")
+    if not tg_id:
+        return None
+    try:
+        return User.objects.get(telegram_id=tg_id)
+    except User.DoesNotExist:
+        return None
+
 
 # Список случайных имен для ботов
 BOT_NAMES = [
@@ -177,24 +193,36 @@ def get_top_5_players():
 
 
 def rps_game(request, game_id=None):
-    """Страница игры"""
     user = request.user
-    
+
     if game_id:
         game = get_object_or_404(Game, id=game_id)
-        
-        # Проверяем, не истекла ли игра
-        if game.expires_at and game.expires_at <= timezone.now() and game.status != 'finished':
+
+        logger.warning(
+            "[RPS] open game_id=%s status=%s is_bot=%s expires_at=%s now=%s "
+            "player1=%s player2=%s req_user=%s req_user_id=%s",
+            game.id, game.status, game.is_bot_game, game.expires_at, timezone.now(),
+            getattr(game.player1, "id", None),
+            getattr(game.player2, "id", None),
+            getattr(user, "id", None),
+            getattr(user, "telegram_id", None),
+        )
+
+        # 1) истекла?
+        if game.expires_at and game.expires_at <= timezone.now() and game.status not in ['finished', 'cancelled']:
+            logger.warning("[RPS] expired -> cancelling + refund")
+            with transaction.atomic():
+                _resolve_timeout_cancel(game)
             return redirect('rps:home')
-        
-        # Проверяем, что пользователь участвует в игре
+
+        # 2) проверка участника
         if game.is_bot_game:
-            # Для игры с ботом проверяем только player1
             if game.player1 != user:
+                logger.warning("[RPS] redirect причина=not_your_bot_game")
                 return redirect('rps:home')
         else:
-            # Для PvP проверяем обоих игроков
             if game.player1 != user and (not game.player2 or game.player2 != user):
+                logger.warning("[RPS] redirect причина=not_your_pvp_game")
                 return redirect('rps:home')
     else:
         game = None
@@ -228,7 +256,7 @@ def api_search_game(request):
         return JsonResponse({'error': 'Invalid bet amount'}, status=400)
     
     # Проверяем доступные ставки
-    valid_bets = [10, 50, 100, 500]
+    valid_bets = [1, 3, 5, 10]
     if bet_amount not in valid_bets:
         return JsonResponse({'error': 'Invalid bet amount'}, status=400)
     
@@ -277,9 +305,11 @@ def api_search_game(request):
         # Проверяем, не находится ли пользователь уже в активной игре
         active_game = Game.objects.filter(
             (Q(player1=user) | Q(player2=user)),
-            status__in=['waiting', 'betting', 'playing']
+            status__in=['waiting', 'betting', 'playing'],
+        ).filter(
+            Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
         ).first()
-        
+
         if active_game:
             # Пользователь уже в игре
             queue_item.delete()
@@ -393,9 +423,13 @@ def api_make_move(request):
         return JsonResponse({'error': 'Игра истекла, ставки возвращены'}, status=400)
     
     # Проверяем, что пользователь участвует в игре
-    if game.player1_id != user.telegram_id and (not game.is_bot_game and game.player2_id != user.telegram_id):
-        return JsonResponse({'error': 'Not your game'}, status=403)
-    
+    if game.is_bot_game:
+        if game.player1 != user:
+            return JsonResponse({'error': 'Not your game'}, status=403)
+    else:
+        if game.player1 != user and game.player2 != user:
+            return JsonResponse({'error': 'Not your game'}, status=403)
+
     # Определяем, какой игрок делает ход
     is_player1 = (game.player1 == user)
     
@@ -413,29 +447,41 @@ def api_make_move(request):
         
         # Если это игра с ботом и пользователь сделал ход, бот делает ход автоматически
         if game.is_bot_game and not game.player2_move:
-            # Бот делает ход (60% проигрывает, 40% выигрывает)
-            bot_will_lose = random.random() < 0.6
-            
-            if bot_will_lose:
-                # Бот проиграет - выбираем проигрышный ход
-                if move == 'rock':
-                    bot_move = 'scissors'
-                elif move == 'paper':
-                    bot_move = 'rock'
-                else:  # scissors
-                    bot_move = 'paper'
+
+            P_DRAW = 0.10  # 10% ничья (можешь менять)
+            BOT_WIN_RATE = 0.60  # из НЕ-ничьих: бот выигрывает 60%, игрок 40%
+
+
+            r = random.random()
+
+            if r < P_DRAW:
+
+                bot_move = move
             else:
-                # Бот выиграет - выбираем выигрышный ход
-                if move == 'rock':
-                    bot_move = 'paper'
-                elif move == 'paper':
-                    bot_move = 'scissors'
-                else:  # scissors
-                    bot_move = 'rock'
-            
+
+                r2 = random.random()
+                bot_will_win = (r2 < BOT_WIN_RATE)  # 60% бот выигрывает, 40% проигрывает
+
+                if bot_will_win:
+                    # Бот выигрывает (контрит ход игрока)
+                    if move == 'rock':
+                        bot_move = 'paper'
+                    elif move == 'paper':
+                        bot_move = 'scissors'
+                    else:  # scissors
+                        bot_move = 'rock'
+                else:
+                    # Бот проигрывает (ставит проигрышный ход)
+                    if move == 'rock':
+                        bot_move = 'scissors'
+                    elif move == 'paper':
+                        bot_move = 'rock'
+                    else:  # scissors
+                        bot_move = 'paper'
+
             game.player2_move = bot_move
             game.save()
-        
+
         # Если оба игрока сделали ход, вычисляем результат
         if game.player1_move and game.player2_move:
             result = game.calculate_result()

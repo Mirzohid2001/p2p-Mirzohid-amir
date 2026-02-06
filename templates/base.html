@@ -264,6 +264,10 @@
         <i class="fa fa-home"></i>
         <span>Главная</span>
     </a>
+    <a href="/rps/" class="nav-item{% if '/rps' in request.path %} active{% endif %}">
+        <span style="font-size:18px;line-height:1;">🎮</span>
+        <span>Игра</span>
+    </a>
     <a href="/p2p/" class="nav-item{% if '/p2p' in request.path %} active{% endif %}">
         <span style="font-size:18px;line-height:1;">P2P</span>
 
@@ -280,10 +284,7 @@
         <i class="fa fa-shopping-cart"></i>
         <span>Магазин</span>
     </a>
-    <a href="/rps/" class="nav-item{% if '/rps' in request.path %} active{% endif %}">
-        <span style="font-size:18px;line-height:1;">🎮</span>
-        <span>Игра</span>
-    </a>
+
 </div>
 
 

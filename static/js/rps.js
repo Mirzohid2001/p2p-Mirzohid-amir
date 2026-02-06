@@ -7,6 +7,15 @@ let isMoveTimerRunning = false;
 let currentGameId = null;
 let searchTimer = 5;
 let moveTimer = 8;
+document.addEventListener('click', function (e) {
+  const btn = e.target.closest('#btn-rematch, #btn-rematch-cancelled');
+  if (!btn) return;
+
+  const gid = btn.dataset.gameId;
+  console.log('REMATCH CLICK gid=', gid);
+
+  startRematch(gid);
+});
 
 // Инициализация
 document.addEventListener('DOMContentLoaded', function() {
@@ -20,6 +29,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+
     
     // Кнопка отмены поиска
     const cancelSearchBtn = document.getElementById('btn-cancel-search');
@@ -28,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
             cancelGameSearch();
         });
     }
-    
+
     // Если мы на странице игры
     if (typeof gameId !== 'undefined' && gameId) {
         currentGameId = gameId;
@@ -651,47 +661,55 @@ function hideLoading() {
 }
 
 // Начать новую игру с тем же соперником
-function startRematch(gameId) {
-    if (!gameId) {
-        showNotification('Ошибка: ID игры не найден', 'error');
-        return;
-    }
-    
-    showLoading();
-    
-    fetch('/rps/api/rematch/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken'),
-        },
-        body: JSON.stringify({
-            game_id: gameId
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        hideLoading();
-        
-        if (data.error) {
-            showNotification(data.error, 'error');
-            return;
-        }
-        
-        if (data.success && data.game_id) {
-            showNotification('Новая игра создана!', 'success');
-            // Переходим к новой игре
-            setTimeout(() => {
-                window.location.href = `/rps/game/${data.game_id}/`;
-            }, 500);
-        }
-    })
-    .catch(error => {
-        hideLoading();
-        console.error('Error:', error);
-        showNotification('Ошибка при создании новой игры', 'error');
-    });
+function stopAllRpsIntervals() {
+  if (searchInterval) { clearInterval(searchInterval); searchInterval = null; }
+  if (gameStatusInterval) { clearInterval(gameStatusInterval); gameStatusInterval = null; }
+  if (moveTimerInterval) { clearInterval(moveTimerInterval); moveTimerInterval = null; }
+  isMoveTimerRunning = false;
 }
+
+function startRematch(gameId) {
+  if (!gameId) {
+    showNotification('Ошибка: ID игры не найден', 'error');
+    return;
+  }
+
+  showLoading();
+
+  fetch('/rps/api/rematch/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken'),
+    },
+    body: JSON.stringify({ game_id: gameId })
+  })
+  .then(r => r.json())
+  .then(data => {
+    hideLoading();
+
+    if (data.error) {
+      showNotification(data.error, 'error');
+      return;
+    }
+
+    if (data.success && data.game_id) {
+      showNotification('Новая игра создана!', 'success');
+
+      // ✅ ВАЖНО: стопаем опросы старой игры
+      stopAllRpsIntervals();
+
+      // ✅ ВАЖНО: сразу уходим на новую игру
+      window.location.replace(`/rps/game/${data.game_id}/`);
+    }
+  })
+  .catch(err => {
+    hideLoading();
+    console.error(err);
+    showNotification('Ошибка при создании новой игры', 'error');
+  });
+}
+
 
 // Добавляем CSS для уведомлений
 const style = document.createElement('style');

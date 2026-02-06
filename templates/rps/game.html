@@ -1,157 +1,161 @@
-{% extends 'base.html' %}
-{% load static %}
-{% load mask %}
-{% load humanize %}
+    {% extends 'base.html' %}
+    {% load static %}
+    {% load mask %}
+    {% load humanize %}
 
-{% block title %}Игра — Камень-Ножницы-Бумага{% endblock %}
+    {% block title %}Игра — Камень-Ножницы-Бумага{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/rps.css' %}">
-{% endblock %}
+    {% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/rps.css' %}">
+    {% endblock %}
 
-{% block content %}
-<div class="rps-game-container">
-    {% if not game %}
-    <!-- Выбор ставки -->
-    <div class="rps-betting card">
-        <div class="betting-header">
-            <h2>💰 Выберите ставку</h2>
-            <a href="{% url 'rps:home' %}" class="btn-back">← Назад</a>
-        </div>
-        <div class="balance-info">
-            <span>Ваш баланс: <strong>{{ user.cf_balance|floatformat:0|intcomma }} FL</strong></span>
-        </div>
-        <div class="search-status" id="search-status" style="display: none;">
-            <div class="searching-animation">
-                <div class="spinner"></div>
-                <p>Поиск противника...</p>
-                <p class="timer" id="search-timer">5</p>
+    {% block content %}
+    <div class="rps-game-container">
+        {% if not game %}
+        <!-- Выбор ставки -->
+        <div class="rps-betting card">
+            <div class="betting-header">
+                <h2>💰 Выберите ставку</h2>
+                <a href="{% url 'rps:home' %}" class="btn-back">← Назад</a>
             </div>
-            <button class="btn-cancel-search" id="btn-cancel-search" style="display: none;">Отменить поиск</button>
-        </div>
-        <div class="bet-options">
-            <button class="bet-btn" data-bet="10">10 FL</button>
-            <button class="bet-btn" data-bet="50">50 FL</button>
-            <button class="bet-btn" data-bet="100">100 FL</button>
-            <button class="bet-btn" data-bet="500">500 FL</button>
-        </div>
-    </div>
-    {% else %}
-    <!-- Игровой экран -->
-    <div class="rps-game-screen card">
-        <div class="game-header">
-            <a href="{% url 'rps:home' %}" class="btn-back-small">← Назад</a>
-            <div class="game-bank">
-                <span>Банк игры: <strong id="game-bank">{{ game.game_bank|floatformat:0|intcomma }} FL</strong></span>
+            <div class="balance-info">
+                <span>Ваш баланс: <strong>{{ user.cf_balance|floatformat:0|intcomma }} FL</strong></span>
             </div>
-            <div class="game-timer" id="game-timer" >
-                <span id="timer-value">8</span>
+            <div class="search-status" id="search-status" style="display: none;">
+                <div class="searching-animation">
+                    <div class="spinner"></div>
+                    <p>Поиск противника...</p>
+                    <p class="timer" id="search-timer">5</p>
+                </div>
+                <button class="btn-cancel-search" id="btn-cancel-search" style="display: none;">Отменить поиск</button>
+            </div>
+            <div class="bet-options">
+                <button class="bet-btn" data-bet="1">1 FL</button>
+                <button class="bet-btn" data-bet="3">3 FL</button>
+                <button class="bet-btn" data-bet="5">5 FL</button>
+                <button class="bet-btn" data-bet="10">10 FL</button>
             </div>
         </div>
-
-        <div class="game-arena">
-            <div class="player-card player-1">
-                <div class="player-name">{{ game.player1|mask_last:3 }}</div>
-                <div class="player-move" id="player1-move">
-                    {% if game.player1_move %}
-                        <div class="move-icon move-{{ game.player1_move }}">
-                            {% if game.player1_move == 'rock' %}✊
-                            {% elif game.player1_move == 'paper' %}🖐️
-                            {% elif game.player1_move == 'scissors' %}✌️
-                            {% endif %}
-                        </div>
-                    {% else %}
-                        <div class="move-placeholder">?</div>
-                    {% endif %}
+        {% else %}
+        <!-- Игровой экран -->
+        <div class="rps-game-screen card">
+            <div class="game-header">
+                <a href="{% url 'rps:home' %}" class="btn-back-small">← Назад</a>
+                <div class="game-bank">
+                    <span>Банк игры: <strong id="game-bank">{{ game.game_bank|floatformat:0|intcomma }} FL</strong></span>
+                </div>
+                <div class="game-timer" id="game-timer" >
+                    <span id="timer-value">8</span>
                 </div>
             </div>
 
-            <div class="vs-badge">VS</div>
-
-            <div class="player-card player-2">
-                <div class="player-name">
-                    {% if game.is_bot_game %}{{ game.bot_name|default:"Бот" }}{% else %}{{ game.player2|mask_last:3 }}{% endif %}
+            <div class="game-arena">
+                <div class="player-card player-1">
+                    <div class="player-name">{{ game.player1|mask_last:3 }}</div>
+                    <div class="player-move" id="player1-move">
+                        {% if game.player1_move %}
+                            <div class="move-icon move-{{ game.player1_move }}">
+                                {% if game.player1_move == 'rock' %}✊
+                                {% elif game.player1_move == 'paper' %}🖐️
+                                {% elif game.player1_move == 'scissors' %}✌️
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <div class="move-placeholder">?</div>
+                        {% endif %}
+                    </div>
                 </div>
-                <div class="player-move" id="player2-move">
-                    {% if game.status == 'finished' and game.player2_move %}
-                        <div class="move-icon move-{{ game.player2_move }}">
-                            {% if game.player2_move == 'rock' %}✊
-                            {% elif game.player2_move == 'paper' %}🖐️
-                            {% elif game.player2_move == 'scissors' %}✌️
-                            {% endif %}
-                        </div>
-                    {% else %}
-                        <div class="move-placeholder">?</div>
-                    {% endif %}
+
+                <div class="vs-badge">VS</div>
+
+                <div class="player-card player-2">
+                    <div class="player-name">
+                        {% if game.is_bot_game %}{{ game.bot_name|default:"Бот" }}{% else %}{{ game.player2|mask_last:3 }}{% endif %}
+                    </div>
+                    <div class="player-move" id="player2-move">
+                        {% if game.status == 'finished' and game.player2_move %}
+                            <div class="move-icon move-{{ game.player2_move }}">
+                                {% if game.player2_move == 'rock' %}✊
+                                {% elif game.player2_move == 'paper' %}🖐️
+                                {% elif game.player2_move == 'scissors' %}✌️
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <div class="move-placeholder">?</div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-        </div>
 
-        {% if game.status == 'betting' or game.status == 'playing' %}
-        <div class="move-panel">
-            <button class="move-btn" data-move="rock" title="Камень">
-                <div class="move-icon">✊</div>
-                <span>Камень</span>
-            </button>
-            <button class="move-btn" data-move="paper" title="Бумага">
-                <div class="move-icon">🖐️</div>
-                <span>Бумага</span>
-            </button>
-            <button class="move-btn" data-move="scissors" title="Ножницы">
-                <div class="move-icon">✌️</div>
-                <span>Ножницы</span>
-            </button>
-        </div>
-        <div class="game-actions">
-            <button class="btn-cancel-game" id="btn-cancel-game">Отменить игру</button>
-        </div>
-        {% endif %}
-
-        {% if game.status == 'finished' %}
-        <div class="game-result" id="game-result">
-            {% if game.result == 'draw' %}
-                <div class="result-message result-draw">
-                    <h2>🤝 Ничья!</h2>
-                    <p>Ставки возвращены</p>
-                </div>
-            {% elif game.winner == user %}
-                <div class="result-message result-win">
-                    <h2>🎉 Вы выиграли!</h2>
-                    <p>Вы получили {{ game.game_bank|floatformat:0|intcomma }} FL</p>
-                </div>
-            {% else %}
-                <div class="result-message result-loss">
-                    <h2>😔 Вы проиграли</h2>
-                    <p>Попробуйте еще раз!</p>
-                </div>
+            {% if game.status == 'betting' or game.status == 'playing' %}
+            <div class="move-panel">
+                <button class="move-btn" data-move="rock" title="Камень">
+                    <div class="move-icon">✊</div>
+                    <span>Камень</span>
+                </button>
+                <button class="move-btn" data-move="paper" title="Бумага">
+                    <div class="move-icon">🖐️</div>
+                    <span>Бумага</span>
+                </button>
+                <button class="move-btn" data-move="scissors" title="Ножницы">
+                    <div class="move-icon">✌️</div>
+                    <span>Ножницы</span>
+                </button>
+            </div>
+            <div class="game-actions">
+                <button class="btn-cancel-game" id="btn-cancel-game">Отменить игру</button>
+            </div>
             {% endif %}
-            <div class="result-actions">
-                <button class="btn-exit" id="btn-exit">🚪 Выйти</button>
+
+            {% if game.status == 'finished' %}
+            <div class="game-result" id="game-result">
+                {% if game.result == 'draw' %}
+                    <div class="result-message result-draw">
+                        <h2>🤝 Ничья!</h2>
+                        <p>Ставки возвращены</p>
+                    </div>
+                {% elif game.winner == user %}
+                    <div class="result-message result-win">
+                        <h2>🎉 Вы выиграли!</h2>
+                        <p>Вы получили {{ game.game_bank|floatformat:0|intcomma }} FL</p>
+                    </div>
+                {% else %}
+                    <div class="result-message result-loss">
+                        <h2>😔 Вы проиграли</h2>
+                        <p>Попробуйте еще раз!</p>
+                    </div>
+                {% endif %}
+                <div class="result-actions">
+        <button class="btn-rematch" id="btn-rematch" data-game-id="{{ game.id }}">🔁 Ещё раз</button>
+        <button class="btn-exit" id="btn-exit">🚪 Выйти</button>
+    </div>
+
             </div>
-        </div>
-        {% elif game.status == 'cancelled' %}
-        <div class="game-result" id="game-result">
-            <div class="result-message result-draw">
-                <h2>⏱️ Игра отменена</h2>
-                <p>Один из игроков не сделал выбор. Ставки возвращены.</p>
+            {% elif game.status == 'cancelled' %}
+            <div class="game-result" id="game-result">
+                <div class="result-message result-draw">
+                    <h2>⏱️ Игра отменена</h2>
+                    <p>Один из игроков не сделал выбор. Ставки возвращены.</p>
+                </div>
+                <div class="result-actions">
+        <button class="btn-rematch" id="btn-rematch-cancelled" data-game-id="{{ game.id }}">🔁 Ещё раз</button>
+        <button class="btn-exit" id="btn-exit-cancelled">🚪 Выйти</button>
+    </div>
+
             </div>
-            <div class="result-actions">
-                <button class="btn-exit" id="btn-exit-cancelled">🚪 Выйти</button>
-            </div>
+            {% endif %}
         </div>
         {% endif %}
     </div>
-    {% endif %}
-</div>
 
-<script>
-    const gameId = {% if game %}{{ game.id }}{% else %}null{% endif %};
-    const userId = {{ user.telegram_id }};
-    const isPlayer1 = {% if is_player1 %}true{% else %}false{% endif %};
-</script>
-{% endblock %}
+    <script>
+        const gameId = {% if game %}{{ game.id }}{% else %}null{% endif %};
+        const userId = {{ user.telegram_id }};
+        const isPlayer1 = {% if is_player1 %}true{% else %}false{% endif %};
+    </script>
+    {% endblock %}
 
-{% block extra_js %}
-<script src="{% static 'js/rps.js' %}"></script>
-{% endblock %}
+    {% block extra_js %}
+    <script src="{% static 'js/rps.js' %}"></script>
+    {% endblock %}
 
