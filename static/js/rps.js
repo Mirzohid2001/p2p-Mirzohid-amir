@@ -592,37 +592,20 @@ function makeMove(move) {
         }
         
         if (data.game_finished) {
-  if (!gameFinalized) {
+  // ❗ НЕ стопаем polling здесь
+  // Просто отключаем кнопки и показываем "ждём результат"
+  onGameFinishedUI();
+
+  showNotification('Ожидаем результат...', 'info');
+
+  // Если в ответе уже есть финальные данные — финализируем сразу
+  if (data.result || (data.player1_move && data.player2_move)) {
     gameFinalized = true;
-
-    // стопаем всё правильно
     stopAllRpsIntervals();
-
-    // дорисуем противника, если пришёл ход
-    if (data.player2_move) {
-      const player2Move = document.getElementById('player2-move');
-      if (player2Move) {
-        const moveEmoji = data.player2_move === 'rock' ? '✊' :
-                          data.player2_move === 'paper' ? '🖐️' : '✌️';
-        player2Move.innerHTML = `<div class="move-icon move-${data.player2_move}">${moveEmoji}</div>`;
-      }
-    }
-
-    // подсветка победителя (если result пришёл)
-    const player1Card = document.querySelector('.player-card.player-1');
-    const player2Card = document.querySelector('.player-card.player-2');
-
-    if (data.result === 'player1_win') {
-      player1Card?.classList.add('winner');
-      player2Card?.classList.add('loser');
-    } else if (data.result === 'player2_win') {
-      player2Card?.classList.add('winner');
-      player1Card?.classList.add('loser');
-    }
-
     finalizeGameUI({ ...data, status: 'finished' });
   }
 }
+
 
     })
     .catch(error => {
