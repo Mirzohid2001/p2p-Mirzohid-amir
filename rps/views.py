@@ -449,7 +449,7 @@ def api_make_move(request):
         if game.is_bot_game and not game.player2_move:
 
             P_DRAW = 0.10  # 10% ничья (можешь менять)
-            BOT_WIN_RATE = 0.60  # из НЕ-ничьих: бот выигрывает 60%, игрок 40%
+            BOT_WIN_RATE = 0.55
 
 
             r = random.random()
@@ -460,7 +460,7 @@ def api_make_move(request):
             else:
 
                 r2 = random.random()
-                bot_will_win = (r2 < BOT_WIN_RATE)  # 60% бот выигрывает, 40% проигрывает
+                bot_will_win = (r2 < BOT_WIN_RATE)
 
                 if bot_will_win:
                     # Бот выигрывает (контрит ход игрока)

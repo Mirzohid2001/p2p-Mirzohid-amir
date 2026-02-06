@@ -380,17 +380,20 @@ function startGameStatusPolling() {
                 
                 // Если игра завершена или отменена, останавливаем опрос
                 if (data.status === 'finished' || data.status === 'cancelled') {
-                    clearInterval(gameStatusInterval);
-                    if (moveTimerInterval) {
-                        clearInterval(moveTimerInterval);
-                        moveTimerInterval = null;
-                        isMoveTimerRunning = false;
-                    }
-                    // Перезагружаем страницу для показа результата
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 2000);
-                }
+                    onGameFinishedUI();
+    clearInterval(gameStatusInterval);
+    gameStatusInterval = null;
+
+    if (moveTimerInterval) {
+        clearInterval(moveTimerInterval);
+        moveTimerInterval = null;
+    }
+    isMoveTimerRunning = false;
+
+    // ✅ НИКАКОГО reload — просто оставляем результат на экране
+    return;
+}
+
             })
             .catch(error => {
                 console.error('Error:', error);
@@ -504,7 +507,12 @@ function startMoveTimer() {
         }
     }, 1000);
 }
+function onGameFinishedUI() {
+  document.querySelectorAll('.move-btn').forEach(b => b.disabled = true);
 
+  const timerEl = document.getElementById('game-timer');
+  if (timerEl) timerEl.style.display = 'none';
+}
 // Совершение хода
 function makeMove(move) {
     if (!currentGameId) return;
