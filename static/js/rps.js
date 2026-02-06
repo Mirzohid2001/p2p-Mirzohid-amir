@@ -594,10 +594,7 @@ function makeMove(move) {
                     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
                 }
                 
-                // Перезагружаем страницу через 3 секунды
-                setTimeout(() => {
-                    window.location.reload();
-                }, 3000);
+                onGameFinishedUI();
             }, 500);
         }
     })
