@@ -69,7 +69,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "PUT_YOUR_TOKEN_HERE")
-WEBAPP_URL_BASE = os.getenv("WEBAPP_URL_BASE", "https://352c-95-46-69-105.ngrok-free.app/telegram_login/")
+WEBAPP_URL_BASE = os.getenv("WEBAPP_URL_BASE", "https://flora.diy/telegram_login/")
 
 ADMIN_IDS = [1010942377, 455168812]
 class AdminOnly(MessageFilter):
@@ -287,7 +287,57 @@ def db_get_all_user_ids():
         TelegramUser.objects
         .exclude(telegram_id__isnull=True)
         .values_list("telegram_id", flat=True)
+
     )
+@sync_to_async
+def db_get_watering_stats(days: int = 7) -> Dict[str, int]:
+    now = timezone.now()
+    cutoff = now - timezone.timedelta(days=days)
+
+    total_users = TelegramUser.objects.count()
+
+    active_users = (
+        Tree.objects
+        .filter(last_watered__isnull=False, last_watered__gte=cutoff)
+        .values("user_id")      # у ForeignKey поле хранится как user_id
+        .distinct()
+        .count()
+    )
+
+    afk_users = total_users - active_users
+
+    never_watered = (
+        TelegramUser.objects
+        .exclude(telegram_id__in=Tree.objects.filter(last_watered__isnull=False).values_list("user_id", flat=True))
+        .count()
+    )
+
+    return {
+        "total": total_users,
+        "active": active_users,
+        "afk": afk_users,
+        "never_watered": never_watered,
+        "days": days,
+    }
+
+async def stata_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if not await _is_admin(user_id):
+        await update.message.reply_text("⛔️ Нет доступа.")
+        return
+
+    days = 7
+    s = await db_get_watering_stats(days=days)
+
+    msg = (
+        f"📊 <b>Статистика</b> (по поливу)\n\n"
+        f"👥 Всего зарегистрировано: <b>{s['total']}</b>\n"
+        f"✅ Актив (поливали за {s['days']}д): <b>{s['active']}</b>\n"
+        f"🕒 АФК (не поливали {s['days']}д+): <b>{s['afk']}</b>\n"
+        f"🥶 Никогда не поливали: <b>{s['never_watered']}</b>"
+    )
+    await update.message.reply_text(msg, parse_mode="HTML")
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # /start
@@ -792,6 +842,7 @@ def main():
     app.add_handler(CommandHandler("listadmins", listadmins_command,filters=ADMIN_ONLY))
     app.add_handler(CommandHandler("tyrnir", tyrnir_command,filters=ADMIN_ONLY))
     app.add_handler(CommandHandler("priz", priz_command,filters=ADMIN_ONLY))
+    app.add_handler(CommandHandler("stata", stata_command, filters=ADMIN_ONLY))
 
     app.add_handler(CallbackQueryHandler(callback_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_router))

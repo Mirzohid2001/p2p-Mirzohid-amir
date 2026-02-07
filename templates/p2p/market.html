@@ -11,10 +11,28 @@
 </div>
 
 <!-- Цена TON и CF -->
-<div class="flex justify-center gap-6 mt-2 mb-4 text-white text-base">
-    <div>Цена FL: <span class="font-bold">{{ cf_price_rub }}</span> ₽</div>
-    <div>TON: <span class="font-bold">{% if ton_to_rub %}{{ ton_to_rub|floatformat:2 }}{% else %}—{% endif %}</span> ₽</div>
+<div class="flex justify-center items-center gap-6 mt-2 mb-4 text-white text-base" id="rates-bar">
+  <div>
+    Цена FL:
+    <span class="font-bold" id="cf-price-value">{{ cf_price_rub }}</span>
+    <span id="cf-price-currency">₽</span>
+  </div>
+
+  <div>
+    TON:
+    <span class="font-bold" id="ton-price-value">
+      {% if ton_to_rub %}{{ ton_to_rub|floatformat:2 }}{% else %}—{% endif %}
+    </span>
+    <span id="ton-price-currency">₽</span>
+  </div>
+
+  <!-- Переключатель валюты -->
+  <div style="display:flex; align-items:center; gap:10px;">
+    <button type="button" class="currency-btn active" data-currency="RUB">₽</button>
+    <button type="button" class="currency-btn" data-currency="USD">$</button>
+  </div>
 </div>
+
 
 <!-- График -->
 <div class="chart-wrapper mb-4" style="position: relative; overflow: hidden;">
@@ -135,6 +153,22 @@
 </div>
 
 <style>
+.currency-btn{
+  border: 1px solid rgba(255,255,255,.22);
+  background: rgba(255,255,255,.08);
+  color: #fff;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: transform .12s, background .12s, border-color .12s;
+  line-height: 1;
+}
+.currency-btn:hover{ transform: scale(1.04); }
+.currency-btn.active{
+  background: linear-gradient(135deg, rgba(90,255,117,.22), rgba(61,80,199,.22));
+  border-color: rgba(90,255,117,.40);
+}
 .p2p-main-btn {
     min-width: 155px;
     padding: 17px 0;
@@ -472,6 +506,79 @@ document.addEventListener('DOMContentLoaded', function() {
   window.tonPerCf = Number('{{ ton_per_cf|default:0|safe }}');
   window.tonToRub = Number('{{ ton_to_rub|default:0|safe }}');
   window.cfPriceRub = Number('{{ cf_price_rub|default:0|safe }}');
+  // ================== ВАЛЮТА (₽ / $) ==================
+window.fxRates = {
+  RUB: 1,
+  USD: Number('{{ usd_to_rub|default:0|safe }}') // сколько ₽ за 1$
+};
+// Если usd_to_rub не передали с бэка — можно будет подтянуть через API позже
+window.selectedCurrency = localStorage.getItem('p2p_currency') || 'RUB';
+
+function formatMoney(v, currency) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  const digits = (currency === 'RUB') ? 2 : 2;
+  return Number(v).toFixed(digits);
+}
+
+function convertFromRub(rubValue, currency) {
+  if (currency === 'RUB') return rubValue;
+  const usdToRub = window.fxRates.USD;
+  if (!usdToRub || usdToRub <= 0) return null; // нет курса
+  return rubValue / usdToRub;
+}
+
+function renderRates() {
+  const cur = window.selectedCurrency;
+
+  // FL price
+  const cfVal = document.getElementById('cf-price-value');
+  const cfCur = document.getElementById('cf-price-currency');
+
+  // TON price
+  const tonVal = document.getElementById('ton-price-value');
+  const tonCur = document.getElementById('ton-price-currency');
+
+  // Индикатор сверху графика (у тебя он сейчас в ₽)
+  const chartIndicator = document.getElementById('chart-price-indicator');
+
+  // исходные значения в ₽
+  const cfRub = window.cfPriceRub;
+  const tonRub = window.tonToRub;
+
+  const cfOut = convertFromRub(cfRub, cur);
+  const tonOut = convertFromRub(tonRub, cur);
+
+  if (cfVal) cfVal.textContent = (cfOut === null ? '—' : formatMoney(cfOut, cur));
+  if (tonVal) tonVal.textContent = (tonOut === null ? '—' : formatMoney(tonOut, cur));
+
+  const sym = (cur === 'RUB') ? '₽' : '$';
+  if (cfCur) cfCur.textContent = sym;
+  if (tonCur) tonCur.textContent = sym;
+
+  // обновим индикатор цены на графике текущей свечи (если хочешь — только для стартовой цены)
+  if (chartIndicator) {
+    const base = cfRub; // это текущая цена FL в ₽ из бекенда
+    const out = convertFromRub(base, cur);
+    chartIndicator.textContent = (out === null ? '—' : formatMoney(out, cur)) + ' ' + sym;
+  }
+
+  // подсветка кнопок
+  document.querySelectorAll('.currency-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.currency === cur);
+  });
+}
+
+document.querySelectorAll('.currency-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    window.selectedCurrency = btn.dataset.currency;
+    localStorage.setItem('p2p_currency', window.selectedCurrency);
+    renderRates();
+  });
+});
+
+// первичный рендер
+renderRates();
+
 
   // --- ПРОДАТЬ ---
   const btnSell = document.getElementById('btn-sell');

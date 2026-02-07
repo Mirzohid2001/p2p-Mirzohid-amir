@@ -9,8 +9,10 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET
 
 from shop.models import ShopItem, Purchase
+from users import models
 from .models import Tree, TonDistribution, BurnedToken
 from users.models import User as TelegramUser, User
 from .utils import apply_item_to_tree, use_purchase_for_cf_tree
@@ -421,3 +423,28 @@ def finish_ton_distribution(request, dist_id):
         dist.finish()
         messages.success(request, "Раздача завершена.")
     return redirect("home")
+
+@require_GET
+def stats_by_watering_json(request):
+    token = request.headers.get("X-API-TOKEN")
+
+    days = int(request.GET.get("days", 7))
+    cutoff = timezone.now() - timedelta(days=days)
+
+    total = User.objects.count()
+
+    # Актив = поливал за последние N дней
+    active = User.objects.filter(last_watered__isnull=False, last_watered__gte=cutoff).count()
+
+    # АфК = либо не поливал вообще, либо поливал слишком давно
+    afk = User.objects.filter(
+        models.Q(last_watered__isnull=True) | models.Q(last_watered__lt=cutoff)
+    ).count()
+
+    return JsonResponse({
+        "success": True,
+        "total": total,
+        "active": active,
+        "afk": afk,
+        "days": days
+    })

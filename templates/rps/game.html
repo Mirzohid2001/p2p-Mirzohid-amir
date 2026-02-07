@@ -129,7 +129,12 @@
                     </div>
                 {% endif %}
                 <div class="result-actions">
-        <button class="btn-rematch" id="btn-rematch" data-game-id="{{ game.id }}">🔁 Ещё раз</button>
+        <button class="btn-rematch"
+        id="btn-rematch"
+        data-bet="{{ game.bet_amount }}">
+  🔁 Ещё раз
+</button>
+
         <button class="btn-exit" id="btn-exit">🚪 Выйти</button>
     </div>
 
@@ -141,7 +146,12 @@
                     <p>Один из игроков не сделал выбор. Ставки возвращены.</p>
                 </div>
                 <div class="result-actions">
-        <button class="btn-rematch" id="btn-rematch-cancelled" data-game-id="{{ game.id }}">🔁 Ещё раз</button>
+        <button class="btn-rematch"
+        id="btn-rematch-cancelled"
+        data-bet="{{ game.bet_amount }}">
+  🔁 Ещё раз
+</button>
+
         <button class="btn-exit" id="btn-exit-cancelled">🚪 Выйти</button>
     </div>
 

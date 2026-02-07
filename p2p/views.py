@@ -3,6 +3,7 @@ import hashlib
 import random
 
 from _decimal import Decimal, InvalidOperation
+from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Sum
 from django.shortcuts import render, get_object_or_404
@@ -61,16 +62,23 @@ def get_ton_to_rub():
         return 0  # Не возвращай 85.0, лучше 0 чтобы на фронте показать ошибку
 
 def p2p_market(request):
-    cf_created = 25000000  # Всегда фиксированное количество
+    cf_created = 25000000
     burned = BurnedToken.objects.aggregate(total=Sum('amount'))['total'] or 0
-    cf_grown = User.objects.aggregate(total=Sum('cf_balance'))['total'] or 0  # Сколько всего выращено (на счетах)
+    cf_grown = User.objects.aggregate(total=Sum('cf_balance'))['total'] or 0
     cf_left = cf_created - cf_grown - burned
 
-    ton_to_rub = get_ton_to_rub()
+    usd_to_rub = get_usd_to_rub()      # ✅ для фронта (конвертер ₽/$)
+    ton_to_usd = get_ton_to_usd()      # ✅ опционально (показ TON в $)
+    ton_to_rub = round(ton_to_usd * usd_to_rub, 2) if (ton_to_usd and usd_to_rub) else 0
+
     cf_price_rub = get_today_cf_price()
+    cf_price_usd = round(cf_price_rub / usd_to_rub, 4) if usd_to_rub else 0
+
     ton_per_cf = round(cf_price_rub / ton_to_rub, 8) if ton_to_rub else None
+
     settings = P2PSettings.objects.first()
     market_open = settings.is_market_open if settings else True
+
     recent_trades = (
         Order.objects.filter(action='sell', is_active=False, fulfilled_by__isnull=False)
         .select_related('user', 'fulfilled_by')
@@ -80,10 +88,16 @@ def p2p_market(request):
     return render(request, "p2p/market.html", {
         "cf_created": cf_created,
         "cf_grown": cf_grown,
-        "cf_left":cf_left,
+        "cf_left": cf_left,
         "ton_per_cf": ton_per_cf,
+
         "cf_price_rub": cf_price_rub,
+        "cf_price_usd": cf_price_usd,   # ✅ если захочешь показывать сразу
+
         "ton_to_rub": ton_to_rub,
+        "ton_to_usd": ton_to_usd,       # ✅ если захочешь показывать TON в $
+        "usd_to_rub": usd_to_rub,       # ✅ главное для кнопки ₽/$
+
         "error_no_ton": ton_to_rub == 0,
         "recent_trades": recent_trades,
         "market_open": market_open,
@@ -366,3 +380,63 @@ def buy_order(request):
 def p2p_status(request):
     settings = P2PSettings.objects.first()
     return JsonResponse({"open": settings.is_market_open if settings else True})
+
+def get_usd_to_rub():
+    """
+    USD -> RUB (₽ за 1$), кэш 5 минут
+    """
+    cache_key = "fx_usd_rub"
+    cached = cache.get(cache_key)
+    if cached:
+        return cached
+
+    try:
+        r = requests.get('https://www.cbr-xml-daily.ru/daily_json.js', timeout=5)
+        r.raise_for_status()
+        usd_rub = float(r.json()['Valute']['USD']['Value'])
+
+        if usd_rub > 0:
+            usd_rub = round(usd_rub, 4)
+            cache.set(cache_key, usd_rub, 300)  # ⏱ 5 минут
+            return usd_rub
+    except Exception as e:
+        print("USD→RUB error:", e)
+
+    return 0
+
+
+def get_ton_to_usd():
+    """
+    TON -> USD, кэш 5 минут
+    """
+    cache_key = "fx_ton_usd"
+    cached = cache.get(cache_key)
+    if cached:
+        return cached
+
+    try:
+        r = requests.get(
+            'https://min-api.cryptocompare.com/data/price?fsym=TON&tsyms=USD',
+            timeout=5
+        )
+        r.raise_for_status()
+        ton_usd = float(r.json().get('USD', 0))
+
+        if ton_usd > 0:
+            ton_usd = round(ton_usd, 6)
+            cache.set(cache_key, ton_usd, 300)  # ⏱ 5 минут
+            return ton_usd
+    except Exception as e:
+        print("TON→USD error:", e)
+
+    return 0
+
+
+def get_ton_to_rub():
+    ton_usd = get_ton_to_usd()
+    usd_rub = get_usd_to_rub()
+
+    if ton_usd and usd_rub:
+        return round(ton_usd * usd_rub, 2)
+
+    return 0

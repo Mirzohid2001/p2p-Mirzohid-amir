@@ -1,3 +1,4 @@
+from _decimal import InvalidOperation
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -248,12 +249,24 @@ def api_search_game(request):
         return JsonResponse({'error': 'Method not allowed'}, status=405)
     
     user = request.user
-    
+
     try:
-        data = json.loads(request.body)
-        bet_amount = Decimal(str(data.get('bet_amount', 0)))
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'error': 'Invalid bet amount'}, status=400)
+        data = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    raw_bet = data.get('bet_amount', 0)
+
+    # ✅ нормализуем вход
+    if isinstance(raw_bet, str):
+        raw_bet = raw_bet.strip()
+        # если прислали "1 FL" или "10fl" — вытащим число
+        raw_bet = raw_bet.replace('FL', '').replace('fl', '').strip()
+
+    try:
+        bet_amount = Decimal(str(raw_bet))
+    except (InvalidOperation, ValueError, TypeError):
+        return JsonResponse({'error': f'Invalid bet amount: {raw_bet!r}'}, status=400)
     
     # Проверяем доступные ставки
     valid_bets = [1, 3, 5, 10]
@@ -653,12 +666,24 @@ def api_connect_bot(request):
         return JsonResponse({'error': 'Method not allowed'}, status=405)
     
     user = request.user
-    
+
     try:
-        data = json.loads(request.body)
-        bet_amount = Decimal(str(data.get('bet_amount', 0)))
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'error': 'Invalid bet amount'}, status=400)
+        data = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    raw_bet = data.get('bet_amount', 0)
+
+    # ✅ нормализуем вход
+    if isinstance(raw_bet, str):
+        raw_bet = raw_bet.strip()
+        # если прислали "1 FL" или "10fl" — вытащим число
+        raw_bet = raw_bet.replace('FL', '').replace('fl', '').strip()
+
+    try:
+        bet_amount = Decimal(str(raw_bet))
+    except (InvalidOperation, ValueError, TypeError):
+        return JsonResponse({'error': f'Invalid bet amount: {raw_bet!r}'}, status=400)
     
     # Проверяем баланс
     user.refresh_from_db()
