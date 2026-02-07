@@ -567,7 +567,11 @@ function startMoveTimer() {
         }
     }, 1000);
 }
-
+document.addEventListener('click', function(e) {
+  const exit = e.target.closest('#btn-exit');
+  if (!exit) return;
+  window.location.href = '/rps/';
+});
 function finalizeGameUI(data) {
   onGameFinishedUI(); // выключаем кнопки, таймеры
     hideMovePanel();
