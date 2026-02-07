@@ -69,7 +69,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "PUT_YOUR_TOKEN_HERE")
-WEBAPP_URL_BASE = os.getenv("WEBAPP_URL_BASE", "https://flora.diy/telegram_login/")
+WEBAPP_URL_BASE = os.getenv("WEBAPP_URL_BASE", "https://352c-95-46-69-105.ngrok-free.app/telegram_login/")
 
 ADMIN_IDS = [1010942377, 455168812]
 class AdminOnly(MessageFilter):

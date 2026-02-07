@@ -8,6 +8,58 @@ let currentGameId = null;
 let searchTimer = 5;
 let moveTimer = 8;
 let gameFinalized = false;
+let awaitingFinalize = false;
+let finalizeAttempts = 0;
+let finalizeInterval = null;
+
+function isFinalizeReady(data) {
+  // считаем финал готовым, если пришёл result ИЛИ пришёл ход соперника
+  // (в бот-игре result может приходить позже, но player2_move обычно уже есть)
+  return !!data.result || (data.player1_move && data.player2_move);
+}
+
+function stopFinalizeLoop() {
+  if (finalizeInterval) {
+    clearInterval(finalizeInterval);
+    finalizeInterval = null;
+  }
+  finalizeAttempts = 0;
+}
+
+function forceFinalizeLoop() {
+  if (finalizeInterval) return; // уже запущен
+  awaitingFinalize = true;
+  finalizeAttempts = 0;
+
+  finalizeInterval = setInterval(() => {
+    finalizeAttempts++;
+
+    fetch(`/rps/api/game/${currentGameId}/status/`)
+      .then(r => r.json())
+      .then(data => {
+        if (data?.error) return;
+
+        // обновим UI хоть чем-то (например, ходами)
+        updateGameStatus(data);
+
+        if (isFinalizeReady(data)) {
+          gameFinalized = true;
+          awaitingFinalize = false;
+
+          stopFinalizeLoop();
+          stopAllRpsIntervals();     // стопаем общий polling
+          finalizeGameUI({ ...data, status: 'finished' });
+        }
+
+        // таймаут: 10-12 секунд
+        if (finalizeAttempts >= 12) {
+          stopFinalizeLoop();
+          showNotification('Результат долго не приходит. Обнови страницу.', 'error');
+        }
+      })
+      .catch(() => {});
+  }, 900);
+}
 
 
 function isGameReadyToFinalize(data) {
@@ -374,31 +426,39 @@ function resetBetButtons() {
 function startGameStatusPolling() {
   if (!currentGameId) return;
 
+  // ✅ чтобы не плодить интервалы
+  if (gameStatusInterval) clearInterval(gameStatusInterval);
+
   gameStatusInterval = setInterval(() => {
     fetch(`/rps/api/game/${currentGameId}/status/`)
       .then(r => r.json())
       .then(data => {
-        if (data.error) return;
+        if (data?.error) return;
 
         updateGameStatus(data);
 
-        // ✅ cancelled — сразу стоп
-        if (data.status === 'cancelled') {
+        if (data.status === 'cancelled' && !gameFinalized) {
+          gameFinalized = true;
+          stopFinalizeLoop();
           stopAllRpsIntervals();
           finalizeGameUI(data);
           return;
         }
 
-        // ✅ finished — стопаем ТОЛЬКО если реально есть финальные данные
+        // ✅ если уже “дожимаем” — НЕ трогаем finalize тут
+        if (awaitingFinalize) return;
+
+        // ✅ финализируем по обычной логике (если хочешь оставить)
         if (isGameReadyToFinalize(data) && !gameFinalized) {
           gameFinalized = true;
           stopAllRpsIntervals();
           finalizeGameUI(data);
         }
       })
-      .catch(console.error);
-  }, 1200); // можно 1200-1500
+      .catch(() => {});
+  }, 1200);
 }
+
 
 
 // Обновление статуса игры
@@ -509,29 +569,105 @@ function startMoveTimer() {
 }
 
 function finalizeGameUI(data) {
-  onGameFinishedUI();
+  onGameFinishedUI(); // выключаем кнопки, таймеры
+    hideMovePanel();
 
-  // результат (если есть элемент)
-  const resultEl = document.getElementById('game-result');
-  if (resultEl) {
-    let text = 'Игра завершена';
-    if (data.status === 'cancelled') text = 'Игра отменена';
-    if (data.result === 'player1_win') text = 'Вы победили!';
-    if (data.result === 'player2_win') text = 'Вы проиграли';
-    if (data.result === 'draw') text = 'Ничья';
-    resultEl.textContent = text;
-    resultEl.style.display = 'block';
+  const normalized = normalizeResult(data);
+
+  // определяем выиграл ли текущий юзер
+  let userWin = false;
+  let userLose = false;
+  let isDraw = false;
+
+  if (normalized === 'draw') {
+    isDraw = true;
+  } else if (normalized === 'player1_win') {
+    userWin = !!isPlayer1;
+    userLose = !isPlayer1;
+  } else if (normalized === 'player2_win') {
+    userWin = !isPlayer1;
+    userLose = !!isPlayer1;
   }
 
-  // показать кнопки (если они есть в HTML)
-  const rematch = document.getElementById('btn-rematch');
-  const exit = document.getElementById('btn-exit');
-  if (rematch) rematch.style.display = 'inline-flex';
-  if (exit) exit.style.display = 'inline-flex';
+  const bank = (data.game_bank != null) ? Number(data.game_bank).toFixed(0) : null;
 
-  // на всякий случай: скрыть кнопку отмены
+  const resultEl = document.getElementById('game-result');
+  if (!resultEl) return;
+
+  // если cancelled
+  if (data.status === 'cancelled') {
+    resultEl.innerHTML = `
+      <div class="result-message result-draw">
+        <h2>⏱️ Игра отменена</h2>
+        <p>Один из игроков не сделал выбор. Ставки возвращены.</p>
+      </div>
+      <div class="result-actions">
+        <button class="btn-rematch" id="btn-rematch" data-game-id="${currentGameId}">🔁 Ещё раз</button>
+        <button class="btn-exit" id="btn-exit">🚪 Выйти</button>
+      </div>
+    `;
+  } else {
+    // finished
+    if (isDraw) {
+      resultEl.innerHTML = `
+        <div class="result-message result-draw">
+          <h2>🤝 Ничья!</h2>
+          <p>Ставки возвращены</p>
+        </div>
+        <div class="result-actions">
+          <button class="btn-rematch" id="btn-rematch" data-game-id="${currentGameId}">🔁 Ещё раз</button>
+          <button class="btn-exit" id="btn-exit">🚪 Выйти</button>
+        </div>
+      `;
+    } else if (userWin) {
+      resultEl.innerHTML = `
+        <div class="result-message result-win">
+          <h2>🎉 Вы выиграли!</h2>
+          ${bank ? `<p>Вы получили ${bank} FL</p>` : `<p>Поздравляем!</p>`}
+        </div>
+        <div class="result-actions">
+          <button class="btn-rematch" id="btn-rematch" data-game-id="${currentGameId}">🔁 Ещё раз</button>
+          <button class="btn-exit" id="btn-exit">🚪 Выйти</button>
+        </div>
+      `;
+    } else if (userLose) {
+      resultEl.innerHTML = `
+        <div class="result-message result-loss">
+          <h2>😔 Вы проиграли</h2>
+          <p>Попробуйте ещё раз!</p>
+        </div>
+        <div class="result-actions">
+          <button class="btn-rematch" id="btn-rematch" data-game-id="${currentGameId}">🔁 Ещё раз</button>
+          <button class="btn-exit" id="btn-exit">🚪 Выйти</button>
+        </div>
+      `;
+    } else {
+      // если не смогли распознать результат
+      resultEl.innerHTML = `
+        <div class="result-message result-draw">
+          <h2>✅ Игра завершена</h2>
+          <p>Результат получен.</p>
+        </div>
+        <div class="result-actions">
+          <button class="btn-rematch" id="btn-rematch" data-game-id="${currentGameId}">🔁 Ещё раз</button>
+          <button class="btn-exit" id="btn-exit">🚪 Выйти</button>
+        </div>
+      `;
+    }
+  }
+
+  resultEl.style.display = 'block';
+
+  // прячем отмену игры (на всякий)
   const cancelBtn = document.getElementById('btn-cancel-game');
   if (cancelBtn) cancelBtn.style.display = 'none';
+}
+
+function hideMovePanel() {
+  const panel = document.querySelector('.move-panel');
+  if (panel) {
+    panel.style.display = 'none';
+  }
 }
 
 function onGameFinishedUI() {
@@ -592,19 +728,13 @@ function makeMove(move) {
         }
         
         if (data.game_finished) {
-  // ❗ НЕ стопаем polling здесь
-  // Просто отключаем кнопки и показываем "ждём результат"
   onGameFinishedUI();
-
   showNotification('Ожидаем результат...', 'info');
 
-  // Если в ответе уже есть финальные данные — финализируем сразу
-  if (data.result || (data.player1_move && data.player2_move)) {
-    gameFinalized = true;
-    stopAllRpsIntervals();
-    finalizeGameUI({ ...data, status: 'finished' });
-  }
+  // ❗ запускаем принудительный “дожим” результата
+  forceFinalizeLoop();
 }
+
 
 
     })
@@ -656,6 +786,28 @@ function showNotification(message, type = 'info') {
         notification.style.animation = 'slideOut 0.3s ease-out';
         setTimeout(() => notification.remove(), 300);
     }, 3000);
+}
+function normalizeResult(data) {
+  // 1) если сервер уже прислал result в твоём формате
+  const r = data?.result;
+
+  // 2) частые варианты
+  if (r === 'player1_win' || r === 'p1' || r === 'player1' || r === 'win' || r === 'won') return 'player1_win';
+  if (r === 'player2_win' || r === 'p2' || r === 'player2' || r === 'lose' || r === 'lost') return 'player2_win';
+  if (r === 'draw' || r === 'tie') return 'draw';
+
+  // 3) если сервер шлёт winner: 1/2/0
+  if (data?.winner === 1) return 'player1_win';
+  if (data?.winner === 2) return 'player2_win';
+  if (data?.winner === 0) return 'draw';
+
+  // 4) если сервер шлёт outcome: 'WIN'/'LOSE'/'DRAW'
+  const o = (data?.outcome || '').toLowerCase();
+  if (o === 'win') return 'player1_win';
+  if (o === 'lose') return 'player2_win';
+  if (o === 'draw') return 'draw';
+
+  return null;
 }
 
 // Показ загрузки
