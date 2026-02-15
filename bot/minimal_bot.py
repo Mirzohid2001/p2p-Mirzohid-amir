@@ -118,12 +118,12 @@ TEXT = {
     },
 
     "bonus_inviter": {
-        "ru": "🎉 Вам начислено +50 FL за приглашённого пользователя @{name}!",
-        "en": "🎉 You got +50 FL for inviting @{name}!",
+        "ru": "🎉 Вам начислено +100 FL за приглашённого пользователя @{name}!",
+        "en": "🎉 You got +100 FL for inviting @{name}!",
     },
     "bonus_invited": {
-        "ru": "🎁 Вам начислено +50 FL за регистрацию по реферальной ссылке!",
-        "en": "🎁 You got +50 FL for signing up via referral link!",
+        "ru": "🎁 Вам начислено +100 FL за регистрацию по реферальной ссылке!",
+        "en": "🎁 You got +100 FL for signing up via referral link!",
     },
 }
 
@@ -288,23 +288,23 @@ def db_apply_referral_bonus(inviter_id: int, invited_user_id: int) -> Dict[str, 
     if already:
         return {"ok": False, "inviter_tg_id": inviter.telegram_id, "invited_name": invited.username or invited.first_name}
 
-    referral = Referral.objects.create(inviter=inviter, invited=invited, bonus_cf=50)
+    referral = Referral.objects.create(inviter=inviter, invited=invited, bonus_cf=100)
 
-    inviter.cf_balance += 50
-    invited.cf_balance += 50
+    inviter.cf_balance += 100
+    invited.cf_balance += 100
     inviter.save()
     invited.save()
 
     ReferralBonus.objects.create(
         referral=referral,
         bonus_type='signup',
-        amount=50,
+        amount=100,
         description=f'Бонус за приглашение @{invited.username or invited.first_name}'
     )
     ReferralBonus.objects.create(
         referral=referral,
         bonus_type='signup',
-        amount=50,
+        amount=100,
         description=f'Бонус за регистрацию по реф. ссылке @{inviter.username or inviter.first_name}'
     )
 

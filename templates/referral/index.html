@@ -319,7 +319,7 @@
   <div class="ref-bonus-card">
     <img src="{% static 'images/gift.png' %}" alt="gift" />
     <div class="ref-bonus-label">
-  {% blocktrans with reward=50 %}Для вас и вашего друга {{ reward }}{% endblocktrans %}
+  {% blocktrans with reward=100 %}Для вас и вашего друга {{ reward }}{% endblocktrans %}
   <img src="{% static 'images/coin.png' %}" alt="{% trans 'монета' %}" class="coin-inline" />
 </div>
 
@@ -490,7 +490,7 @@ function checkTask(taskId) {
  <script>
 function shareReferralToTelegram() {
     const link = "{{ referral_link|escapejs }}";
-    const text = "{{ _('🌱 Заходи в CryptoFarm по моей ссылке и получи бонус +50 FL! 👇')|escapejs }}";
+    const text = "{{ _('🌱 Заходи в CryptoFarm по моей ссылке и получи бонус +100 FL! 👇')|escapejs }}";
     const shareUrl = "https://t.me/share/url?url=" + encodeURIComponent(link) + "&text=" + encodeURIComponent(text);
 
     console.log("TG:", window.Telegram, "link:", link, "shareUrl:", shareUrl);
