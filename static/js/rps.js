@@ -1,5 +1,6 @@
 // RPS Game JavaScript
-
+const t = (window.I18N_RPS || {});
+const tr = (key, fallback) => (t[key] != null ? t[key] : fallback);
 let searchInterval = null;
 let gameStatusInterval = null;
 let moveTimerInterval = null;
@@ -54,7 +55,8 @@ function forceFinalizeLoop() {
         // таймаут: 10-12 секунд
         if (finalizeAttempts >= 12) {
           stopFinalizeLoop();
-          showNotification('Результат долго не приходит. Обнови страницу.', 'error');
+          showNotification(tr('result_too_long', 'Результат долго не приходит. Обнови страницу.'), 'error');
+
         }
       })
       .catch(() => {});
@@ -191,7 +193,8 @@ function startGameSearch(betAmount) {
         
         if (data.opponent_found) {
             // Противник найден - переходим к игре
-            showNotification('Противник найден!', 'success');
+            showNotification(tr('opponent_found', 'Противник найден!'), 'success');
+
             setTimeout(() => {
                 window.location.href = `/rps/game/${data.game_id}/`;
             }, 500);
@@ -202,7 +205,7 @@ function startGameSearch(betAmount) {
     })
     .catch(error => {
         console.error('Error:', error);
-        showNotification('Ошибка при поиске игры', 'error');
+        showNotification(tr('search_error', 'Ошибка при поиске игры'), 'error');
         resetBetButtons();
         searchStatus.style.display = 'none';
     });
@@ -256,7 +259,8 @@ function connectBot(betAmount) {
     const searchStatus = document.getElementById('search-status');
     const searchTimerEl = document.getElementById('search-timer');
     
-    searchTimerEl.textContent = 'Подключение ...';
+    searchTimerEl.textContent = tr('bot_connecting', 'Подключение ...');
+
     
     fetch('/rps/api/bot/connect/', {
         method: 'POST',
@@ -278,7 +282,8 @@ function connectBot(betAmount) {
         }
         
         if (data.bot_connected) {
-            showNotification('Подключен!', 'success');
+            showNotification(tr('bot_connected', 'Подключен!'), 'success');
+
             if (navigator.vibrate) {
                 navigator.vibrate([100, 50, 100]);
             }
@@ -289,7 +294,7 @@ function connectBot(betAmount) {
     })
     .catch(error => {
         console.error('Error:', error);
-        showNotification('Ошибка при подключении бота', 'error');
+        showNotification(tr('bot_connect_error', 'Ошибка при подключении бота'), 'error');
         resetBetButtons();
         searchStatus.style.display = 'none';
     });
@@ -327,7 +332,8 @@ function cancelGameSearch() {
     // Восстанавливаем кнопки ставок
     resetBetButtons();
     
-    showNotification('Поиск отменен', 'info');
+    showNotification(tr('search_cancelled', 'Поиск отменен'), 'info');
+
 }
 
 // Отмена активной игры
@@ -336,13 +342,15 @@ function cancelGame() {
     
     if (!currentGameId) {
         console.error('currentGameId не установлен');
-        showNotification('Ошибка: ID игры не найден', 'error');
+        showNotification(tr('id_not_found', 'Ошибка: ID игры не найден'), 'error');
+
         return;
     }
     
-    if (!confirm('Вы уверены, что хотите отменить игру? Ставки будут возвращены.')) {
-        return;
-    }
+    if (!confirm(tr('cancel_confirm', 'Вы уверены, что хотите отменить игру? Ставки будут возвращены.'))) {
+  return;
+}
+
     
     showLoading();
     
@@ -377,7 +385,8 @@ function cancelGame() {
         }
         
         if (data.success) {
-            showNotification(data.message || 'Игра отменена, ставки возвращены', 'success');
+            showNotification(data.message || tr('cancel_success', 'Игра отменена, ставки возвращены'), 'success');
+
             
             // Останавливаем опросы
             if (gameStatusInterval) {
@@ -402,7 +411,8 @@ function cancelGame() {
     .catch(error => {
         hideLoading();
         console.error('Error canceling game:', error);
-        showNotification('Ошибка при отмене игры: ' + error.message, 'error');
+        showNotification(tr('cancel_error_prefix', 'Ошибка при отмене игры: ') + error.message, 'error');
+
     });
 }
 
@@ -556,12 +566,13 @@ function startMoveTimer() {
                 moveTimer = 7;
                 timerValue.textContent = moveTimer;
                 timerEl.classList.remove('warning', 'danger');
-                showNotification('Дополнительное время: +7 секунд', 'info');
+                showNotification(tr('time_extra', 'Дополнительное время: +7 секунд'), 'info');
+
             } else {
                 // Время истекло
                 clearInterval(moveTimerInterval);
                 isMoveTimerRunning = false;
-                showNotification('Время вышло!', 'error');
+                showNotification(tr('time_over', 'Время вышло!'), 'error');
                 timerEl.style.display = 'none';
             }
         }
@@ -602,62 +613,64 @@ function finalizeGameUI(data) {
   if (data.status === 'cancelled') {
     resultEl.innerHTML = `
       <div class="result-message result-draw">
-        <h2>⏱️ Игра отменена</h2>
-        <p>Один из игроков не сделал выбор. Ставки возвращены.</p>
+        <h2>${tr('game_cancelled_title', '⏱️ Игра отменена')}</h2>
+        <p>${tr('game_cancelled_text', 'Один из игроков не сделал выбор. Ставки возвращены.')}</p>
       </div>
       <div class="result-actions">
-        <button class="btn-rematch" id="btn-rematch" data-game-id="${currentGameId}">🔁 Ещё раз</button>
-        <button class="btn-exit" id="btn-exit">🚪 Выйти</button>
+            <button class="btn-rematch" id="btn-rematch" data-game-id="${currentGameId}">${tr('rematch_btn','🔁 Ещё раз')}</button>
+
+            <button class="btn-exit" id="btn-exit">${tr('exit_btn','🚪 Выйти')}</button>
+
       </div>
     `;
   } else {
     // finished
     if (isDraw) {
-      resultEl.innerHTML = `
-        <div class="result-message result-draw">
-          <h2>🤝 Ничья!</h2>
-          <p>Ставки возвращены</p>
-        </div>
-        <div class="result-actions">
-          <button class="btn-rematch" id="btn-rematch" data-game-id="${currentGameId}">🔁 Ещё раз</button>
-          <button class="btn-exit" id="btn-exit">🚪 Выйти</button>
-        </div>
-      `;
-    } else if (userWin) {
-      resultEl.innerHTML = `
-        <div class="result-message result-win">
-          <h2>🎉 Вы выиграли!</h2>
-          ${bank ? `<p>Вы получили ${bank} FL</p>` : `<p>Поздравляем!</p>`}
-        </div>
-        <div class="result-actions">
-          <button class="btn-rematch" id="btn-rematch" data-game-id="${currentGameId}">🔁 Ещё раз</button>
-          <button class="btn-exit" id="btn-exit">🚪 Выйти</button>
-        </div>
-      `;
-    } else if (userLose) {
-      resultEl.innerHTML = `
-        <div class="result-message result-loss">
-          <h2>😔 Вы проиграли</h2>
-          <p>Попробуйте ещё раз!</p>
-        </div>
-        <div class="result-actions">
-          <button class="btn-rematch" id="btn-rematch" data-game-id="${currentGameId}">🔁 Ещё раз</button>
-          <button class="btn-exit" id="btn-exit">🚪 Выйти</button>
-        </div>
-      `;
-    } else {
-      // если не смогли распознать результат
-      resultEl.innerHTML = `
-        <div class="result-message result-draw">
-          <h2>✅ Игра завершена</h2>
-          <p>Результат получен.</p>
-        </div>
-        <div class="result-actions">
-          <button class="btn-rematch" id="btn-rematch" data-game-id="${currentGameId}">🔁 Ещё раз</button>
-          <button class="btn-exit" id="btn-exit">🚪 Выйти</button>
-        </div>
-      `;
-    }
+  resultEl.innerHTML = `
+    <div class="result-message result-draw">
+      <h2>${tr('draw_title', '🤝 Ничья!')}</h2>
+      <p>${tr('draw_text', 'Ставки возвращены')}</p>
+    </div>
+    <div class="result-actions">
+      <button class="btn-rematch" id="btn-rematch" data-game-id="${currentGameId}">${tr('rematch_btn','🔁 Ещё раз')}</button>
+      <button class="btn-exit" id="btn-exit">${tr('exit_btn','🚪 Выйти')}</button>
+    </div>
+  `;
+} else if (userWin) {
+  resultEl.innerHTML = `
+    <div class="result-message result-win">
+      <h2>${tr('win_title', '🎉 Вы выиграли!')}</h2>
+      ${bank ? `<p>${tr('win_got_prefix','Вы получили')} ${bank} FL</p>` : `<p>${tr('congrats','Поздравляем!')}</p>`}
+    </div>
+    <div class="result-actions">
+      <button class="btn-rematch" id="btn-rematch" data-game-id="${currentGameId}">${tr('rematch_btn','🔁 Ещё раз')}</button>
+      <button class="btn-exit" id="btn-exit">${tr('exit_btn','🚪 Выйти')}</button>
+    </div>
+  `;
+} else if (userLose) {
+  resultEl.innerHTML = `
+    <div class="result-message result-loss">
+      <h2>${tr('lose_title', '😔 Вы проиграли')}</h2>
+      <p>${tr('lose_text', 'Попробуйте ещё раз!')}</p>
+    </div>
+    <div class="result-actions">
+      <button class="btn-rematch" id="btn-rematch" data-game-id="${currentGameId}">${tr('rematch_btn','🔁 Ещё раз')}</button>
+      <button class="btn-exit" id="btn-exit">${tr('exit_btn','🚪 Выйти')}</button>
+    </div>
+  `;
+} else {
+  resultEl.innerHTML = `
+    <div class="result-message result-draw">
+      <h2>${tr('game_finished_title', '✅ Игра завершена')}</h2>
+      <p>${tr('game_finished_text', 'Результат получен.')}</p>
+    </div>
+    <div class="result-actions">
+      <button class="btn-rematch" id="btn-rematch" data-game-id="${currentGameId}">${tr('rematch_btn','🔁 Ещё раз')}</button>
+      <button class="btn-exit" id="btn-exit">${tr('exit_btn','🚪 Выйти')}</button>
+    </div>
+  `;
+}
+
   }
 
   resultEl.style.display = 'block';
@@ -733,7 +746,8 @@ function makeMove(move) {
         
         if (data.game_finished) {
   onGameFinishedUI();
-  showNotification('Ожидаем результат...', 'info');
+  showNotification(tr('wait_result', 'Ожидаем результат...'), 'info');
+
 
   // ❗ запускаем принудительный “дожим” результата
   forceFinalizeLoop();
@@ -745,7 +759,7 @@ function makeMove(move) {
     .catch(error => {
         hideLoading();
         console.error('Error:', error);
-        showNotification('Ошибка при совершении хода', 'error');
+        showNotification(tr('move_error', 'Ошибка при совершении хода'), 'error');
         moveButtons.forEach(btn => btn.disabled = false);
     });
 }
@@ -841,7 +855,8 @@ function stopAllRpsIntervals() {
 
 function startRematch(gameId) {
   if (!gameId) {
-    showNotification('Ошибка: ID игры не найден', 'error');
+    showNotification(tr('id_not_found', 'Ошибка: ID игры не найден'), 'error');
+
     return;
   }
 
@@ -865,7 +880,8 @@ function startRematch(gameId) {
     }
 
     if (data.success && data.game_id) {
-      showNotification('Новая игра создана!', 'success');
+      showNotification(tr('rematch_created', 'Новая игра создана!'), 'success');
+
 
       // ✅ ВАЖНО: стопаем опросы старой игры
       stopAllRpsIntervals();
@@ -877,7 +893,8 @@ function startRematch(gameId) {
   .catch(err => {
     hideLoading();
     console.error(err);
-    showNotification('Ошибка при создании новой игры', 'error');
+    showNotification(tr('rematch_error', 'Ошибка при создании новой игры'), 'error');
+
   });
 }
 

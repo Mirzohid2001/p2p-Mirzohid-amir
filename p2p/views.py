@@ -17,6 +17,9 @@ from users.models import User
 from .models import Order, PriceHistory, P2PSettings
 from django.template.loader import render_to_string
 import requests
+from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy
+
 
 def get_today_cf_price():
     today = timezone.now().date()
@@ -108,20 +111,20 @@ def p2p_market(request):
 def create_order_sell(request):
     settings = P2PSettings.objects.first()
     if settings and not settings.is_market_open:
-        return JsonResponse({"success": False, "msg": "P2P рынок временно закрыт."})
+        return JsonResponse({"success": False, "msg": _("P2P рынок временно закрыт.")})
 
     try:
         cf_amount = Decimal(request.POST.get('cf_amount', '0'))
     except InvalidOperation:
-        return JsonResponse({"success": False, "msg": "Некорректное число CF."})
+        return JsonResponse({"success": False, "msg": _("Некорректное число CF.")})
 
     if cf_amount <= 0:
-        return JsonResponse({"success": False, "msg": "Введите положительное число CF."})
+        return JsonResponse({"success": False, "msg": _("Введите положительное число CF.")})
 
     user = request.user
     user.refresh_from_db()
     if user.cf_balance < cf_amount:
-        return JsonResponse({"success": False, "msg": "Недостаточно CF на балансе."})
+        return JsonResponse({"success": False, "msg": _("Недостаточно CF на балансе.")})
 
     ton_to_rub = get_ton_to_rub()
     cf_price_rub = get_today_cf_price()
@@ -140,8 +143,13 @@ def create_order_sell(request):
 
     return JsonResponse({
         "success": True,
-        "msg": f"Ордер на продажу {cf_amount} FL создан по {cf_price_rub}₽/FL ({ton_per_cf} TON/FL)"
+        "msg": _("Ордер на продажу %(amount)s FL создан по %(price)s₽/FL (%(ton)s TON/FL)") % {
+            "amount": cf_amount,
+            "price": cf_price_rub,
+            "ton": ton_per_cf,
+        }
     })
+
 
 from django.db.models import Q
 
@@ -327,22 +335,21 @@ def price_history_json(request):
 def buy_order(request):
     settings = P2PSettings.objects.first()
     if settings and not settings.is_market_open:
-        return JsonResponse({"success": False, "msg": "P2P рынок временно закрыт."})
-
+        return JsonResponse({"success": False, "msg": _("P2P рынок временно закрыт.")})
     try:
         order_id = int(request.POST.get('order_id', '0'))
     except (ValueError, TypeError):
-        return JsonResponse({"success": False, "msg": "Некорректный номер ордера."})
+        return JsonResponse({"success": False, "msg": _("Некорректный номер ордера.")})
 
     try:
         order = Order.objects.select_for_update().get(id=order_id, is_active=True, action='sell')
     except Order.DoesNotExist:
-        return JsonResponse({"success": False, "msg": "Ордер не найден или уже исполнен."})
+        return JsonResponse({"success": False, "msg": _("Ордер не найден или уже исполнен.")})
 
     buyer = request.user
     seller = order.user
     if buyer == seller:
-        return JsonResponse({"success": False, "msg": "Нельзя купить свой ордер."})
+        return JsonResponse({"success": False, "msg": _("Нельзя купить свой ордер.")})
 
     # Рассчитываем сколько TON требуется
     price_in_ton = order.price_in_ton  # уже float с округлением
@@ -353,8 +360,13 @@ def buy_order(request):
     seller.refresh_from_db()
 
     if buyer.ton_balance < total_ton:
-        return JsonResponse({"success": False, "msg": f"Недостаточно TON. Нужно {total_ton_display} TON, у вас {buyer.ton_balance}."})
-
+        return JsonResponse({
+            "success": False,
+            "msg": _("Недостаточно TON. Нужно %(need)s TON, у вас %(have)s.") % {
+                "need": total_ton_display,
+                "have": buyer.ton_balance,
+            }
+        })
     with transaction.atomic():
         # Списываем TON с покупателя
         buyer.ton_balance -= total_ton
@@ -374,7 +386,10 @@ def buy_order(request):
 
     return JsonResponse({
         "success": True,
-        "msg": f"Вы успешно купили {order.cf_amount} FL за {total_ton:.3f} TON."
+        "msg": _("Вы успешно купили %(amount)s FL за %(ton)s TON.") % {
+            "amount": order.cf_amount,
+            "ton": f"{total_ton:.3f}",
+        }
     })
 
 def p2p_status(request):

@@ -1,0 +1,22 @@
+from django.utils import translation
+from users.models import User as TelegramUser
+
+class TelegramLanguageMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        tg_id = request.GET.get("tg_id") or request.session.get("telegram_id")
+        if tg_id:
+            try:
+                u = TelegramUser.objects.only("language").get(telegram_id=int(tg_id))
+                lang = (u.language or "ru").lower()
+                if lang in ("ru", "en"):
+                    translation.activate(lang)
+                    request.LANGUAGE_CODE = lang
+            except Exception:
+                pass
+
+        response = self.get_response(request)
+        translation.deactivate()
+        return response

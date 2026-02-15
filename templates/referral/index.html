@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %}
+
 {% block content %}
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
@@ -305,8 +307,11 @@
 <div class="background-coins"></div>
 
 <div class="ref-container">
-    <div class="ref-title">Друзья</div>
-    <div class="ref-subtitle">Приглашайте друзей и<br>получайте бонусы</div>
+    <div class="ref-title">{% trans "Друзья" %}</div>
+<div class="ref-subtitle">
+  {% blocktrans %}Приглашайте друзей и<br>получайте бонусы{% endblocktrans %}
+</div>
+
 
 
     <div class="ref-content-row">
@@ -314,19 +319,21 @@
   <div class="ref-bonus-card">
     <img src="{% static 'images/gift.png' %}" alt="gift" />
     <div class="ref-bonus-label">
-      Для вас и вашего друга 50
-      <img src="{% static 'images/coin.png' %}" alt="coin" class="coin-inline" />
-    </div>
+  {% blocktrans with reward=50 %}Для вас и вашего друга {{ reward }}{% endblocktrans %}
+  <img src="{% static 'images/coin.png' %}" alt="{% trans 'монета' %}" class="coin-inline" />
+</div>
+
   </div>
 
 
   <div class="ref-stats-stack">
     <div class="stat-card">
-      <div class="stat-title">Количество приглашений</div>
+      <div class="stat-title">{% trans "Количество приглашений" %}</div>
+
       <div class="stat-value">{{ referral_count|default:0 }}</div>
     </div>
     <div class="stat-card">
-      <div class="stat-title">Заработано</div>
+<div class="stat-title">{% trans "Заработано" %}</div>
       <div class="stat-value">
         {{ referral_rewards|default:0 }}
         <img src="{% static 'images/coin.png' %}" alt="coin" class="coin-inline" />
@@ -336,9 +343,11 @@
 </div>
 
 
-    <button class="ref-invite-btn" data-bs-toggle="modal" data-bs-target="#refModal">Пригласить друзей</button>
+<button class="ref-invite-btn" data-bs-toggle="modal" data-bs-target="#refModal">
+  {% trans "Пригласить друзей" %}
+</button>
 {% if tasks %}
-  <div class="ref-friends-title" style="margin-top:1.5rem;">Задания</div>
+  <div class="ref-friends-title" style="margin-top:1.5rem;">{% trans "Задания" %}</div>
   <div class="ref-friends-list ref-tasks-list">
     {% for task in tasks %}
       <div>
@@ -348,12 +357,12 @@
         </div>
         <div>
           {% if task.id in completed_task_ids %}
-              <span class="badge bg-success">Выполнено</span>
+              <span class="badge bg-success">{% trans "Выполнено" %}</span>
           {% else %}
               {% if task.type == "tg_channel" and task.channel_username %}
                   <a href="https://t.me/{{ task.channel_username|cut:'@' }}" target="_blank"
-                      class="btn btn-sm btn-outline-primary" style="margin:8px 0;">Перейти</a>
-                  <button class="btn btn-sm btn-success" onclick="checkTask('{{ task.id }}')">Проверить</button>
+                      class="btn btn-sm btn-outline-primary" style="margin:8px 0;">{% trans "Перейти" %}</a>
+<button class="btn btn-sm btn-success" onclick="checkTask('{{ task.id }}')">{% trans "Проверить" %}</button>
               {% endif %}
           {% endif %}
           <span class="friend-bonus" style="margin-left:10px;">+{{ task.reward_fl }} <img src="{% static 'images/coin.png' %}" alt="coin"></span>
@@ -364,7 +373,7 @@
 {% endif %}
 
 
-    <div class="ref-friends-title">Список друзей</div>
+    <div class="ref-friends-title">{% trans "Список друзей" %}</div>
 {% if referrals %}
     <div class="ref-friends-list">
         {% for r in referrals %}
@@ -385,7 +394,7 @@
         {% endfor %}
     </div>
 {% else %}
-    <div class="ref-friends-list ref-no-friends">Нет друзей</div>
+    <div class="ref-friends-list ref-no-friends">{% trans "Нет друзей" %}</div>
 {% endif %}
 
 </div>
@@ -395,26 +404,26 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content" style="border-radius: 22px; padding: 1.5rem 0;">
       <div class="modal-header border-0">
-        <h5 class="modal-title w-100 text-center" id="refModalLabel" style="font-weight:700;">Ваша реферальная ссылка</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+        <h5 class="modal-title w-100 text-center" id="refModalLabel" style="font-weight:700;">{% trans "Ваша реферальная ссылка" %}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Закрыть' %}"></button>
       </div>
       <div class="modal-body text-center">
         <div class="mb-3">
             <img src="https://api.qrserver.com/v1/create-qr-code/?size=170x170&data={{ referral_link|urlencode }}"
-                 alt="QR код" style="border-radius: 16px;">
+                 alt="{% trans 'QR код' %}" style="border-radius: 16px;">
         </div>
         <div class="mb-2">
             <input type="text" id="ref-link-input" class="form-control text-center" style="border-radius:14px;font-size:1.02rem;" value="{{ referral_link }}" readonly>
         </div>
-        <button type="button" class="btn btn-primary px-4" style="border-radius:18px;" onclick="copyReferralLink()">Скопировать ссылку</button>
-          {% with share_text="🌱 В FloraCoin ты не просто выращиваешь дерево — ты создаешь свой собственный финансовый оазис." %}
+        <button type="button" class="btn btn-primary px-4" style="border-radius:18px;" onclick="copyReferralLink()">{% trans "Скопировать ссылку" %}</button>
+          {% blocktrans asvar share_text %}🌱 В FloraCoin ты не просто выращиваешь дерево — ты создаешь свой собственный финансовый оазис.{% endblocktrans %}
 <a class="btn btn-success px-4 mt-2"
    style="border-radius:18px;"
    href="https://t.me/share/url?url={{ referral_link|urlencode }}&text={{ share_text|urlencode }}"
    target="_blank" rel="noopener">
-  📩 Отправить друзьям в Telegram
+  📩 {% trans "Отправить друзьям в Telegram" %}
 </a>
-{% endwith %}
+
 
       </div>
     </div>
@@ -423,6 +432,12 @@
 {% endblock %}
 
 {% block extra_js %}
+    <script>
+const I18N_REF = {
+  task_check_error: "{{ _('Ошибка проверки задания')|escapejs }}",
+};
+</script>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 function copyReferralLink() {
@@ -475,7 +490,7 @@ function checkTask(taskId) {
  <script>
 function shareReferralToTelegram() {
     const link = "{{ referral_link|escapejs }}";
-    const text = "🌱 Заходи в CryptoFarm по моей ссылке и получи бонус +50 FL! 👇";
+    const text = "{{ _('🌱 Заходи в CryptoFarm по моей ссылке и получи бонус +50 FL! 👇')|escapejs }}";
     const shareUrl = "https://t.me/share/url?url=" + encodeURIComponent(link) + "&text=" + encodeURIComponent(text);
 
     console.log("TG:", window.Telegram, "link:", link, "shareUrl:", shareUrl);

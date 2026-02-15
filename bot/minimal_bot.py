@@ -69,7 +69,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "PUT_YOUR_TOKEN_HERE")
-WEBAPP_URL_BASE = os.getenv("WEBAPP_URL_BASE", "https://flora.diy/telegram_login/")
+WEBAPP_URL_BASE = os.getenv("WEBAPP_URL_BASE", "https://352c-95-46-69-105.ngrok-free.app/telegram_login/")
 
 ADMIN_IDS = [1010942377, 455168812]
 class AdminOnly(MessageFilter):
@@ -83,6 +83,63 @@ ADMIN_STATES: Dict[int, Dict[str, Any]] = {}
 BURN_STATES: Dict[int, bool] = {}
 BROADCAST_STATES: Dict[int, bool] = {}
 
+
+TEXT = {
+    "choose_lang": {
+        "ru": "🌍 Выберите язык / Choose language:",
+        "en": "🌍 Choose language / Выберите язык:",
+    },
+    "open_game": {"ru": "🌱 Открыть игру:", "en": "🌱 Open the game:"},
+    "play_btn": {"ru": "🌱 Играть", "en": "🌱 Play"},
+
+    "water_due": {
+        "ru": "💧 Пора поливать! {tree_name}-дерево высохло — полейте, чтобы снова шёл доход.",
+        "en": "💧 Time to water! Your {tree_name} tree is dry — water it to keep earning.",
+    },
+
+    "no_access": {"ru": "⛔️ Нет доступа.", "en": "⛔️ Access denied."},
+
+    "lang_set_ru": {"ru": "✅ Язык установлен: Русский", "en": "✅ Language set: Russian"},
+    "lang_set_en": {"ru": "✅ Язык установлен: English", "en": "✅ Language set: English"},
+
+    "use_help": {
+        "ru": "Используйте /help или нажмите кнопку, чтобы открыть игру:",
+        "en": "Use /help or press the button to open the game:",
+    },
+
+    "start_welcome": {
+        "ru": "Привет, {first_name}! 👋\n\nВаша учётная запись успешно создана.\nНажмите кнопку ниже, чтобы открыть игру.",
+        "en": "Hi, {first_name}! 👋\n\nYour account has been created.\nPress the button below to open the game.",
+    },
+
+    "ref_text": {
+        "ru": "Ваша реферальная ссылка:\n{ref_url}\n\nПоделитесь ею с друзьями, чтобы получить бонусы!",
+        "en": "Your referral link:\n{ref_url}\n\nShare it with friends to get bonuses!",
+    },
+
+    "bonus_inviter": {
+        "ru": "🎉 Вам начислено +50 FL за приглашённого пользователя @{name}!",
+        "en": "🎉 You got +50 FL for inviting @{name}!",
+    },
+    "bonus_invited": {
+        "ru": "🎁 Вам начислено +50 FL за регистрацию по реферальной ссылке!",
+        "en": "🎁 You got +50 FL for signing up via referral link!",
+    },
+}
+
+def t(lang: str, key: str, **kwargs) -> str:
+    lang = (lang or "ru").lower()
+    if lang not in ("ru", "en"):
+        lang = "ru"
+    s = TEXT.get(key, {}).get(lang) or TEXT.get(key, {}).get("ru") or key
+    return s.format(**kwargs)
+
+@sync_to_async
+def db_get_lang(tg_id: int) -> str:
+    u = TelegramUser.objects.filter(telegram_id=tg_id).only("language").first()
+    return (getattr(u, "language", None) or "ru")
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ──────────────────────────────────────────────────────────────────────────────
@@ -92,10 +149,19 @@ def _webapp_url(tg_id: int, ref: Optional[int] = None) -> str:
         url += f"&ref={ref}"
     return url
 
-def _play_keyboard(tg_id: int, ref: Optional[int] = None) -> InlineKeyboardMarkup:
+def _play_keyboard(tg_id: int, ref: Optional[int] = None, lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🌱 Играть", web_app=WebAppInfo(url=_webapp_url(tg_id, ref)))]
+        [InlineKeyboardButton(t(lang, "play_btn"), web_app=WebAppInfo(url=_webapp_url(tg_id, ref)))]
     ])
+
+async def language_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    tg_id = update.effective_user.id
+    # просто показываем выбор языка
+    await update.message.reply_text(
+        t("ru", "choose_lang"),
+        reply_markup=language_keyboard()
+    )
+
 
 def _is_number_like(s: str) -> bool:
     if not s:
@@ -159,14 +225,16 @@ async def notify_water_due_job(context: ContextTypes.DEFAULT_TYPE):
         if not tg_id:
             continue
 
+        user_lang = getattr(tree.user, "language", None) or "ru"
         tree_name = "🌱 FLORA" if tree.type == "CF" else "💎 TON"
 
         try:
             await context.bot.send_message(
                 chat_id=tg_id,
-                text=f"💧 Пора поливать! {tree_name}-дерево высохло — полейте, чтобы снова шёл доход.",
-                reply_markup=_play_keyboard(tg_id)
+                text=t(user_lang, "water_due", tree_name=tree_name),
+                reply_markup=_play_keyboard(tg_id,lang=user_lang)
             )
+
         except Exception:
             continue
 
@@ -347,43 +415,46 @@ async def stata_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     telegram_id = user.id
-    first_name = user.first_name or "Пользователь"
-    username = user.username or ""
-    last_name = user.last_name or ""
-
-    inviter_id = None
-    if context.args and context.args[0].isdigit():
-        inviter_id = int(context.args[0])
-
-    is_new_user = not await db_user_exists(telegram_id)
 
     tg_user, created = await db_get_or_create_user(
         telegram_id=telegram_id,
-        username=username,
-        first_name=first_name,
-        last_name=last_name,
+        username=user.username or "",
+        first_name=user.first_name or "",
+        last_name=user.last_name or "",
     )
 
-    # referral bonus
+    user_lang = getattr(tg_user, "language", None) or "ru"
+
+    # если язык не выбран — спрашиваем 1 раз
+    if created or not getattr(tg_user, "language", None):
+        await update.message.reply_text(t("ru", "choose_lang"), reply_markup=language_keyboard())
+        return
+
+    # бонусы (перевод)
+    inviter_id = None
+    if context.args and context.args[0].isdigit():
+        inviter_id = int(context.args[0])
+    is_new_user = created  # или твоё exists/created как удобнее
+
     if is_new_user and inviter_id:
         res = await db_apply_referral_bonus(inviter_id, telegram_id)
         if res.get("ok"):
+            inviter_lang = await db_get_lang(res["inviter_tg_id"])
             try:
                 await context.bot.send_message(
                     res["inviter_tg_id"],
-                    f"🎉 Вам начислено +50 FL за приглашённого пользователя @{res['invited_name']}!",
-                    reply_markup=_play_keyboard(res["inviter_tg_id"])
+                    t(inviter_lang, "bonus_inviter", name=res["invited_name"]),
+                    reply_markup=_play_keyboard(res["inviter_tg_id"],lang=inviter_lang)
                 )
             except Exception:
                 pass
-            await update.message.reply_text("🎁 Вам начислено +50 FL за регистрацию по реферальной ссылке!")
+            await update.message.reply_text(t(user_lang, "bonus_invited"))
 
-    welcome_text = (
-        f"Привет, {first_name}! 👋\n\n"
-        "Ваша учётная запись успешно создана.\n"
-        "Нажмите кнопку ниже, чтобы открыть игру."
+    await update.message.reply_text(
+        t(user_lang, "start_welcome", first_name=user.first_name or ""),
+        reply_markup=_play_keyboard(telegram_id, inviter_id,lang=user_lang)
     )
-    await update.message.reply_text(welcome_text, reply_markup=_play_keyboard(telegram_id, inviter_id))
+
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     txt = (
@@ -482,6 +553,9 @@ async def finduser_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(info, reply_markup=kb, parse_mode="HTML")
 
+def tr(user_lang, ru, en):
+    return ru if user_lang == "ru" else en
+
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -489,6 +563,22 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not await _is_admin(from_id):
         await query.message.reply_text("⛔️ Нет доступа.")
+        return
+    if query.data.startswith("lang_"):
+        lang = query.data.split("_", 1)[1]
+        tg_id = query.from_user.id
+
+        await sync_to_async(TelegramUser.objects.filter(telegram_id=tg_id).update)(language=lang)
+
+        msg = t("ru", "lang_set_ru") if lang == "ru" else t("en", "lang_set_en")
+        await query.message.edit_text(msg)
+
+        await context.bot.send_message(
+            chat_id=tg_id,
+            text=t(lang, "open_game"),
+            reply_markup=_play_keyboard(tg_id, lang=lang)
+        )
+
         return
 
     data = query.data or ""
@@ -634,6 +724,15 @@ async def market_close_command(update: Update, context: ContextTypes.DEFAULT_TYP
 async def myid_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     await update.message.reply_text(f"🆔 Ваш Telegram ID: {user.id}")
+
+def language_keyboard():
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru"),
+            InlineKeyboardButton("🇬🇧 English", callback_data="lang_en"),
+        ]
+    ])
+
 
 async def addadmin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -834,7 +933,7 @@ def main():
     app.add_handler(CommandHandler("burn", burn_command,filters=ADMIN_ONLY))
     app.add_handler(CommandHandler("market_open", market_open_command,filters=ADMIN_ONLY))
     app.add_handler(CommandHandler("market_close", market_close_command,filters=ADMIN_ONLY))
-
+    app.add_handler(CommandHandler("language", language_command))
     app.add_handler(CommandHandler("broadcast", broadcast_command,filters=ADMIN_ONLY))
     app.add_handler(CommandHandler("myid", myid_command))
     app.add_handler(CommandHandler("addadmin", addadmin_command,filters=ADMIN_ONLY))

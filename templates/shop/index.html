@@ -1,8 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load humanize %}
+{% load i18n %}
 
-{% block title %}Магазин{% endblock %}
+{% block title %}{% trans "Магазин" %}{% endblock %}
 
 {% block content %}
 <style>
@@ -112,14 +113,14 @@ body, html {
   justify-content: center;
 }
 .shop-card-title {
-  font-size: 1.00rem;
+  font-size: 0.90rem;
   font-weight: 700;
   color: #23257b;
   margin-bottom: 6px;
 }
 .shop-card-desc {
   color: #23257b;
-  font-size: 0.92rem;
+  font-size: 0.8rem;
   margin-bottom: 0;
   margin-top: 0.5px;
   font-weight: 600;
@@ -327,11 +328,11 @@ body, html {
 
 <div class="shop-bg">
   <div class="cf-summary-block">
-    <div>Создано FL: {{ total_created_cf|intcomma }}</div>
-    <div>Выращено: {{ all_cf_grown|floatformat:0|intcomma }}</div>
-    <div>Осталось: {{ cf_left|floatformat:0|intcomma }}</div>
+  <div>{% trans "Создано FL" %}: {{ total_created_cf|intcomma }}</div>
+  <div>{% trans "Выращено" %}: {{ all_cf_grown|floatformat:0|intcomma }}</div>
+  <div>{% trans "Осталось" %}: {{ cf_left|floatformat:0|intcomma }}</div>
 </div>
-  <div class="shop-title-btn">Магазин</div>
+<div class="shop-title-btn">{% trans "Магазин" %}</div>
   <div id="shop-message" style="display:none;" class="shop-message"></div>
 
   <div class="shop-list">
@@ -343,22 +344,22 @@ body, html {
               </div>
       </div>
       <div class="shop-card">
-        <div class="shop-card-title">Автополив</div>
-        <div class="shop-card-desc">Срок: <span class="sh">24ч</span> </div>
-        <div class="shop-card-desc">Срок: <span class="sh">48ч</span></div>
+<div class="shop-card-title">{% trans "Автополив" %}</div>
+<div class="shop-card-desc">{% trans "Срок" %}: <span class="sh">24{% trans "ч" %}</span></div>
+<div class="shop-card-desc">{% trans "Срок" %}: <span class="sh">48{% trans "ч" %}</span></div>
       </div>
       <div class="shop-btns">
         <form action="{% url 'shop:buy_auto_water' %}" method="post">
           {% csrf_token %}
           <input type="hidden" name="tree_id" value="{{ user.cf_trees.0.id|default:1 }}">
           <input type="hidden" name="days" value="1">
-          <button type="submit" class="shop-btn">Купить 0.1 TON</button>
+<button type="submit" class="shop-btn">{% trans "Купить" %} 0.1 TON</button>
         </form>
         <form action="{% url 'shop:buy_auto_water' %}" method="post">
           {% csrf_token %}
           <input type="hidden" name="tree_id" value="{{ user.cf_trees.0.id|default:1 }}">
           <input type="hidden" name="days" value="2">
-          <button type="submit" class="shop-btn second">Купить 0.2 TON</button>
+<button type="submit" class="shop-btn second">{% trans "Купить" %} 0.2 TON</button>
         </form>
       </div>
     </div>
@@ -371,15 +372,15 @@ body, html {
           </div>
       </div>
       <div class="shop-card">
-        <div class="shop-card-title">Увеличивает</div>
-        <div class="shop-card-desc">Доход: <span class="sh">x2</span></div>
-        <div class="shop-card-desc">Срок: <span class="sh">24ч</span></div>
+<div class="shop-card-title">{% trans "Удобрение" %}</div>
+<div class="shop-card-desc">{% trans "Доход" %}: <span class="sh">x2</span></div>
+<div class="shop-card-desc">{% trans "Срок" %}: <span class="sh">24{% trans "ч" %}</span></div>
       </div>
       <div class="shop-btns">
         <form action="{% url 'shop:buy_fertilizer' %}" method="post">
           {% csrf_token %}
           <input type="hidden" name="tree_id" value="{{ user.cf_trees.0.id|default:1 }}">
-          <button type="submit" class="shop-btn1 shop-btn">Купить 0.1 TON</button>
+<button type="submit" class="shop-btn1 shop-btn">{% trans "Купить" %} 0.1 TON</button>
         </form>
       </div>
     </div>
@@ -392,24 +393,25 @@ body, html {
           </div>
       </div>
       <div class="shop-card">
-        <div class="shop-card-title">Ветки</div>
-        <div class="shop-card-desc">Улучшение дерева</div>
+<div class="shop-card-title">{% trans "Ветки" %}</div>
+<div class="shop-card-desc">{% trans "Улучшение дерева" %}</div>
       </div>
       <div class="shop-btns">
         <form action="{% url 'shop:buy_branches' %}" method="post" style="display: flex; flex-direction: column; align-items: flex-end;">
           {% csrf_token %}
 <textarea class="shop-input-qty"
-          name="quantity"
-          id="quantity"
-          placeholder="Напишите количество"
-          rows="2"></textarea>
-          <button type="submit" class="shop-btn" id="branch-btn">1шт 0.5 TON</button>
+  name="quantity"
+  id="quantity"
+  placeholder="{% trans 'Напишите количество' %}"
+  rows="2"></textarea>
+          <button type="submit" class="shop-btn" id="branch-btn">1 {% trans "шт" %} 0.5 TON</button>
+
         </form>
       </div>
     </div>
   </div>
   <div class="inventory-block">
-  <div class="inventory-title">Инвентарь</div>
+<div class="inventory-title">{% trans "Инвентарь" %}</div>
   {% if purchases %}
     <div class="inventory-list">
       {% for p in purchases %}
@@ -418,32 +420,32 @@ body, html {
           Определяем картинку и подпись:
           {% endcomment %}
           {% if p.item.type == "fertilizer" %}
-            <img src="{% static 'images/Seed.png' %}" alt="Удобрение" class="inventory-img">
+            <img src="{% static 'images/Seed.png' %}" alt="{% trans 'Удобрение' %}" class="inventory-img">
           {% elif p.item.type == "auto_water" %}
-            <img src="{% static 'images/watering_can.png' %}" alt="Автополив" class="inventory-img">
+            <img src="{% static 'images/watering_can.png' %}" alt="{% trans 'Автополив' %}" class="inventory-img">
           {% else %}
-            <img src="{% static 'images/tree_1.png' %}" alt="Предмет" class="inventory-img">
+            <img src="{% static 'images/tree_1.png' %}" alt="{% trans 'Предмет' %}" class="inventory-img">
           {% endif %}
 
           <div class="inventory-info">
             <div class="inventory-name">
               {% if p.item.type == "auto_water" %}
-                Автополив {{ p.item.duration|floatformat:0 }}ч
-              {% elif p.item.type == "fertilizer" %}
-                Удобрение {{ p.item.duration|floatformat:0 }}ч
-              {% else %}
-                {{ p.item.name }}
-              {% endif %}
+  {% trans "Автополив" %} {{ p.item.duration|floatformat:0 }}{% trans "ч" %}
+{% elif p.item.type == "fertilizer" %}
+  {% trans "Удобрение" %} {{ p.item.duration|floatformat:0 }}{% trans "ч" %}
+{% else %}
+  {{ p.item.name }}
+{% endif %}
             </div>
             {% if p.valid_until %}
-              <div class="inventory-valid">Действует до: {{ p.valid_until|date:"d.m H:i" }}</div>
+              <div class="inventory-valid">{% trans "Действует до" %}: {{ p.valid_until|date:"d.m H:i" }}</div>
             {% endif %}
           </div>
           {% if p.item.type == "auto_water" or p.item.type == "fertilizer" %}
   <a href="/"
      class="inventory-use-btn"
      style="text-decoration:none;display:inline-block;text-align:center;">
-    Активировать
+    {% trans "Активировать" %}
   </a>
 {% endif %}
 
@@ -451,13 +453,20 @@ body, html {
       {% endfor %}
     </div>
   {% else %}
-    <div class="inventory-empty">Пусто</div>
+    <div class="inventory-empty">{% trans "Пусто" %}</div>
   {% endif %}
 </div>
 
 
 </div>
-
+<script>
+  window.I18N_SHOP = {
+    network_error: "{% trans 'Ошибка сети' %}",
+    refresh_inventory: "{% trans 'Обновить инвентарь' %}",
+    close: "{% trans 'Закрыть' %}",
+    pcs_ton: "{% trans 'шт' %}",           // если хочешь переводить "шт"
+  };
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
@@ -466,8 +475,9 @@ document.addEventListener('DOMContentLoaded', function() {
   if (branchInput && branchBtn) {
     branchInput.addEventListener('input', function() {
   let val = Number(branchInput.value) || 1;
-  let price = (val * 0.5).toFixed(2);
-  branchBtn.textContent = val + 'шт ' + price + ' TON';
+let price = (val * 0.5).toFixed(2);
+const pcs = (window.I18N_SHOP && window.I18N_SHOP.pcs_ton) ? window.I18N_SHOP.pcs_ton : 'шт';
+branchBtn.textContent = val + ' ' + pcs + ' ' + price + ' TON';
 });
 
   }
@@ -488,7 +498,8 @@ document.addEventListener('DOMContentLoaded', function() {
       })
       .then(res => res.json())
       .then(data => showShopMessage(data))
-      .catch(() => showShopMessage({status: "error", message: "Ошибка сети"}))
+      .catch(() => showShopMessage({status: "error", message: window.I18N_SHOP.network_error}))
+
       .finally(() => { btn.disabled = false; });
     });
   });
@@ -508,10 +519,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Новая кнопка!
     let btn = document.createElement('button');
     if (data.status === "success") {
-      btn.textContent = 'Обновить инвентарь';
+      btn.textContent = window.I18N_SHOP.refresh_inventory;
       btn.onclick = function() { location.reload(); };
     } else {
-      btn.textContent = 'Закрыть';
+      btn.textContent = window.I18N_SHOP.close;
       btn.onclick = function() { msgDiv.style.display = "none"; };
     }
     btn.className = 'close-shop-msg';

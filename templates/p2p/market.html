@@ -1,30 +1,33 @@
 {% extends "base.html" %}
 {% load humanize %}
+{% load i18n %}
 
 {% block title %}P2P Биржа FL{% endblock %}
 
 {% block content %}
 <div class="cf-summary-block mb-4 animate-float">
-    <div>Создано FL: {{ cf_created|intcomma }}</div>
-    <div>Выращено: {{ cf_grown|floatformat:0|intcomma }}</div>
-    <div>Осталось: {{ cf_left|floatformat:0|intcomma }}</div>
+    <div>{% trans "Создано FL" %}: {{ cf_created|intcomma }}</div>
+    <div>{% trans "Выращено" %}: {{ cf_grown|floatformat:0|intcomma }}</div>
+    <div>{% trans "Осталось" %}: {{ cf_left|floatformat:0|intcomma }}</div>
 </div>
+
 
 <!-- Цена TON и CF -->
 <div class="flex justify-center items-center gap-6 mt-2 mb-4 text-white text-base" id="rates-bar">
   <div>
-    Цена FL:
-    <span class="font-bold" id="cf-price-value">{{ cf_price_rub }}</span>
-    <span id="cf-price-currency">₽</span>
-  </div>
+  {% trans "Цена FL" %}:
+  <span class="font-bold" id="cf-price-value">{{ cf_price_rub }}</span>
+  <span id="cf-price-currency">₽</span>
+</div>
 
-  <div>
-    TON:
-    <span class="font-bold" id="ton-price-value">
-      {% if ton_to_rub %}{{ ton_to_rub|floatformat:2 }}{% else %}—{% endif %}
-    </span>
-    <span id="ton-price-currency">₽</span>
-  </div>
+<div>
+  TON:
+  <span class="font-bold" id="ton-price-value">
+    {% if ton_to_rub %}{{ ton_to_rub|floatformat:2 }}{% else %}—{% endif %}
+  </span>
+  <span id="ton-price-currency">₽</span>
+</div>
+
 
   <!-- Переключатель валюты -->
   <div style="display:flex; align-items:center; gap:10px;">
@@ -44,7 +47,7 @@
         <!-- Заголовок графика -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; position: relative; z-index: 1;">
             <h3 style="color: #fff; font-size: 18px; font-weight: 700; margin: 0; text-shadow: 0 2px 10px rgba(90, 255, 117, 0.3);">
-                📈 Динамика цены FL
+                {% trans "Динамика цены FL" %}
             </h3>
             <div id="chart-price-indicator" style="background: linear-gradient(135deg, rgba(90, 255, 117, 0.2) 0%, rgba(61, 80, 199, 0.2) 100%); color: #5AFF75; padding: 6px 14px; border-radius: 12px; font-size: 14px; font-weight: 700; border: 1px solid rgba(90, 255, 117, 0.3); box-shadow: 0 4px 15px rgba(90, 255, 117, 0.2);">
                 {{ cf_price_rub }} ₽
@@ -54,10 +57,10 @@
         <!-- График -->
         <div id="candlestick-chart" style="width: 100%; height: 200px; max-width: 100%; position: relative; z-index: 1; border-radius: 12px; overflow: hidden;"></div>
 
-        <!-- Индикатор загрузки -->
+
         <div id="chart-loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(255, 255, 255, 0.6); font-size: 14px; z-index: 0;">
             <div style="display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(90, 255, 117, 0.3); border-top-color: #5AFF75; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 10px; vertical-align: middle;"></div>
-            Загрузка графика...
+            {% trans "Загрузка графика..." %}
         </div>
     </div>
 </div>
@@ -83,8 +86,9 @@
 {% if market_open %}
 <!-- Кнопки -->
 <div class="flex justify-center gap-6 mt-4">
-    <button id="btn-buy" class="p2p-main-btn">Купить</button>
-    <button id="btn-sell" class="p2p-main-btn">Продать</button>
+    <button id="btn-buy" class="p2p-main-btn">{% trans "Купить" %}</button>
+<button id="btn-sell" class="p2p-main-btn">{% trans "Продать" %}</button>
+
 </div>
 
 
@@ -96,19 +100,19 @@
         {% for order in recent_trades %}
   <div class="flex items-center mb-1" style="color:#eaf2ff;">
     <span style="font-weight:500;">
-      @{{ order.fulfilled_by.username|default:order.fulfilled_by.first_name|slice:":2" }}... купил
-      {{ order.cf_amount|floatformat:0 }} FL
+      @{{ order.fulfilled_by.username|default:order.fulfilled_by.first_name|slice:":2" }}...
+      {% trans "купил" %} {{ order.cf_amount|floatformat:0 }} FL
     </span>
   </div>
 {% empty %}
-  <div style="color:black; font-size:1rem;">Пока никто не покупал FL</div>
+  <div style="color:black; font-size:1rem;">{% trans "Пока никто не покупал FL" %}</div>
 {% endfor %}
 
     </div>
 </div>
 {% else %}
       <div style="text-align:center; color:black; font-weight:600; margin:24px 0 24px 0; font-size:1.2rem">
-    ⚠️ Когда будут добыты все монеты, откроется п2п рынок
+    ⚠️ {% trans "Когда будут добыты все монеты, откроется п2п рынок" %}
   </div>
 {% endif %}
 
@@ -116,15 +120,15 @@
 <div id="modal-sell" class="p2p-modal">
   <div class="p2p-modal-content">
     <span class="p2p-modal-close" id="closeSellModal">&times;</span>
-    <div class="p2p-modal-title">Продать FL</div>
+    <div class="p2p-modal-title">{% trans "Продать FL" %}</div>
 
 
     <form id="sell-form">
-      <label class="p2p-modal-label">Сколько FL хотите продать?</label>
+      <label class="p2p-modal-label">{% trans "Сколько FL хотите продать?" %}</label>
       <input id="cf-amount-input" name="cf_amount" type="number" min="0.01" step="0.01"
-             class="p2p-modal-input" placeholder="Введите количество">
+             class="p2p-modal-input" placeholder="{% trans 'Введите количество' %}">
       <div id="sell-convert-hint" class="p2p-modal-convert"></div>
-      <button type="submit" class="p2p-modal-btn">Продать</button>
+      <button type="submit" class="p2p-modal-btn">{% trans "Продать" %}</button>
     </form>
     <div id="sell-result" class="p2p-modal-success"></div>
   </div>
@@ -134,20 +138,21 @@
 <div id="modal-buy" class="p2p-modal">
   <div class="p2p-modal-content" style="max-width:440px;">
     <span class="p2p-modal-close" id="closeBuyModal">&times;</span>
-    <div class="p2p-modal-title">Ордера на продажу</div>
+    <div class="p2p-modal-title">{% trans "Ордера на продажу" %}</div>
       <div class="flex items-center gap-3 mb-4" id="buy-orders-filters" style="justify-content:center;">
-    <label style="color:#fff; font-size:0.95em;">Сортировка:</label>
+    <label style="color:#fff; font-size:0.95em;">{% trans "Сортировка" %}:</label>
     <select id="order-sort-select" class="p2p-modal-input" style="width:auto; min-width:135px; padding:5px 18px;">
-        <option value="price_asc">Цена ↑</option>
-        <option value="price_desc">Цена ↓</option>
-        <option value="amount_desc">Кол-во ↓</option>
-        <option value="amount_asc">Кол-во ↑</option>
-        <option value="all" selected>Все</option>
+        <option value="price_asc">{% trans "Цена ↑" %}</option>
+<option value="price_desc">{% trans "Цена ↓" %}</option>
+<option value="amount_desc">{% trans "Кол-во ↓" %}</option>
+<option value="amount_asc">{% trans "Кол-во ↑" %}</option>
+<option value="all" selected>{% trans "Все" %}</option>
+
     </select>
 
 </div>
     <div id="buy-orders-list">
-      <div class="text-center text-gray-300 py-3" style="color:#c5d5fa;">Загрузка...</div>
+      <div class="text-center text-gray-300 py-3" style="color:#c5d5fa;">{% trans "Загрузка..." %}</div>
     </div>
   </div>
 </div>
@@ -299,8 +304,30 @@
 
 {% block extra_js %}
 <script src="https://unpkg.com/lightweight-charts@4.0.1/dist/lightweight-charts.standalone.production.js"></script>
+<script>
+  window.I18N_P2P = {
+    chart_loading: "{% trans 'Загрузка графика...' %}",
+    chart_load_error: "{% trans 'Ошибка загрузки данных' %}",
+
+    sell_loading: "{% trans 'Загрузка...' %}",
+    rate_unavailable: "{% trans 'Курс временно недоступен' %}",
+
+    rate_label: "{% trans 'Курс' %}",
+    rate_fmt: "{% trans '1 FL = %(ton_per_cf)s TON, 1 TON = %(ton_to_rub)s ₽' %}",
+
+    server_error: "{% trans 'Ошибка связи с сервером' %}",
+
+    buy_order_confirm: "{% trans 'Купить этот ордер?' %}",
+
+    // валюта
+    currency_rate_missing: "{% trans 'Нет курса USD' %}",
+  };
+</script>
 
 <script>
+const p2pT = (window.I18N_P2P || {});
+const tr = (key, fallback) => (p2pT[key] != null ? p2pT[key] : fallback);
+
 let allCandles = []; // тут массив из API (history)
 let visibleCount = 30; // сколько свечей видно одновременно
 let chart, candleSeries, pointer = 0;
@@ -496,7 +523,8 @@ document.addEventListener('DOMContentLoaded', function() {
       .catch(error => {
         console.error('Ошибка загрузки графика:', error);
         if (chartLoading) {
-          chartLoading.innerHTML = '<span style="color: #FF5A8F;">Ошибка загрузки данных</span>';
+          chartLoading.innerHTML = '<span style="color: #FF5A8F;">' + tr('chart_load_error', 'Ошибка загрузки данных') + '</span>';
+
         }
       });
 
@@ -601,25 +629,38 @@ renderRates();
       if (sellResult) sellResult.innerText = '';
       if (sellConvertHint) sellConvertHint.innerText = '';
   };
-  if (cfAmountInput) cfAmountInput.oninput = function() {
-    let cf = parseFloat(this.value) || 0;
-    if (window.tonPerCf && window.tonToRub) {
-      let ton = (cf * window.tonPerCf).toFixed(3);
-      let tonPerCf = Number(window.tonPerCf).toFixed(3);
-      let tonToRub = Number(window.tonToRub).toFixed(2);
-      sellConvertHint.innerHTML = cf ?
-        `<span style="color:#fff;">${cf} FL ≈ <b>${ton} TON</b></span>
-        <br><span style="font-size:14px;color:#bed7fa;">Курс: 1 FL = <b>${tonPerCf}</b> TON, 1 TON = <b>${tonToRub}</b> ₽</span>`
-        : '';
-    } else {
-      sellConvertHint.innerHTML = `<span style="color:#e85;">Курс временно недоступен</span>`;
-    }
-  };
+  if (cfAmountInput) cfAmountInput.oninput = function () {
+  let cf = parseFloat(this.value) || 0;
+
+  if (window.tonPerCf && window.tonToRub) {
+    let ton = (cf * window.tonPerCf).toFixed(3);
+    let tonPerCf = Number(window.tonPerCf).toFixed(3);
+    let tonToRub = Number(window.tonToRub).toFixed(2);
+
+    const rateLabel = tr('rate_label', 'Курс');
+    let rateFmt = tr('rate_fmt', '1 FL = %(ton_per_cf)s TON, 1 TON = %(ton_to_rub)s ₽');
+
+    // подстановка %(...)s
+    rateFmt = rateFmt
+      .replace('%(ton_per_cf)s', `<b>${tonPerCf}</b>`)
+      .replace('%(ton_to_rub)s', `<b>${tonToRub}</b>`);
+
+    sellConvertHint.innerHTML = cf
+      ? `<span style="color:#fff;">${cf} FL ≈ <b>${ton} TON</b></span>
+         <br><span style="font-size:14px;color:#bed7fa;">${rateLabel}: ${rateFmt}</span>`
+      : '';
+  } else {
+    sellConvertHint.innerHTML =
+      `<span style="color:#e85;">${tr('rate_unavailable', 'Курс временно недоступен')}</span>`;
+  }
+};
+
   if (sellForm) sellForm.onsubmit = function(e){
       e.preventDefault();
       const cf = parseFloat(cfAmountInput.value) || 0;
       if (cf <= 0) return;
-      sellResult.innerText = "Загрузка...";
+      sellResult.innerText = tr('sell_loading', 'Загрузка...');
+
       fetch("{% url 'p2p:sell_order' %}", {
           method: "POST",
           headers: {
@@ -645,7 +686,7 @@ renderRates();
           }
       })
       .catch(() => {
-          showP2PStatusModal("Ошибка связи с сервером", false);
+          showP2PStatusModal(tr('server_error', 'Ошибка связи с сервером'), false);
       });
   };
 
@@ -714,9 +755,9 @@ renderRates();
 
   window.buyOrder = function(orderId) {
       if (!orderId) return;
-      showP2PStatusModal('Купить этот ордер?', true, function(){
-          doBuyOrder(orderId);
-      });
+      showP2PStatusModal(tr('buy_order_confirm', 'Купить этот ордер?'), true, function(){
+  doBuyOrder(orderId);
+});
   };
 
   function doBuyOrder(orderId) {

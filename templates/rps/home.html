@@ -2,8 +2,9 @@
 {% load static %}
 {% load mask %}
 {% load humanize %}
+{% load i18n %}
 
-{% block title %}Камень-Ножницы-Бумага — CryptoFarm{% endblock %}
+{% block title %}{% trans "Камень-Ножницы-Бумага — CryptoFarm" %}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/rps.css' %}">
@@ -13,9 +14,9 @@
 <div class="rps-container">
     <!-- Заголовок -->
     <div class="rps-header card">
-        <h1>🎮 Камень-Ножницы-Бумага</h1>
+        <h1>{% trans "🎮 Камень-Ножницы-Бумага" %}</h1>
         <div class="balance-info">
-            <span>Ваш баланс: <strong>{{ user.cf_balance|floatformat:0|intcomma }} FL</strong></span>
+            <span>{% trans "Ваш баланс" %}: <strong>{{ user.cf_balance|floatformat:0|intcomma }} FL</strong></span>
         </div>
     </div>
 
@@ -23,29 +24,29 @@
     <div class="rps-actions">
         <a href="{% url 'rps:game' %}" class="btn-find-game">
             <i class="fa fa-search"></i>
-            Найти игру
+            {% trans "Найти игру" %}
         </a>
     </div>
 
     <!-- Статистика пользователя -->
     <div class="rps-stats card">
-        <h2>📊 Ваша статистика</h2>
+        <h2>{% trans "📊 Ваша статистика" %}</h2>
         <div class="stats-grid">
             <div class="stat-item">
                 <div class="stat-value">{{ user_stats.games_played }}</div>
-                <div class="stat-label">Игр сыграно</div>
+                <div class="stat-label">{% trans "Игр сыграно" %}</div>
             </div>
             <div class="stat-item stat-win">
                 <div class="stat-value">{{ user_stats.wins }}</div>
-                <div class="stat-label">Побед</div>
+                <div class="stat-label">{% trans "Побед" %}</div>
             </div>
             <div class="stat-item stat-draw">
                 <div class="stat-value">{{ user_stats.draws }}</div>
-                <div class="stat-label">Ничьих</div>
+                <div class="stat-label">{% trans "Ничьих" %}</div>
             </div>
             <div class="stat-item stat-loss">
                 <div class="stat-value">{{ user_stats.losses }}</div>
-                <div class="stat-label">Поражений</div>
+                <div class="stat-label">{% trans "Поражений" %}</div>
             </div>
         </div>
     </div>
@@ -53,25 +54,25 @@
     <!-- Турнирная информация -->
     {% if active_tournament %}
     <div class="rps-tournament card">
-        <h2>🏆 Текущий турнир</h2>
+        <h2>{% trans "🏆 Текущий турнир" %}</h2>
         <div class="tournament-info">
             {% if tournament_stats %}
             <div class="tournament-stats">
                 <div class="tournament-stat">
-                    <span class="label">Ваши очки:</span>
+                    <span class="label">{% trans "Ваши очки" %}:</span>
                     <span class="value">{{ tournament_stats.points }}</span>
                 </div>
                 <div class="tournament-stat">
-                    <span class="label">Ваше место:</span>
+                    <span class="label">{% trans "Ваше место" %}:</span>
                     <span class="value">#{{ tournament_stats.rank }}</span>
                 </div>
                 <div class="tournament-stat">
-                    <span class="label">Игр сыграно:</span>
+                    <span class="label">{% trans "Игр сыграно" %}:</span>
                     <span class="value">{{ tournament_stats.games_played }}</span>
                 </div>
             </div>
             {% else %}
-            <p class="no-participation">Вы еще не участвуете в турнире. Сыграйте первую игру!</p>
+            <p class="no-participation">{% trans "Вы еще не участвуете в турнире. Сыграйте первую игру" %}!</p>
             {% endif %}
         </div>
     </div>
@@ -79,14 +80,17 @@
     <!-- Топ-10 -->
     {% if top_10 %}
     <div class="rps-leaderboard card">
-        <h2>🏅 Топ-10 турнира</h2>
+        <h2>{% trans "🏅 Топ-10 турнира" %}</h2>
         <div class="leaderboard-list">
             {% for participant in top_10 %}
             <div class="leaderboard-item {% if participant.user == user %}current-user{% endif %}">
                 <div class="rank">#{{ forloop.counter }}</div>
                 <div class="user-info">
                     <div class="username">{{ participant.user|mask_last }}</div>
-                    <div class="user-stats">{{ participant.points }} очков • {{ participant.games_played }} игр</div>
+                    {% blocktrans with pts=participant.points games=participant.games_played %}
+{{ pts }} очков • {{ games }} игр
+{% endblocktrans %}
+
                 </div>
             </div>
             {% endfor %}
@@ -95,14 +99,14 @@
     {% endif %}
     {% else %}
     <div class="rps-tournament card">
-        <h2>🏆 Турнир</h2>
-        <p class="no-tournament">Турнир не активен. Ожидайте запуска нового турнира.</p>
+        <h2>{% trans "🏆 Турнир" %}</h2>
+        <p class="no-tournament">{% trans "Турнир не активен. Ожидайте запуска нового турнира." %}</p>
     </div>
     {% endif %}
 
     <!-- Топ-5 игроков -->
     <div class="rps-top-players card">
-        <h2>🏆 Топ-5 игроков</h2>
+        <h2>{% trans "🏆 Топ-5 игроков" %}</h2>
         <div class="top-players-list" id="top-players-list">
             {% for player in top_5_players %}
             <div class="top-player-item">
@@ -110,25 +114,26 @@
                 <div class="player-info">
                     <div class="player-name">{{ player.user|mask_last }}</div>
                     <div class="player-stats">
-                        <span class="stat-win">Побед: {{ player.wins }}</span>
-                        <span class="stat-loss">Поражений: {{ player.losses }}</span>
-                        <span class="stat-draw">Ничьих: {{ player.draws }}</span>
+                        <span class="stat-win">{% trans "Побед" %}: {{ player.wins }}</span>
+                        <span class="stat-loss">{% trans "Поражений" %}: {{ player.losses }}</span>
+                        <span class="stat-draw">{% trans "Ничьих" %}: {{ player.draws }}</span>
                     </div>
                 </div>
                 <div class="player-rating">
 
-                    <div class="total-games">{{ player.total_games }} игр</div>
+                    <div class="total-games">{{ player.total_games }} {% trans "игр" %}</div>
+
                 </div>
             </div>
             {% empty %}
-            <p class="no-data">Пока нет игроков</p>
+            <p class="no-data">{% trans "Пока нет игроков" %}</p>
             {% endfor %}
         </div>
     </div>
 
     <!-- История последних игр -->
     <div class="rps-recent-games card">
-        <h2>📜 История игр</h2>
+        <h2>{% trans "📜 История игр" %}</h2>
         <div class="recent-games-list" id="recent-games-list">
             {% for game in recent_games %}
             <div class="recent-game-item">
@@ -136,21 +141,21 @@
                     {% if game.result == 'draw' %}
                         <div class="game-result-icon">🤝</div>
                         <div class="game-info">
-                            <div class="game-opponent">vs {% if game.is_bot_game %}{{ game.bot_name|default:"Бот" }}{% else %}{{ game.player2|mask_last|default:"Бот" }}{% endif %}</div>
+                            <div class="game-opponent">vs {% if game.is_bot_game %}{{ game.bot_name|default:_("Бот") }}{% else %}{{ game.player2|mask_last|default:_("Бот") }}{% endif %}</div>
                             <div class="game-details">{{ game.bet_amount|floatformat:0|intcomma }} FL • {{ game.finished_at|date:"d.m H:i" }}</div>
                         </div>
                         <div class="game-amount draw">0 FL</div>
                     {% elif game.result == 'player1_win' %}
                         <div class="game-result-icon">🎉</div>
                         <div class="game-info">
-                            <div class="game-opponent">vs {% if game.is_bot_game %}{{ game.bot_name|default:"Бот" }}{% else %}{{ game.player2|mask_last|default:"Бот" }}{% endif %}</div>
+                            <div class="game-opponent">vs {% if game.is_bot_game %}{{ game.bot_name|default:_("Бот") }}{% else %}{{ game.player2|mask_last|default:_("Бот") }}{% endif %}</div>
                             <div class="game-details">{{ game.bet_amount|floatformat:0|intcomma }} FL • {{ game.finished_at|date:"d.m H:i" }}</div>
                         </div>
                         <div class="game-amount win">+{{ game.game_bank|floatformat:0|intcomma }} FL</div>
                     {% else %}
                         <div class="game-result-icon">😔</div>
                         <div class="game-info">
-                            <div class="game-opponent">vs {% if game.is_bot_game %}{{ game.bot_name|default:"Бот" }}{% else %}{{ game.player2|mask_last|default:"Бот" }}{% endif %}</div>
+                            <div class="game-opponent">vs {% if game.is_bot_game %}{{ game.bot_name|default:_("Бот") }}{% else %}{{ game.player2|mask_last|default:_("Бот") }}{% endif %}</div>
                             <div class="game-details">{{ game.bet_amount|floatformat:0|intcomma }} FL • {{ game.finished_at|date:"d.m H:i" }}</div>
                         </div>
                         <div class="game-amount loss">-{{ game.bet_amount|floatformat:0|intcomma }} FL</div>
@@ -181,7 +186,7 @@
                 {% endif %}
             </div>
             {% empty %}
-            <p class="no-data">У вас пока нет сыгранных игр</p>
+            <p class="no-data">{% trans "У вас пока нет сыгранных игр" %}</p>
             {% endfor %}
         </div>
     </div>
@@ -190,6 +195,71 @@
 
 {% block extra_js %}
 <script src="{% static 'js/rps.js' %}"></script>
+    <script>
+  window.I18N_RPS = {
+    wins: "{% trans 'Побед' %}",
+    losses: "{% trans 'Поражений' %}",
+    draws: "{% trans 'Ничьих' %}",
+    games: "{% trans 'игр' %}",
+    no_recent_games: "{% trans 'У вас пока нет сыгранных игр' %}",
+    no_players: "{% trans 'Пока нет игроков' %}",
+    vs: "{% trans 'vs' %}",
+  };
+</script>
+
+   <script>
+  window.I18N_RPS = {
+    // общие
+    wins: "{% trans 'Побед' %}",
+    losses: "{% trans 'Поражений' %}",
+    draws: "{% trans 'Ничьих' %}",
+    games: "{% trans 'игр' %}",
+    vs: "{% trans 'vs' %}",
+
+    // уведомления/ошибки
+    result_too_long: "{% trans 'Результат долго не приходит. Обнови страницу.' %}",
+    opponent_found: "{% trans 'Противник найден!' %}",
+    search_error: "{% trans 'Ошибка при поиске игры' %}",
+    bot_connecting: "{% trans 'Подключение ...' %}",
+    bot_connected: "{% trans 'Подключен!' %}",
+    bot_connect_error: "{% trans 'Ошибка при подключении бота' %}",
+    search_cancelled: "{% trans 'Поиск отменен' %}",
+    id_not_found: "{% trans 'Ошибка: ID игры не найден' %}",
+    cancel_confirm: "{% trans 'Вы уверены, что хотите отменить игру? Ставки будут возвращены.' %}",
+    cancel_success: "{% trans 'Игра отменена, ставки возвращены' %}",
+    cancel_error_prefix: "{% trans 'Ошибка при отмене игры: ' %}",
+    time_extra: "{% trans 'Дополнительное время: +7 секунд' %}",
+    time_over: "{% trans 'Время вышло!' %}",
+    wait_result: "{% trans 'Ожидаем результат...' %}",
+    move_error: "{% trans 'Ошибка при совершении хода' %}",
+    rematch_created: "{% trans 'Новая игра создана!' %}",
+    rematch_error: "{% trans 'Ошибка при создании новой игры' %}",
+
+    // кнопки
+    rematch_btn: "{% trans '🔁 Ещё раз' %}",
+    exit_btn: "{% trans '🚪 Выйти' %}",
+
+    // финальный экран (finalizeGameUI)
+    game_cancelled_title: "{% trans '⏱️ Игра отменена' %}",
+    game_cancelled_text: "{% trans 'Один из игроков не сделал выбор. Ставки возвращены.' %}",
+
+    draw_title: "{% trans '🤝 Ничья!' %}",
+    draw_text: "{% trans 'Ставки возвращены' %}",
+
+    win_title: "{% trans '🎉 Вы выиграли!' %}",
+    win_got_prefix: "{% trans 'Вы получили' %}",
+    congrats: "{% trans 'Поздравляем!' %}",
+
+    lose_title: "{% trans '😔 Вы проиграли' %}",
+    lose_text: "{% trans 'Попробуйте ещё раз!' %}",
+
+    game_finished_title: "{% trans '✅ Игра завершена' %}",
+    game_finished_text: "{% trans 'Результат получен.' %}",
+  };
+</script>
+
+
+
 <script>
     // Функция для обновления топ-5 игроков
     function updateTopPlayers() {
@@ -203,19 +273,21 @@
                     data.players.forEach(player => {
                         const item = document.createElement('div');
                         item.className = 'top-player-item';
+                        const t = window.I18N_RPS;
+
                         item.innerHTML = `
                             <div class="player-rank">#${player.rank}</div>
                             <div class="player-info">
                                 <div class="player-name">${player.username}</div>
                                 <div class="player-stats">
-                                    <span class="stat-win">Побед: ${player.wins}</span>
-                                    <span class="stat-loss">Поражений: ${player.losses}</span>
-                                    <span class="stat-draw">Ничьих: ${player.draws}</span>
+                                    <span class="stat-win">${t.wins}: ${player.wins}</span>
+                                    <span class="stat-loss">${t.losses}: ${player.losses}</span>
+                                    <span class="stat-draw">${t.draws}: ${player.draws}</span>
                                 </div>
                             </div>
                             <div class="player-rating">
 
-                                <div class="total-games">${player.total_games} игр</div>
+                                <div class="total-games">${player.total_games} ${t.games}</div>
                             </div>
                         `;
                         list.appendChild(item);
@@ -227,6 +299,7 @@
 
     // Функция для обновления истории игр
     function updateRecentGames() {
+        const t = window.I18N_RPS || {};
         fetch('/rps/api/recent-games/')
             .then(response => response.json())
             .then(data => {
@@ -240,7 +313,7 @@
                         item.innerHTML = `
                             <div class="game-result-icon">${game.result === 'win' ? '🎉' : game.result === 'loss' ? '😔' : '🤝'}</div>
                             <div class="game-info">
-                                <div class="game-opponent">vs ${game.opponent}</div>
+                                <div class="game-opponent">${t.vs} ${game.opponent}</div>
                                 <div class="game-details">${game.bet_amount} FL • ${game.date}</div>
                             </div>
                             <div class="game-amount ${game.result}">${game.result === 'win' ? '+' : game.result === 'loss' ? '-' : ''}${game.amount} FL</div>
@@ -249,7 +322,8 @@
                     });
                 } else {
                     const list = document.getElementById('recent-games-list');
-                    list.innerHTML = '<p class="no-data">У вас пока нет сыгранных игр</p>';
+                    list.innerHTML = `<p class="no-data">${t.no_recent_games}</p>`;
+
                 }
             })
             .catch(error => console.error('Error loading recent games:', error));

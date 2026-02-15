@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load humanize %}
+{% load i18n %}
 
 {% block title %}FLORA Дерево{% endblock %}
 
@@ -499,19 +500,21 @@ body, html {
     </a>
     <span class="tree-header-title">
   {% if tree.type == "TON" %}
-    TON Дерево
-  {% else %}
-    FLORA Дерево
-  {% endif %}
+  {% trans "TON Дерево" %}
+{% else %}
+  {% trans "FLORA Дерево" %}
+{% endif %}
+
 </span>
 
   </div>
 
   <!-- CF Summary -->
   <div class="cf-summary-block">
-    <div>Создано FL: {{ total_created_cf|intcomma }}</div>
-    <div>Выращено: {{ all_cf_grown|floatformat:0|intcomma }}</div>
-    <div>Осталось: {{ cf_left|floatformat:0|intcomma }}</div>
+    <div>{% trans "Создано FL" %}: {{ total_created_cf|intcomma }}</div>
+<div>{% trans "Выращено" %}: {{ all_cf_grown|floatformat:0|intcomma }}</div>
+<div>{% trans "Осталось" %}: {{ cf_left|floatformat:0|intcomma }}</div>
+
   </div>
 
   {% if messages %}
@@ -528,20 +531,20 @@ body, html {
   <!-- Основной блок с кнопками и инфо -->
   <div class="tree-main-row">
   <div class="tree-btns-col">
-  <button class="tree-btn btn-water" data-tree-id="{{ tree.id }}" {% if not can_water or is_auto_watered %}disabled{% endif %}>Полить</button>
+  <button class="tree-btn btn-water" data-tree-id="{{ tree.id }}" {% if not can_water or is_auto_watered %}disabled{% endif %}>{% trans "Полить" %}</button>
 
-<button class="tree-btn btn-collect" data-tree-id="{{ tree.id }}" {% if not can_collect %}disabled{% endif %}>Собрать</button>
+<button class="tree-btn btn-collect" data-tree-id="{{ tree.id }}" {% if not can_collect %}disabled{% endif %}>{% trans "Собрать" %}</button>
 
-  <button class="tree-btn btn-use-item open-modal-btn" data-modal="autowater-modal">Автополив</button>
-  <button class="tree-btn btn-use-item open-modal-btn" data-modal="fertilizer-modal">Удобрение</button>
+  <button class="tree-btn btn-use-item open-modal-btn" data-modal="autowater-modal">{% trans "Автополив" %}</button>
+  <button class="tree-btn btn-use-item open-modal-btn" data-modal="fertilizer-modal">{% trans "Удобрение" %}</button>
   {% if tree.level < 5 %}
   <button class="tree-btn btn-upgrade"
           data-tree-id="{{ tree.id }}">
-    Улучшить
+    {% trans "Улучшить" %}
   </button>
 {% endif %}
     <button type="button" class="tree-btn btn-earn-more" data-url="{% url 'rps:home' %}">
-  Заработать больше
+  {% trans "Заработать больше" %}
 </button>
 
 
@@ -554,12 +557,12 @@ body, html {
   <div class="tree-info-card">
   {% if tree.type == "TON" %}
     <div class="info-row">
-      <span class="info-label">Уровень:</span>
+      <span class="info-label">{% trans "Уровень" %}:</span>
       <span class="info-value">{{ tree.level }}</span>
     </div>
 
     <div class="info-row">
-  <span class="info-label">TON в час:</span>
+  <span class="info-label">{% trans "TON в час" %}:</span>
   <span class="info-value">
     <b>
       {% if is_fertilized %}
@@ -567,20 +570,20 @@ body, html {
       {% else %}
         {{ ton_per_hour|floatformat:2 }}
       {% endif %}
-    </b> TON/час
+    </b> {% trans "TON/час" %}
   </span>
 </div>
 <div class="info-row">
-      <span class="info-label">В пуле:</span>
+      <span class="info-label">{% trans "В пуле" %}:</span>
       <span class="info-value"><b>{% if ton_was %}{{ ton_was|floatformat:2 }}{% else %}0.00{% endif %}</b> TON</span>
     </div>
     <div class="info-row">
-      <span class="info-label">Осталось в пуле:</span>
+      <span class="info-label">{% trans "Осталось в пуле" %}:</span>
       <span class="info-value"><b>{% if ton_left %}{{ ton_left|floatformat:2 }}{% else %}0.00{% endif %}</b> TON</span>
     </div>
 
         <div class="info-row">
-    <span class="info-label">Ветки:</span>
+    <span class="info-label">{% trans "Ветки" %}:</span>
     <span class="info-value">
   {% if tree.level >= 5 %}
     MAX
@@ -597,17 +600,17 @@ body, html {
   </div>
 
     <div class="info-row">
-      <span class="info-label">Автополив:</span>
-      <span class="info-value">{% if is_auto_watered %} Активен {% else %} Не активен {% endif %}</span>
+      <span class="info-label">{% trans "Автополив" %}:</span>
+      <span class="info-value">{% if is_auto_watered %} {% trans "Активно" %} {% else %} {% trans "Не активно" %} {% endif %}</span>
     </div>
     <div class="info-row">
-      <span class="info-label">Удобрение:</span>
-      <span class="info-value">{% if is_fertilized %} Активно {% else %} Не активно {% endif %}</span>
+      <span class="info-label">{% trans "Удобрение" %}:</span>
+      <span class="info-value">{% if is_fertilized %} {% trans "Активно" %} {% else %} {% trans "Не активно" %} {% endif %}</span>
     </div>
     {% if tree.type == "TON" %}
  {% if pending_income > 0 %}
     <div class="info-row" style="margin-top: 12px;">
-      <span class="info-label" style="color:#1ec97f; font-weight:600;">К сбору:</span>
+      <span class="info-label" style="color:#1ec97f; font-weight:600;">{% trans "К сбору" %}:</span>
       <span class="info-value" style="color:#22e488; font-weight:700; font-size:1.15em;">
         {{ pending_income|floatformat:4 }} TON
       </span>
@@ -628,11 +631,11 @@ body, html {
 
   {% else %}
     <div class="info-row">
-      <span class="info-label">Уровень:</span>
+      <span class="info-label">{% trans "Уровень" %}:</span>
       <span class="info-value">{{ tree.level }}</span>
     </div>
     <div class="info-row">
-      <span class="info-label">Доход в час:</span>
+      <span class="info-label">{% trans "Доход в час" %}:</span>
       <span class="info-value">
         {% if is_fertilized %}
           {{ income_per_hour|floatformat:1 }} + {{ income_per_hour|floatformat:1 }} = <b>{{ total_income|floatformat:1 }}</b>  FL
@@ -642,7 +645,7 @@ body, html {
       </span>
     </div>
     <div class="info-row">
-      <span class="info-label">Ветки:</span>
+      <span class="info-label">{% trans "Ветки" %}:</span>
       <span class="info-value">
   {% if tree.level >= 5 %}
     MAX
@@ -658,16 +661,16 @@ body, html {
 
     </div>
     <div class="info-row">
-      <span class="info-label">Автополив:</span>
-      <span class="info-value">{% if is_auto_watered %} Активен {% else %} Не активен {% endif %}</span>
+      <span class="info-label">{% trans "Автополив" %}:</span>
+      <span class="info-value">{% if is_auto_watered %} {% trans "Активен" %} {% else %} {% trans "Не активен" %} {% endif %}</span>
     </div>
     <div class="info-row">
-      <span class="info-label">Удобрение:</span>
-      <span class="info-value">{% if is_fertilized %} Активно {% else %} Не активно {% endif %}</span>
+      <span class="info-label">{% trans "Удобрение" %}:</span>
+      <span class="info-value">{% if is_fertilized %} {% trans "Активно" %} {% else %} {% trans "Не активно" %} {% endif %}</span>
     </div>
     {% if pending_income > 0 %}
     <div class="info-row" style="margin-top: 12px;">
-      <span class="info-label" style="color:#1ec97f; font-weight:600;">К сбору:</span>
+      <span class="info-label" style="color:#1ec97f; font-weight:600;">{% trans "К сбору" %}:</span>
       <span class="info-value" style="color:#22e488; font-weight:700; font-size:1.15em;">
         {{ pending_income|floatformat:1 }} FL
       </span>
@@ -698,15 +701,15 @@ body, html {
 <div id="autowater-modal" class="custom-modal">
   <div class="custom-modal-content">
     <span class="custom-modal-close" data-modal-close>&times;</span>
-    <h3 style="text-align:left; margin-left:8px;">Автополив</h3>
+    <h3 style="text-align:left; margin-left:8px;">{% trans "Автополив" %}:</h3>
     {% if is_auto_watered %}
       <div class="inline-inventory-row">
         <img src="{% static 'images/watering_can.png' %}" alt="Автополив" class="inventory-img-small">
-        <span class="inline-inventory-title">Автополив {{ auto_water_duration }}</span>
-        <span style="font-size:0.96rem; color:#29a983; font-weight:600;">Активен</span>
+        <span class="inline-inventory-title">{% trans "Автополив" %}: {{ auto_water_duration }}</span>
+        <span style="font-size:0.96rem; color:#29a983; font-weight:600;">{% trans "Активно" %}:</span>
       </div>
       <div style="text-align:left; margin-left:6px; color:#fff; font-size:0.94rem;">
-        До окончания: {{ tree.auto_water_until|date:"d.m H:i" }}
+        {% trans "До окончания" %}: {{ tree.auto_water_until|date:"d.m H:i" }}
       </div>
     {% else %}
       {% if user_has_autowater_item %}
@@ -714,14 +717,14 @@ body, html {
           {% for purchase in autowater_purchases %}
             <div class="inline-inventory-row">
               <img src="{% static 'images/watering_can.png' %}" alt="Автополив" class="inventory-img-small">
-              <span class="inline-inventory-title">Автополив {{ purchase.item.duration|default:24 }}ч</span>
+              <span class="inline-inventory-title">{% trans "Автополив" %} {{ purchase.item.duration|default:24 }}ч</span>
               <form class="autowater-form" data-purchase-id="{{ purchase.id }}" style="margin:0;">
                 {% csrf_token %}
                 <input type="hidden" name="tree_id" value="{{ tree.id }}">
                 <button type="button"
                         class="inline-inventory-btn use-autowater-btn"
                         data-purchase-id="{{ purchase.id }}">
-                  Активировать
+                  {% trans "Активировать" %}
                 </button>
               </form>
             </div>
@@ -730,8 +733,8 @@ body, html {
       {% else %}
         <div class="inline-inventory-row">
           <img src="{% static 'images/watering_can.png' %}" alt="Автополив" class="inventory-img-small">
-          <span class="inline-inventory-title">Автополив 24ч</span>
-          <button class="inline-inventory-btn" onclick="window.location.href='{% url 'shop:shop' %}'">Купить</button>
+          <span class="inline-inventory-title">{% trans "Автополив 24ч" %}</span>
+          <button class="inline-inventory-btn" onclick="window.location.href='{% url 'shop:shop' %}'">{% trans "Купить" %}</button>
         </div>
       {% endif %}
     {% endif %}
@@ -744,16 +747,16 @@ body, html {
 <div id="fertilizer-modal" class="custom-modal">
   <div class="custom-modal-content">
     <span class="custom-modal-close" data-modal-close>&times;</span>
-    <h3 style="text-align:left; margin-left:8px;">Удобрение</h3>
+    <h3 style="text-align:left; margin-left:8px;">{% trans "Удобрение" %}</h3>
     {% if is_fertilized %}
       <div class="inline-inventory-row">
         <img src="{% static 'images/Seed.png' %}" alt="Удобрение" class="inventory-img-small">
-        <span class="inline-inventory-title">Удобрение {{ fertilizer_duration|default:24 }}ч</span>
-        <span style="font-size:0.96rem; color:#29a983; font-weight:600;">Активно</span>
+        <span class="inline-inventory-title">{% trans "Удобрение" %} {{ fertilizer_duration|default:24 }}ч</span>
+        <span style="font-size:0.96rem; color:#29a983; font-weight:600;">{% trans "Активно" %}</span>
       </div>
       <div style="text-align:left; margin-left:6px; color:#fff; font-size:0.94rem;">
-        До окончания: <span id="modal-fertilizer-timer"></span>
-        <div class="modal-datetime">До {{ tree.fertilized_until|date:"d.m.Y H:i" }}</div>
+        {% trans "До окончания" %}: <span id="modal-fertilizer-timer"></span>
+        <div class="modal-datetime">{% trans "До" %} {{ tree.fertilized_until|date:"d.m.Y H:i" }}</div>
       </div>
     {% else %}
       {% if user_has_fertilizer_item %}
@@ -761,14 +764,14 @@ body, html {
           {% for purchase in fertilizer_purchases %}
             <div class="inline-inventory-row">
               <img src="{% static 'images/Seed.png' %}" alt="Удобрение" class="inventory-img-small">
-              <span class="inline-inventory-title">Удобрение {{ purchase.item.duration }}</span>
+              <span class="inline-inventory-title">{% trans "Удобрение" %} {{ purchase.item.duration }}</span>
               <form class="fertilizer-form" data-purchase-id="{{ purchase.id }}" style="margin:0;">
                 {% csrf_token %}
                 <input type="hidden" name="tree_id" value="{{ tree.id }}">
                 <button type="button"
                         class="inline-inventory-btn use-fertilizer-btn"
                         data-purchase-id="{{ purchase.id }}">
-                  Использовать
+                  {% trans "Использовать" %}
                 </button>
               </form>
             </div>
@@ -777,8 +780,8 @@ body, html {
       {% else %}
         <div class="inline-inventory-row">
           <img src="{% static 'images/Seed.png' %}" alt="Удобрение" class="inventory-img-small">
-          <span class="inline-inventory-title">Удобрение 24ч</span>
-          <button class="inline-inventory-btn" onclick="window.location.href='{% url 'shop:shop' %}'">Купить</button>
+          <span class="inline-inventory-title">{% trans "Удобрение 24ч" %}</span>
+          <button class="inline-inventory-btn" onclick="window.location.href='{% url 'shop:shop' %}'">{% trans "Купить" %}</button>
         </div>
       {% endif %}
     {% endif %}
@@ -790,7 +793,7 @@ body, html {
   <div class="custom-modal-content" id="status-modal-content">
     <span class="custom-modal-close" onclick="hideStatusModal()">&times;</span>
     <div id="status-modal-body"></div>
-    <button class="modal-action-btn" onclick="hideStatusModal()">OK</button>
+    <button class="modal-action-btn" onclick="hideStatusModal()">{% trans "OK" %}</button>
   </div>
 </div>
 

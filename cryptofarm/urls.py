@@ -18,8 +18,8 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-
 from users.views import save_wallet, get_ton_balance
+from django.views.i18n import JavaScriptCatalog
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -32,7 +32,10 @@ path('save_wallet/', save_wallet, name='save_wallet'),
     path('telegram_login/', include("users.urls")),
     path('admin-panel/', include('admin_panel.urls')),  # Наша новая админ-панель
     path('rps/', include('rps.urls')),  # Камень-Ножницы-Бумага
-    path('get_ton_balance/', get_ton_balance, name='get_ton_balance')
+    path('get_ton_balance/', get_ton_balance, name='get_ton_balance'),
+    path("i18n/", include("django.conf.urls.i18n")),   # set_language
+    path("jsi18n/", JavaScriptCatalog.as_view(), name="javascript-catalog"),
+
 
 ]
 

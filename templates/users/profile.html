@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %}
 
 {% block title %}Мой профиль{% endblock %}
 
@@ -9,18 +10,39 @@
 
 {% block content %}
 <div class="profile-container">
+{% get_current_language as LANGUAGE_CODE %}
+<div style="display:flex; justify-content:flex-end; padding:10px 0;">
+<form action="{% url 'set_lang_and_django' %}?tg_id={{ request.GET.tg_id|default:'' }}" method="post" style="display:flex; gap:8px; align-items:center;">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <select name="language" onchange="this.form.submit()"
+    style="
+        background: rgba(30, 40, 90, 0.9);
+        color: #fff;
+        border: 1px solid rgba(255,255,255,0.3);
+        padding: 6px 12px;
+        border-radius: 12px;
+        outline: none;
+        backdrop-filter: blur(6px);
+        font-weight: 600;
+    ">
+      <option value="ru" {% if LANGUAGE_CODE == "ru" %}selected{% endif %}>RU</option>
+      <option value="en" {% if LANGUAGE_CODE == "en" %}selected{% endif %}>EN</option>
+    </select>
+  </form>
+</div>
 
 
     <div class="balance-card">
-        <h2 class="balance-card-title"><i class="fas fa-wallet"></i> Ваш баланс</h2>
+<h2 class="balance-card-title"><i class="fas fa-wallet"></i> {% trans "Ваш баланс" %}</h2>
         <div class="balance-item">
             <div class="balance-token">
                 <div class="token-icon cf" style="position:relative; width:54px; height:54px; display:inline-flex; align-items:center; justify-content:center; padding: 30px">
     <img src="{% static 'images/coin.png' %}" style="position:absolute; left:0; top:0; width:100%; height:100%; opacity:0.85; z-index:1;">
 </div>
                 <div class="token-info">
-                    <span class="token-name">FLORA Токены</span>
-                    <span class="token-description">Основная игровая валюта</span>
+<span class="token-name">{% trans "FLORA Токены" %}</span>
+<span class="token-description">{% trans "Основная игровая валюта" %}</span>
                 </div>
             </div>
             <div class="token-amount">{{ cf_balance|floatformat:1 }}</div>
@@ -32,8 +54,8 @@
 
 </div>
                 <div class="token-info">
-                    <span class="token-name">TON Токены</span>
-                    <span class="token-description">Торговая валюта</span>
+<span class="token-name">{% trans "TON Токены" %}</span>
+<span class="token-description">{% trans "Торговая валюта" %}</span>
                 </div>
             </div>
             <div class="token-amount">{{ ton_balance|floatformat:1 }}</div>
@@ -43,24 +65,15 @@
     <div id="ton-connect"></div>
     <div id="wallet-status"></div>
     <div id="ton-topup-block" style="display:none;">
-        <input type="number" id="topup-amount" min="0.01" step="0.01" placeholder="Сумма TON">
-        <button id="send-ton-btn">Пополнить TON</button>
+        <input type="number" id="topup-amount" min="0.01" step="0.01" placeholder="{% trans 'Сумма TON' %}">
+<button id="send-ton-btn">{% trans "Пополнить TON" %}</button>
+
     </div>
     <div id="ton-result"></div>
 
 <!-- Кнопка Вывод -->
 <div style="margin-top: 12px;">
-  <button id="withdraw-ton-btn" style="
-      width: 100%;
-      padding: 12px 14px;
-      border: none;
-      border-radius: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      background: linear-gradient(90deg,#3a247a 10%, #368fff 100%);
-      color: #fff;
-      box-shadow: 0 6px 20px rgba(0,0,0,.25);
-  ">Вывод</button>
+<button id="withdraw-ton-btn"> {% trans "Вывод" %}</button>
 </div>
 
 <!-- Модалка Вывод -->
@@ -99,10 +112,10 @@
     ">&times;</button>
 
     <div style="font-size: 1.2rem; font-weight: 800; margin-bottom: 10px;">
-      Вывод
+      {% trans "Вывод" %}
     </div>
     <div style="font-size: 1.02rem; color: rgba(255,255,255,.92); line-height: 1.35;">
-      Вывод будет доступен после открытия P2P маркета
+      {% trans "Вывод будет доступен после открытия P2P маркета" %}
     </div>
 
     <button id="withdraw-modal-ok" type="button" style="
@@ -124,7 +137,7 @@
 
 
         <div class="trees-section">
-            <h2 class="balance-card-title"><i class="fas fa-tree"></i> Ваши деревья</h2>
+            <h2 class="balance-card-title"><i class="fas fa-tree"></i> {% trans "Ваши деревья" %}</h2>
             {% for tree in trees %}
             <div class="tree-item">
                 <div class="tree-info">
@@ -137,15 +150,15 @@
             </div>
                     <div class="tree-details">
                         <span class="tree-type">{{ tree.get_type_display }}</span>
-                        <span class="tree-level">Уровень {{ tree.level }}</span>
+                        <span class="tree-level">{% trans "Уровень" %} {{ tree.level }}</span>
                     </div>
                 </div>
                 <div class="tree-income">
-                    <i class="fas fa-coins"></i> {{ tree.income_per_hour|floatformat:1 }}/час
+                    <i class="fas fa-coins"></i> {{ tree.income_per_hour|floatformat:1 }}/{% trans "час" %}
                 </div>
             </div>
             {% empty %}
-            <p class="text-center" style="color: rgba(255, 255, 255, 0.6);">У вас пока нет деревьев</p>
+            <p class="text-center" style="color: rgba(255, 255, 255, 0.6);">{% trans "У вас пока нет деревьев" %}</p></p>
             {% endfor %}
         </div>
 
@@ -154,6 +167,31 @@
 {% endblock %}
 
 {% block extra_js %}
+    <script>
+  window.I18N_PROFILE = {
+    copied: "{% trans 'Скопировано!' %}",
+
+    // withdraw modal
+    withdraw_open: "{% trans 'Вывод' %}",
+    withdraw_locked: "{% trans 'Вывод будет доступен после открытия P2P маркета' %}",
+
+    // ton connect
+    wallet_connected: "{% trans 'Кошелек подключен' %}",
+    wallet_not_connected: "{% trans 'Кошелек не подключён' %}",
+
+    need_connect_wallet: "{% trans 'Сначала подключите TON кошелек!' %}",
+    enter_amount: "{% trans 'Введите сумму TON (например, 0.05)' %}",
+
+    tx_sent: "{% trans '✅ Транзакция отправлена! После подтверждения сетью баланс обновится автоматически.' %}",
+    tx_error: "{% trans 'Ошибка или отмена' %}",
+
+    ton_ui_missing: "{% trans 'TON_CONNECT_UI не загружен. Проверь ссылку на скрипт!' %}",
+  };
+
+  const P = window.I18N_PROFILE || {};
+  const trP = (k, fallback) => (P[k] != null ? P[k] : (fallback || k));
+</script>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const copyBtn = document.getElementById('copy-btn');
@@ -167,7 +205,7 @@
                 document.execCommand('copy');
                 document.body.removeChild(tempInput);
                 const originalText = copyBtn.innerHTML;
-                copyBtn.innerHTML = '<i class="fas fa-check"></i> Скопировано!';
+                copyBtn.innerHTML = '<i class="fas fa-check"></i> ' + trP('copied', 'Copied!');
                 copyBtn.classList.add('copied');
 
                 setTimeout(() => {
@@ -217,7 +255,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const tonRecipient = 'UQAaSqEaBNAXz4gz7oJvrYXLaKXGaoUcxXFKR4rdW8KPwzLp';   // сюда будут приходить TON
 
     if (typeof TON_CONNECT_UI === "undefined") {
-        alert("TON_CONNECT_UI не загружен. Проверь ссылку на скрипт!");
+        alert(trP('ton_ui_missing'));
+
         return;
     }
 
@@ -243,7 +282,8 @@ document.addEventListener('DOMContentLoaded', function() {
     wallet = w;
     if (wallet && wallet.account) {
         walletConnected = true;
-        walletStatus.innerHTML = 'Кошелек подключен: <b>' + wallet.account.address.slice(0, 8) + '...</b>';
+        walletStatus.innerHTML = trP('wallet_connected') + ': <b>' + wallet.account.address.slice(0, 8) + '...</b>';
+
         topupBlock.style.display = '';
         // Сохраняем в БД
         try {
@@ -255,7 +295,8 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch(e) { /* ничего */ }
     } else {
         walletConnected = false;
-        walletStatus.textContent = 'Кошелек не подключён';
+        walletStatus.textContent = trP('wallet_not_connected');
+
         topupBlock.style.display = 'none';
     }
     resultBlock.textContent = '';
@@ -275,12 +316,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
         sendTonBtn.onclick = async function() {
             if (!walletConnected || !wallet || !wallet.account) {
-                alert("Сначала подключите TON кошелек!");
+                alert(trP('need_connect_wallet'));
+
                 return;
             }
             const amount = parseFloat(topupAmount.value);
             if (!amount || amount < 0.01) {
-                alert('Введите сумму TON (например, 0.05)');
+                alert(trP('enter_amount'));
+
                 return;
             }
             const amountNano = Math.round(amount * 1e9);
@@ -301,9 +344,11 @@ log("sending...");
   }]
 });
 
-                resultBlock.textContent = '✅ Транзакция отправлена! После подтверждения сетью баланс обновится автоматически.';
+                resultBlock.textContent = trP('tx_sent');
+
             } catch (e) {
-                resultBlock.textContent = 'Ошибка или отмена: ' + (e.message || e);
+                resultBlock.textContent = trP('tx_error') + ': ' + (e.message || e);
+
             }
         }
     }

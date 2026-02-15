@@ -4,11 +4,13 @@ from django.db import models
 from django.utils import timezone
 
 from users.models import User as TelegramUser
+from django.utils.translation import gettext_lazy as _
+
 
 class Tree(models.Model):
     TYPE_CHOICES = (
-        ('CF', 'FLORA'),
-        ('TON', 'TON-Дерево'),
+        ('CF', _('FLORA')),
+        ('TON', _('TON')),
     )
 
     user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="trees")

@@ -16,6 +16,7 @@ from users import models
 from .models import Tree, TonDistribution, BurnedToken
 from users.models import User as TelegramUser, User
 from .utils import apply_item_to_tree, use_purchase_for_cf_tree
+from django.utils.translation import gettext as _
 
 
 # Если у вас в проекте есть модель для логов, раскомментируйте импорт и используйте её.
@@ -236,7 +237,8 @@ from django.utils.timezone import localtime
 def water_tree(request, tree_id):
     user = get_current_user(request)
     if not user:
-        return JsonResponse({"status": "error", "message": "Сначала авторизуйтесь"}, status=403)
+        return JsonResponse({"status": "error", "message": _("Сначала авторизуйтесь")}, status=403)
+
 
     tree = get_object_or_404(Tree, id=tree_id, user=user)
 
@@ -249,34 +251,34 @@ def water_tree(request, tree_id):
         if not active_dist:
             return JsonResponse({
                 "status": "error",
-                "message": "⛔ Раздача TON сейчас не активна. Полив TON-дерева доступен только во время акции."
+                "message": _("⛔ Раздача TON сейчас не активна. Полив TON-дерева доступен только во время акции.")
             }, status=400)
 
         # (опционально) если раздача уже закончилась по факту
         if hasattr(active_dist, "left_to_distribute") and active_dist.left_to_distribute <= 0:
             return JsonResponse({
                 "status": "error",
-                "message": "⛔ Раздача TON завершена. Дождитесь следующей акции."
+                "message": _("⛔ Раздача TON завершена. Дождитесь следующей акции.")
             }, status=400)
 
     result = tree.water()
     if not result.get("ok", True):
         return JsonResponse({
             "status": "error",
-            "message": result.get("message", "Нельзя полить сейчас"),
+            "message": _(result.get("message", "Нельзя полить сейчас")),
             "last_watered": result.get("last_watered"),
             "water_percent": result.get("water_percent", 0),
             "pending_income": result.get("pending_income", 0),
         }, status=400)
 
     if result.get("branch_dropped", False):
-        messages.success(request, "🌿 Поздравляем! Вам выпала ветка!")
+        messages.success(request, _("🌿 Поздравляем! Вам выпала ветка!"))
 
     last_watered_str = localtime(tree.last_watered).strftime("%d.%m.%Y %H:%M") if tree.last_watered else "Никогда"
 
     response_data = {
         "status": "success",
-        "message": "Дерево успешно полито",
+        "message": _("Дерево успешно полито"),
         "is_watered": True,
         "branch_dropped": result.get("branch_dropped", False),
         "branches_collected": tree.branches_collected,
@@ -295,23 +297,25 @@ def upgrade_tree(request, tree_id):
     """
     user = get_current_user(request)
     if not user:
-        return JsonResponse({"status": "error", "message": "Сначала авторизуйтесь"}, status=403)
+        return JsonResponse({"status": "error", "message": _("Сначала авторизуйтесь")}, status=403)
+
 
     tree = get_object_or_404(Tree, id=tree_id, user=user)
 
     if request.method != "POST":
-        return JsonResponse({"status": "error", "message": "Требуется метод POST"}, status=400)
+        return JsonResponse({"status": "error", "message": _("Требуется метод POST")}, status=400)
+
 
     if not tree.can_upgrade():
         return JsonResponse({
             "status": "error",
-            "message": "Недостаточно веток для улучшения. Накопите ещё веток."
+            "message": _("Недостаточно веток для улучшения. Накопите ещё веток.")
         }, status=400)
 
     tree.upgrade()
     return JsonResponse({
         "status": "success",
-        "message": f"Дерево улучшено до уровня {tree.level}",
+        "message": _("Дерево улучшено до уровня %(level)s") % {"level": tree.level},
         "new_level": tree.level,
         "new_income": float(tree.income_per_hour)
     })
@@ -321,15 +325,17 @@ def upgrade_tree(request, tree_id):
 def collect_income(request, tree_id):
     user = get_current_user(request)
     if not user:
-        return JsonResponse({"status": "error", "message": "Сначала авторизуйтесь"}, status=403)
+        return JsonResponse({"status": "error", "message": _("Сначала авторизуйтесь")}, status=403)
     tree = get_object_or_404(Tree, id=tree_id, user=user)
     if request.method != 'POST':
-        return JsonResponse({"status": "error", "message": "Требуется POST"}, status=400)
+        return JsonResponse({"status": "error", "message": _("Требуется POST")}, status=400)
+
 
     now = timezone.now()
     pending = tree.get_pending_income()
     if pending <= 0:
-        return JsonResponse({"status": "error", "message": "Нет накопленного дохода"}, status=400)
+        return JsonResponse({"status": "error", "message": _("Нет накопленного дохода")}, status=400)
+
 
     if tree.type == 'CF':
         user.cf_balance += pending
@@ -340,8 +346,10 @@ def collect_income(request, tree_id):
         from trees.models import TonDistribution
         active_dist = TonDistribution.objects.filter(is_active=True).last()
         if not active_dist or active_dist.left_to_distribute <= 0:
-            return JsonResponse({"status": "error", "message": "⛔ Раздача TON не активна или пул закончился"},
-                                status=400)
+            return JsonResponse(
+                {"status": "error", "message": _("⛔ Раздача TON не активна или пул закончился")},
+                status=400
+            )
 
         pending = min(pending, active_dist.left_to_distribute)
 
@@ -363,15 +371,13 @@ def collect_income(request, tree_id):
         amount_str = fmt_amount(pending, 4)
         currency = "TON"
 
-
     return JsonResponse({
-            "status": "success",
-            "collected": float(pending),
-            "new_balance_cf": float(user.cf_balance) if tree.type == 'CF' else None,
-            "new_balance_ton": float(user.ton_balance) if tree.type == 'TON' else None,
-            "message": f"Начислено: {amount_str} {currency}!"
-        })
-
+        "status": "success",
+        "collected": float(pending),
+        "new_balance_cf": float(user.cf_balance) if tree.type == 'CF' else None,
+        "new_balance_ton": float(user.ton_balance) if tree.type == 'TON' else None,
+        "message": _("Начислено: %(amount)s %(currency)s!") % {"amount": amount_str, "currency": currency},
+    })
 
 
 def use_shop_item(request, purchase_id):
@@ -411,7 +417,8 @@ def start_ton_distribution(request):
         # Закрыть все предыдущие
         TonDistribution.objects.filter(is_active=True).update(is_active=False)
         dist = TonDistribution.objects.create(total_amount=total_amount, is_active=True)
-        messages.success(request, f"Запущена новая раздача: {total_amount} TON.")
+        messages.success(request, _("Запущена новая раздача: %(amount)s TON.") % {"amount": total_amount})
+
     return redirect("home")
 
 
@@ -421,7 +428,7 @@ def finish_ton_distribution(request, dist_id):
     if request.method == "POST":
         dist = TonDistribution.objects.get(id=dist_id)
         dist.finish()
-        messages.success(request, "Раздача завершена.")
+        messages.success(request, _("Раздача завершена."))
     return redirect("home")
 
 @require_GET
@@ -448,3 +455,4 @@ def stats_by_watering_json(request):
         "afk": afk,
         "days": days
     })
+

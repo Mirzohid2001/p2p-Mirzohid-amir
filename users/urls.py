@@ -7,5 +7,7 @@ urlpatterns = [
     path('profile/', views.profile_view, name='profile'),
     path('deposit_ton/', views.deposit_ton, name='deposit_ton'),
 path('save_wallet/', save_wallet, name='save_wallet'),
+path("set_lang/", views.set_lang_and_django, name="set_lang_and_django"),
+
 
 ] 

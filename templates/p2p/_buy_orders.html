@@ -1,3 +1,4 @@
+{% load i18n %}
 {% for order in orders %}
   <div class="order-row" style="background:rgba(255,255,255,0.07);border-radius:9px;padding:13px 10px;margin-bottom:8px;">
     <div>
@@ -10,9 +11,9 @@
       <span style="color:#7de67b">{{ order.total_ton|floatformat:3 }} TON</span>
       <span style="color:#d9d9ff;">({{ order.price_rub|floatformat:2 }} ₽/FL)</span>
     </div>
-    <button class="p2p-modal-btn btn-buy-order" data-order-id="{{ order.id }}">Купить</button>
+    <button class="p2p-modal-btn btn-buy-order" data-order-id="{{ order.id }}">{% trans "Купить" %}</button>
 
   </div>
 {% empty %}
-  <div style="color:#ffc2c2;">Нет активных ордеров на продажу</div>
+  <div style="color:#ffc2c2;">{% trans "Нет активных ордеров на продажу" %}</div>
 {% endfor %}

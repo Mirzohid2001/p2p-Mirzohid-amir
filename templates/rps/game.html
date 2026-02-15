@@ -2,7 +2,7 @@
     {% load static %}
     {% load mask %}
     {% load humanize %}
-
+{% load i18n %}
     {% block title %}Игра — Камень-Ножницы-Бумага{% endblock %}
 
     {% block extra_css %}
@@ -15,19 +15,19 @@
         <!-- Выбор ставки -->
         <div class="rps-betting card">
             <div class="betting-header">
-                <h2>💰 Выберите ставку</h2>
-                <a href="{% url 'rps:home' %}" class="btn-back">← Назад</a>
+                <h2>{% trans "💰 Выберите ставку" %}</h2>
+                <a href="{% url 'rps:home' %}" class="btn-back">{% trans "← Назад" %}</a>
             </div>
             <div class="balance-info">
-                <span>Ваш баланс: <strong>{{ user.cf_balance|floatformat:0|intcomma }} FL</strong></span>
+                <span>{% trans "Ваш баланс" %}: <strong>{{ user.cf_balance|floatformat:0|intcomma }} FL</strong></span>
             </div>
             <div class="search-status" id="search-status" style="display: none;">
                 <div class="searching-animation">
                     <div class="spinner"></div>
-                    <p>Поиск противника...</p>
+                    <p>{% trans "Поиск противника..." %}</p>
                     <p class="timer" id="search-timer">5</p>
                 </div>
-                <button class="btn-cancel-search" id="btn-cancel-search" style="display: none;">Отменить поиск</button>
+                <button class="btn-cancel-search" id="btn-cancel-search" style="display: none;">{% trans "Отменить поиск" %}</button>
             </div>
             <div class="bet-options">
                 <button class="bet-btn" data-bet="1">1 FL</button>
@@ -40,9 +40,9 @@
         <!-- Игровой экран -->
         <div class="rps-game-screen card">
             <div class="game-header">
-                <a href="{% url 'rps:home' %}" class="btn-back-small">← Назад</a>
+                <a href="{% url 'rps:home' %}" class="btn-back-small">{% trans "← Назад" %}</a>
                 <div class="game-bank">
-                    <span>Банк игры: <strong id="game-bank">{{ game.game_bank|floatformat:0|intcomma }} FL</strong></span>
+                    <span>{% trans "Банк игры" %}: <strong id="game-bank">{{ game.game_bank|floatformat:0|intcomma }} FL</strong></span>
                 </div>
                 <div class="game-timer" id="game-timer" >
                     <span id="timer-value">8</span>
@@ -70,7 +70,7 @@
 
                 <div class="player-card player-2">
                     <div class="player-name">
-                        {% if game.is_bot_game %}{{ game.bot_name|default:"Бот" }}{% else %}{{ game.player2|mask_last:3 }}{% endif %}
+                        {% if game.is_bot_game %}{{ game.bot_name|default:_("Бот")  }}{% else %}{{ game.player2|mask_last:3 }}{% endif %}
                     </div>
                     <div class="player-move" id="player2-move">
                         {% if game.status == 'finished' and game.player2_move %}
@@ -92,21 +92,24 @@
 
             {% if game.status == 'betting' or game.status == 'playing' %}
             <div class="move-panel">
-                <button class="move-btn" data-move="rock" title="Камень">
-                    <div class="move-icon">✊</div>
-                    <span>Камень</span>
-                </button>
-                <button class="move-btn" data-move="paper" title="Бумага">
-                    <div class="move-icon">🖐️</div>
-                    <span>Бумага</span>
-                </button>
-                <button class="move-btn" data-move="scissors" title="Ножницы">
-                    <div class="move-icon">✌️</div>
-                    <span>Ножницы</span>
-                </button>
+                <button class="move-btn" data-move="rock" title="{% trans 'Камень' %}">
+                      <div class="move-icon">✊</div>
+                      <span>{% trans "Камень" %}</span>
+                    </button>
+
+                    <button class="move-btn" data-move="paper" title="{% trans 'Бумага' %}">
+                      <div class="move-icon">🖐️</div>
+                      <span>{% trans "Бумага" %}</span>
+                    </button>
+
+                    <button class="move-btn" data-move="scissors" title="{% trans 'Ножницы' %}">
+                      <div class="move-icon">✌️</div>
+                      <span>{% trans "Ножницы" %}</span>
+                    </button>
+
             </div>
             <div class="game-actions">
-                <button class="btn-cancel-game" id="btn-cancel-game">Отменить игру</button>
+                <button class="btn-cancel-game" id="btn-cancel-game">{% trans "Отменить игру" %}</button>
             </div>
             {% endif %}
 
@@ -114,36 +117,44 @@
             <div class="game-result" id="game-result">
                 {% if game.result == 'draw' %}
                     <div class="result-message result-draw">
-                        <h2>🤝 Ничья!</h2>
-                        <p>Ставки возвращены</p>
+                        <h2>{% trans "🤝 Ничья!" %}</h2>
+                        <p>{% trans "Ставки возвращены" %}</p>
+
                     </div>
                 {% elif game.winner == user %}
                     <div class="result-message result-win">
-                        <h2>🎉 Вы выиграли!</h2>
-                        <p>Вы получили {{ game.game_bank|floatformat:0|intcomma }} FL</p>
+                        <h2>{% trans "🎉 Вы выиграли!" %}</h2>
+                        <p>
+                          {% blocktrans with amount=game.game_bank|floatformat:0|intcomma %}
+                          Вы получили {{ amount }} FL
+                          {% endblocktrans %}
+                        </p>
+
                     </div>
                 {% else %}
                     <div class="result-message result-loss">
-                        <h2>😔 Вы проиграли</h2>
-                        <p>Попробуйте еще раз!</p>
+                        <h2>{% trans "😔 Вы проиграли" %}</h2>
+<p>{% trans "Попробуйте еще раз!" %}</p>
+
                     </div>
                 {% endif %}
                 <div class="result-actions">
         <button class="btn-rematch"
         id="btn-rematch"
         data-bet="{{ game.bet_amount }}">
-  🔁 Ещё раз
+  🔁 {% trans "Ещё раз" %}
 </button>
 
-        <button class="btn-exit" id="btn-exit">🚪 Выйти</button>
+        <button class="btn-exit" id="btn-exit">🚪 {% trans "Выйти" %}</button>
     </div>
 
             </div>
             {% elif game.status == 'cancelled' %}
             <div class="game-result" id="game-result">
                 <div class="result-message result-draw">
-                    <h2>⏱️ Игра отменена</h2>
-                    <p>Один из игроков не сделал выбор. Ставки возвращены.</p>
+                    <h2>{% trans "⏱️ Игра отменена" %}</h2>
+<p>{% trans "Один из игроков не сделал выбор. Ставки возвращены." %}</p>
+
                 </div>
                 <div class="result-actions">
         <button class="btn-rematch"
@@ -160,6 +171,74 @@
         </div>
         {% endif %}
     </div>
+
+        <script>
+  window.I18N_RPS_GAME = {
+    searching: "{% trans 'Поиск противника...' %}",
+    cancel_search: "{% trans 'Отменить поиск' %}",
+    cancel_game: "{% trans 'Отменить игру' %}",
+    bot: "{% trans 'Бот' %}",
+    rock: "{% trans 'Камень' %}",
+    paper: "{% trans 'Бумага' %}",
+    scissors: "{% trans 'Ножницы' %}",
+    game_bank: "{% trans 'Банк игры' %}",
+    back: "{% trans '← Назад' %}",
+    vs: "{% trans 'VS' %}",
+  };
+</script>
+
+      <script>
+  window.I18N_RPS = {
+    // общие
+    wins: "{% trans 'Побед' %}",
+    losses: "{% trans 'Поражений' %}",
+    draws: "{% trans 'Ничьих' %}",
+    games: "{% trans 'игр' %}",
+    vs: "{% trans 'vs' %}",
+
+    // уведомления/ошибки
+    result_too_long: "{% trans 'Результат долго не приходит. Обнови страницу.' %}",
+    opponent_found: "{% trans 'Противник найден!' %}",
+    search_error: "{% trans 'Ошибка при поиске игры' %}",
+    bot_connecting: "{% trans 'Подключение ...' %}",
+    bot_connected: "{% trans 'Подключен!' %}",
+    bot_connect_error: "{% trans 'Ошибка при подключении бота' %}",
+    search_cancelled: "{% trans 'Поиск отменен' %}",
+    id_not_found: "{% trans 'Ошибка: ID игры не найден' %}",
+    cancel_confirm: "{% trans 'Вы уверены, что хотите отменить игру? Ставки будут возвращены.' %}",
+    cancel_success: "{% trans 'Игра отменена, ставки возвращены' %}",
+    cancel_error_prefix: "{% trans 'Ошибка при отмене игры: ' %}",
+    time_extra: "{% trans 'Дополнительное время: +7 секунд' %}",
+    time_over: "{% trans 'Время вышло!' %}",
+    wait_result: "{% trans 'Ожидаем результат...' %}",
+    move_error: "{% trans 'Ошибка при совершении хода' %}",
+    rematch_created: "{% trans 'Новая игра создана!' %}",
+    rematch_error: "{% trans 'Ошибка при создании новой игры' %}",
+
+    // кнопки
+    rematch_btn: "{% trans '🔁 Ещё раз' %}",
+    exit_btn: "{% trans '🚪 Выйти' %}",
+
+    // финальный экран (finalizeGameUI)
+    game_cancelled_title: "{% trans '⏱️ Игра отменена' %}",
+    game_cancelled_text: "{% trans 'Один из игроков не сделал выбор. Ставки возвращены.' %}",
+
+    draw_title: "{% trans '🤝 Ничья!' %}",
+    draw_text: "{% trans 'Ставки возвращены' %}",
+
+    win_title: "{% trans '🎉 Вы выиграли!' %}",
+    win_got_prefix: "{% trans 'Вы получили' %}",
+    congrats: "{% trans 'Поздравляем!' %}",
+
+    lose_title: "{% trans '😔 Вы проиграли' %}",
+    lose_text: "{% trans 'Попробуйте ещё раз!' %}",
+
+    game_finished_title: "{% trans '✅ Игра завершена' %}",
+    game_finished_text: "{% trans 'Результат получен.' %}",
+  };
+</script>
+
+
 
     <script>
         const gameId = {% if game %}{{ game.id }}{% else %}null{% endif %};

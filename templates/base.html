@@ -1,15 +1,17 @@
 {% load static %}
+{% load i18n %}
 <!DOCTYPE html>
-<html lang="ru">
+{% get_current_language as LANGUAGE_CODE %}
+<html lang="{{ LANGUAGE_CODE }}">
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{% block title %}Oxiri P2P{% endblock %}</title>
 
     <!-- Telegram WebApp SDK (для возможности tg.expand() и цветовой темы) -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
+    <script src="{% url 'javascript-catalog' %}"></script>
     <!-- TailwindCSS и ваш кастомный CSS -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
           rel="stylesheet">
@@ -254,38 +256,44 @@
         }
     </script>
 
+
     <div class="container mx-auto px-4">
         {% block content %}{% endblock %}
     </div>
 
     <!-- Нижняя навигация -->
     <div class="custom-bottom-nav">
-    <a href="/" class="nav-item{% if request.path == '/' %} active{% endif %}">
-        <i class="fa fa-home"></i>
-        <span>Главная</span>
-    </a>
-    <a href="/rps/" class="nav-item{% if '/rps' in request.path %} active{% endif %}">
-        <span style="font-size:18px;line-height:1;">🎮</span>
-        <span>Игра</span>
-    </a>
-    <a href="/p2p/" class="nav-item{% if '/p2p' in request.path %} active{% endif %}">
-        <span style="font-size:18px;line-height:1;">P2P</span>
+  <a href="/" class="nav-item{% if request.path == '/' %} active{% endif %}">
+      <i class="fa fa-home"></i>
+      <span>{% trans "Главная" %}</span>
+  </a>
 
-    </a>
-    <a href="/referral/" class="nav-item{% if '/referral' in request.path %} active{% endif %}">
-        <i class="fa fa-clipboard-list"></i>
-        <span>Рефералы</span>
-    </a>
-    <a href="/telegram_login/profile/" class="nav-item{% if '/profile' in request.path %} active{% endif %}">
-        <i class="fa fa-user-check"></i>
-        <span>Профиль</span>
-    </a>
-    <a href="/shop/" class="nav-item{% if '/shop' in request.path %} active{% endif %}">
-        <i class="fa fa-shopping-cart"></i>
-        <span>Магазин</span>
-    </a>
+  <a href="/rps/" class="nav-item{% if '/rps' in request.path %} active{% endif %}">
+      <span style="font-size:18px;line-height:1;">🎮</span>
+      <span>{% trans "Игра" %}</span>
+  </a>
 
+  <a href="/p2p/" class="nav-item{% if '/p2p' in request.path %} active{% endif %}">
+      <span style="font-size:18px;line-height:1;">P2P</span>
+      <span>{% trans "P2P" %}</span>
+  </a>
+
+  <a href="/referral/" class="nav-item{% if '/referral' in request.path %} active{% endif %}">
+      <i class="fa fa-clipboard-list"></i>
+      <span>{% trans "Рефералы" %}</span>
+  </a>
+
+  <a href="/telegram_login/profile/" class="nav-item{% if '/profile' in request.path %} active{% endif %}">
+      <i class="fa fa-user-check"></i>
+      <span>{% trans "Профиль" %}</span>
+  </a>
+
+  <a href="/shop/" class="nav-item{% if '/shop' in request.path %} active{% endif %}">
+      <i class="fa fa-shopping-cart"></i>
+      <span>{% trans "Магазин" %}</span>
+  </a>
 </div>
+
 
 
     <script src="/static/js/app.js"></script>

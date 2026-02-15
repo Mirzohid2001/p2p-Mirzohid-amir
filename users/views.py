@@ -10,6 +10,10 @@ from trees.models import Tree
 from referrals.models import Referral, ReferralBonus
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
+from django.utils import translation
+from users.models import User as TelegramUser
+from django.views.decorators.http import require_POST
+
 
 def telegram_login(request):
     tg_id = request.GET.get("tg_id")
@@ -71,6 +75,21 @@ def telegram_login(request):
 
     request.session["telegram_id"] = tg_id_int
     return redirect("home")
+
+
+@require_POST
+def set_lang_and_django(request):
+    lang = request.POST.get("language", "ru")
+    next_url = request.POST.get("next") or "/"
+
+    tg_id = request.GET.get("tg_id") or request.session.get("telegram_id")
+    if tg_id:
+        TelegramUser.objects.filter(telegram_id=int(tg_id)).update(language=lang)
+
+    translation.activate(lang)
+    resp = redirect(next_url)
+    resp.set_cookie("django_language", lang)  # важно для Django i18n
+    return resp
 
 def profile_view(request):
     telegram_id = request.session.get("telegram_id") or request.GET.get("telegram_id")
