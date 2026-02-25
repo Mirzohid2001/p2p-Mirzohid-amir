@@ -734,7 +734,7 @@ body, html {
         <div class="inline-inventory-row">
           <img src="{% static 'images/watering_can.png' %}" alt="Автополив" class="inventory-img-small">
           <span class="inline-inventory-title">{% trans "Автополив 24ч" %}</span>
-          <button class="inline-inventory-btn" onclick="window.location.href='{% url 'shop:shop' %}'">{% trans "Купить" %}</button>
+          <a href="{% url 'shop:shop' %}" class="inline-inventory-btn" style="text-decoration:none;display:inline-block;text-align:center">{% trans "Купить" %}</a>
         </div>
       {% endif %}
     {% endif %}
@@ -781,7 +781,7 @@ body, html {
         <div class="inline-inventory-row">
           <img src="{% static 'images/Seed.png' %}" alt="Удобрение" class="inventory-img-small">
           <span class="inline-inventory-title">{% trans "Удобрение 24ч" %}</span>
-          <button class="inline-inventory-btn" onclick="window.location.href='{% url 'shop:shop' %}'">{% trans "Купить" %}</button>
+          <a href="{% url 'shop:shop' %}" class="inline-inventory-btn" style="text-decoration:none;display:inline-block;text-align:center">{% trans "Купить" %}</a>
         </div>
       {% endif %}
     {% endif %}
@@ -804,7 +804,10 @@ body, html {
 
 <script>
 let shouldReload = false;
-
+function tgUrl(url) {
+  var id = window.__TG_ID;
+  return (id && url) ? url + (url.indexOf('?') >= 0 ? '&' : '?') + 'tg_id=' + id : url;
+}
 // Глобальная функция для показа модалки
 function showStatusModal(message, type = "", reloadAfter = false) {
   let modal = document.getElementById('status-modal');
@@ -833,7 +836,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.btn-water').forEach(btn => {
     btn.onclick = function() {
       let treeId = this.dataset.treeId;
-      fetch(`/tree/${treeId}/water/`, {
+      fetch(tgUrl(`/tree/${treeId}/water/`), {
         method: "POST",
         headers: {'X-CSRFToken': '{{ csrf_token }}'}
       })
@@ -848,7 +851,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('.btn-upgrade').forEach(btn => {
     btn.onclick = function() {
       let treeId = this.dataset.treeId;
-      fetch(`/tree/${treeId}/upgrade/`, {
+      fetch(tgUrl(`/tree/${treeId}/upgrade/`), {
         method: "POST",
         headers: {'X-CSRFToken': '{{ csrf_token }}'}
       })
@@ -886,7 +889,7 @@ document.addEventListener('DOMContentLoaded', function() {
 document.addEventListener('click', function(e){
   const btn = e.target.closest('.btn-earn-more');
   if (!btn) return;
-  window.location.href = btn.dataset.url;
+  window.location.href = tgUrl(btn.dataset.url || '/rps/');
 });
   // Использовать автополив
   document.querySelectorAll('.use-autowater-btn').forEach(btn => {
@@ -894,7 +897,7 @@ document.addEventListener('click', function(e){
       let purchaseId = this.dataset.purchaseId;
       let form = this.closest('form');
       let treeId = form.querySelector('[name="tree_id"]').value;
-      fetch(`/shop/use/${purchaseId}/`, {
+      fetch(tgUrl(`/shop/use/${purchaseId}/`), {
         method: "POST",
         headers: {'X-CSRFToken': '{{ csrf_token }}'},
         body: new URLSearchParams({tree_id: treeId})
@@ -912,7 +915,7 @@ document.addEventListener('click', function(e){
       let purchaseId = this.dataset.purchaseId;
       let form = this.closest('form');
       let treeId = form.querySelector('[name="tree_id"]').value;
-      fetch(`/shop/use/${purchaseId}/`, {
+      fetch(tgUrl(`/shop/use/${purchaseId}/`), {
         method: "POST",
         headers: {'X-CSRFToken': '{{ csrf_token }}'},
         body: new URLSearchParams({tree_id: treeId})
@@ -928,7 +931,7 @@ document.addEventListener('click', function(e){
   document.querySelectorAll('.btn-collect').forEach(btn => {
     btn.onclick = function() {
       let treeId = this.dataset.treeId;
-      fetch(`/tree/${treeId}/collect_income/`, {
+      fetch(tgUrl(`/tree/${treeId}/collect_income/`), {
         method: "POST",
         headers: {'X-CSRFToken': '{{ csrf_token }}'}
       })

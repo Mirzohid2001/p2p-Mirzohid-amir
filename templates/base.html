@@ -247,6 +247,9 @@
       За проверку «есть ли в session['telegram_id']» отвечает middleware.
     -->
     <script>
+        // Сохраняем tg_id для fetch (Telegram Web iframe)
+        var m = /[?&]tg_id=(\d+)/.exec(window.location.search);
+        if (m && window.Telegram && window.Telegram.WebApp) window.__TG_ID = m[1];
         var tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
         if (tg) {
             if (tg.ready) tg.ready();

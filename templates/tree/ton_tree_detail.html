@@ -231,12 +231,16 @@
     </div>
 
     <script>
+    function tgUrl(url) {
+      var id = window.__TG_ID;
+      return (id && url) ? url + (url.indexOf('?') >= 0 ? '&' : '?') + 'tg_id=' + id : url;
+    }
     document.addEventListener('DOMContentLoaded', function() {
 
       document.querySelectorAll('.btn-water').forEach(btn => {
         btn.onclick = function() {
           let treeId = this.dataset.treeId;
-          fetch(`/tree/${treeId}/water/`, {
+          fetch(tgUrl(`/tree/${treeId}/water/`), {
             method: "POST",
             headers: {'X-CSRFToken': '{{ csrf_token }}'}
           })
@@ -251,7 +255,7 @@
       document.querySelectorAll('.btn-upgrade').forEach(btn => {
         btn.onclick = function() {
           let treeId = this.dataset.treeId;
-          fetch(`/tree/${treeId}/upgrade/`, {
+          fetch(tgUrl(`/tree/${treeId}/upgrade/`), {
             method: "POST",
             headers: {'X-CSRFToken': '{{ csrf_token }}'}
           })
@@ -287,7 +291,7 @@
       document.querySelectorAll('.use-autowater-btn').forEach(btn => {
         btn.addEventListener('click', function() {
           let purchaseId = this.dataset.purchaseId;
-          fetch(`/shop/use/${purchaseId}/`, {
+          fetch(tgUrl(`/shop/use/${purchaseId}/`), {
             method: "POST",
             headers: {'X-CSRFToken': '{{ csrf_token }}'}
           })
@@ -302,7 +306,7 @@
       document.querySelectorAll('.use-fertilizer-btn').forEach(btn => {
         btn.addEventListener('click', function() {
           let purchaseId = this.dataset.purchaseId;
-          fetch(`/shop/use/${purchaseId}/`, {
+          fetch(tgUrl(`/shop/use/${purchaseId}/`), {
             method: "POST",
             headers: {'X-CSRFToken': '{{ csrf_token }}'}
           })
@@ -317,7 +321,7 @@
       document.querySelectorAll('.btn-collect').forEach(btn => {
         btn.onclick = function() {
           let treeId = this.dataset.treeId;
-          fetch(`/tree/${treeId}/collect_income/`, {
+          fetch(tgUrl(`/tree/${treeId}/collect_income/`), {
             method: "POST",
             headers: {'X-CSRFToken': '{{ csrf_token }}'}
           })
