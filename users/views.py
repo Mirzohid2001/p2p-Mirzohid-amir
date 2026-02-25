@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.utils.crypto import get_random_string
 
 from cryptofarm import settings
-from cryptofarm.utils.telegram import validate_telegram_login_widget
+from cryptofarm.utils.telegram import validate_telegram_data, extract_user_data, validate_telegram_login_widget
 from trees.views import get_current_user
 from .models import User, TonDepositRequest
 from trees.models import Tree
@@ -13,7 +13,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.utils import translation
 from users.models import User as TelegramUser
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 
 
 def _is_ngrok_request(request):
@@ -77,6 +78,42 @@ def telegram_login(request):
 
     _create_or_login_user(request, tg_id_int)
     return redirect("home")
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def telegram_auth_initdata(request):
+    """
+    Вход по initData из WebApp. POST с init_data.
+    Для Telegram Web — meta refresh вместо 302, чтобы редирект работал в iframe.
+    """
+    from django.http import HttpResponse
+    init_data = request.POST.get("init_data", "")
+    bot_token = getattr(settings, "TELEGRAM_BOT_TOKEN", None) or getattr(settings, "TG_BOT_TOKEN", None)
+    if not bot_token or not init_data:
+        return HttpResponse(
+            "<html><body><p>Ошибка: нет init_data или токена</p></body></html>",
+            status=400,
+        )
+    validated = validate_telegram_data(init_data, bot_token)
+    if not validated:
+        return HttpResponse(
+            "<html><body><p>Ошибка проверки данных</p></body></html>",
+            status=403,
+        )
+    user_data = extract_user_data(validated)
+    if not user_data or not user_data.get("telegram_id"):
+        return HttpResponse(
+            "<html><body><p>Нет данных пользователя</p></body></html>",
+            status=400,
+        )
+    tg_id_int = user_data["telegram_id"]
+    _create_or_login_user(request, tg_id_int, user_data)
+    home_url = request.build_absolute_uri("/")
+    # HTML с meta refresh — надёжнее в Telegram WebView чем 302
+    html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><meta http-equiv="refresh" content="0;url={home_url}"><title>Вход...</title></head><body><p>Вход выполнен. <a href="{home_url}">Перейти</a></p></body></html>"""
+    resp = HttpResponse(html)
+    return resp
 
 
 def _create_or_login_user(request, tg_id_int, widget_data=None):
