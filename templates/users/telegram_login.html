@@ -102,31 +102,9 @@
         if (tg.ready) tg.ready();
         if (tg.expand) tg.expand();
         function waitForUser() {
-          // tg.initData — сырая строка для серверной проверки (надёжно в Telegram Web)
-          if (tg.initData && tg.initData.length > 0) {
-            statusEl.innerText = "Перенаправляем…";
-            var form = document.createElement("form");
-            form.method = "POST";
-            form.action = "/telegram_login/auth/";
-            var inp = document.createElement("input");
-            inp.type = "hidden";
-            inp.name = "init_data";
-            inp.value = tg.initData;
-            form.appendChild(inp);
-            var refParam = new URLSearchParams(window.location.search).get("ref");
-            if (refParam) {
-              var refInp = document.createElement("input");
-              refInp.type = "hidden";
-              refInp.name = "ref";
-              refInp.value = refParam;
-              form.appendChild(refInp);
-            }
-            document.body.appendChild(form);
-            form.submit();
-          } else if (tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
-            // Fallback: tg_id через GET, если initData пустой
-            var userId = tg.initDataUnsafe.user.id;
-            var refParam = new URLSearchParams(window.location.search).get("ref");
+          var refParam = new URLSearchParams(window.location.search).get("ref");
+          // Сначала tg_id — не требует проверки hash, работает всегда
+          if (tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
             statusEl.innerText = "Перенаправляем…";
             var form = document.createElement("form");
             form.method = "GET";
@@ -134,7 +112,7 @@
             var inp = document.createElement("input");
             inp.type = "hidden";
             inp.name = "tg_id";
-            inp.value = userId;
+            inp.value = tg.initDataUnsafe.user.id;
             form.appendChild(inp);
             if (refParam) {
               var refInp = document.createElement("input");

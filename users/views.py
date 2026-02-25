@@ -89,8 +89,8 @@ def telegram_auth_initdata(request):
     """
     from django.http import HttpResponse
     init_data = request.POST.get("init_data", "")
-    bot_token = getattr(settings, "TELEGRAM_BOT_TOKEN", None) or getattr(settings, "TG_BOT_TOKEN", None)
-    if not bot_token or not init_data:
+    bot_token = getattr(settings, "TELEGRAM_BOT_TOKEN", None)
+    if not bot_token or bot_token == "YOUR_BOT_TOKEN" or not init_data:
         return HttpResponse(
             "<html><body><p>Ошибка: нет init_data или токена</p></body></html>",
             status=400,

@@ -16,7 +16,7 @@ def validate_telegram_data(init_data: str, bot_token: str) -> dict | None:
         dict: распарсенные и проверенные данные (ключ 'user' уже десериализован как dict)
         None: если проверка не прошла
     """
-    if not init_data:
+    if not init_data or not bot_token:
         return None
 
     # Распарсим в словарь (parse_qsl разобьёт на пары key=val)

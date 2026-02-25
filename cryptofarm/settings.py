@@ -163,8 +163,13 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Telegram Bot Settings (TELEGRAM_BOT_TOKEN / TG_BOT_TOKEN для совместимости с backend)
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN') or os.getenv('TG_BOT_TOKEN') or 'YOUR_BOT_TOKEN'
+# Telegram Bot Settings — все варианты для совместимости (бот использует BOT_TOKEN)
+TELEGRAM_BOT_TOKEN = (
+    os.getenv('TELEGRAM_BOT_TOKEN') or
+    os.getenv('TG_BOT_TOKEN') or
+    os.getenv('BOT_TOKEN') or
+    'YOUR_BOT_TOKEN'
+)
 TELEGRAM_BOT_USERNAME = os.getenv('TELEGRAM_BOT_USERNAME', 'your_bot_username')
 # Всегда используйте свой реальный Telegram ID в продакшене
 ADMIN_USER_ID = os.getenv('ADMIN_USER_ID', '6286760403')  # Замените на свой Telegram ID
