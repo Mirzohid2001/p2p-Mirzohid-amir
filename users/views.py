@@ -77,13 +77,17 @@ def telegram_login(request):
         return redirect("home")
 
     _create_or_login_user(request, tg_id_int)
-    # Редирект с tg_id в URL — запасной вариант, если cookie не сохраняется в iframe
     home_url = request.build_absolute_uri("/") + f"?tg_id={tg_id_int}"
     from django.http import HttpResponse
-    html = f'''<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Вход...</title></head>
-<body style="margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#6B75E6;color:white;font-family:sans-serif"><p>Вход выполнен…</p>
-<form id="go" method="GET" action="{home_url}"></form>
-<script>document.getElementById("go").submit();</script></body></html>'''
+    # meta refresh + ссылка — form.submit() может не сработать в Telegram Web iframe
+    html = f'''<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="refresh" content="0;url={home_url}">
+<title>Вход...</title></head>
+<body style="margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#6B75E6;color:white;font-family:sans-serif;padding:20px;text-align:center">
+<p style="margin-bottom:20px">Вход выполнен!</p>
+<p style="font-size:14px;opacity:0.9">Переход в игру…</p>
+<a href="{home_url}" style="margin-top:24px;display:inline-block;background:rgba(255,255,255,0.3);color:white;padding:12px 24px;border-radius:12px;text-decoration:none;font-weight:600">Нажмите, если не перешли</a>
+</body></html>'''
     return HttpResponse(html)
 
 
