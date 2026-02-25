@@ -225,7 +225,7 @@ def set_lang_and_django(request):
     return resp
 
 def profile_view(request):
-    telegram_id = request.session.get("telegram_id") or request.GET.get("telegram_id")
+    telegram_id = request.session.get("telegram_id") or request.GET.get("telegram_id") or request.GET.get("tg_id")
     if not telegram_id:
         return redirect('/telegram_login/')
 

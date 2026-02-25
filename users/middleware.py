@@ -14,8 +14,15 @@ class TelegramAuthMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        # Сохраняем tg_id в сессию при любом запросе (для iframe, где cookie могут не работать)
+        tg_from_get = request.GET.get("tg_id")
+        if tg_from_get:
+            try:
+                request.session["telegram_id"] = int(tg_from_get)
+            except (ValueError, TypeError):
+                pass
         # Пути, на которые не нужно авторизовываться
-        exempt_urls = ["/telegram_login/", "/admin/", "/static/", "/admin-panel/"]  # Добавляем admin-panel
+        exempt_urls = ["/telegram_login/", "/admin/", "/static/", "/admin-panel/"]
         for url in exempt_urls:
             if request.path.startswith(url):
                 return self.get_response(request)
