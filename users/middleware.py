@@ -41,13 +41,17 @@ class TelegramAuthMiddleware:
             request.session["telegram_id"] = test_id
             return self.get_response(request)
 
-        # Основная логика: проверяем, есть ли telegram_id в сессии
-        telegram_id = request.session.get("telegram_id")
+        # telegram_id из сессии или из GET (для iframe, где cookie может не сохраниться)
+        telegram_id = request.session.get("telegram_id") or request.GET.get("tg_id")
+        if telegram_id:
+            try:
+                telegram_id = int(telegram_id)
+                request.session["telegram_id"] = telegram_id  # сохраняем в сессию
+            except (ValueError, TypeError):
+                telegram_id = None
         if not telegram_id:
-            # Если нет – сразу редиректим на страницу авторизации через WebApp
             return redirect("/telegram_login/")
 
-        # Если же есть, пробуем загрузить соответствующего пользователя
         try:
             user = User.objects.get(telegram_id=telegram_id)
             request.user = user

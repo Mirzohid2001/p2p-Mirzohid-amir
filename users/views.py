@@ -77,7 +77,14 @@ def telegram_login(request):
         return redirect("home")
 
     _create_or_login_user(request, tg_id_int)
-    return redirect("home")
+    # Редирект с tg_id в URL — запасной вариант, если cookie не сохраняется в iframe
+    home_url = request.build_absolute_uri("/") + f"?tg_id={tg_id_int}"
+    from django.http import HttpResponse
+    html = f'''<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Вход...</title></head>
+<body style="margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#6B75E6;color:white;font-family:sans-serif"><p>Вход выполнен…</p>
+<form id="go" method="GET" action="{home_url}"></form>
+<script>document.getElementById("go").submit();</script></body></html>'''
+    return HttpResponse(html)
 
 
 @csrf_exempt

@@ -300,6 +300,25 @@
 
 
     <script src="/static/js/app.js"></script>
+    <script>
+      // Добавляем tg_id в ссылки для iframe (Telegram Web), если cookie не сохраняется
+      (function(){
+        var m = /[?&]tg_id=(\d+)/.exec(window.location.search);
+        if (m && (window.Telegram && window.Telegram.WebApp)) {
+          var tgId = m[1];
+          document.querySelectorAll('a[href^="/"]').forEach(function(a){
+            var h = a.getAttribute('href');
+            if (h && h.indexOf('tg_id=') < 0) {
+              a.href = h + (h.indexOf('?') >= 0 ? '&' : '?') + 'tg_id=' + tgId;
+            }
+          });
+          var q = new URLSearchParams(location.search);
+          q.delete('tg_id');
+          var clean = location.pathname + (q.toString() ? '?' + q : '');
+          if (clean !== location.href) history.replaceState({}, '', clean);
+        }
+      })();
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
