@@ -74,8 +74,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'cryptofarm.middleware.TelegramFrameMiddleware',  # после XFrameOptions — переопределяет для Telegram
     'users.middleware.TelegramAuthMiddleware',
-
 ]
 
 ROOT_URLCONF = 'cryptofarm.urls'
