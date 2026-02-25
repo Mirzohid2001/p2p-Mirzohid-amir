@@ -163,8 +163,8 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Telegram Bot Settings
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', 'YOUR_BOT_TOKEN')
+# Telegram Bot Settings (TELEGRAM_BOT_TOKEN / TG_BOT_TOKEN для совместимости с backend)
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN') or os.getenv('TG_BOT_TOKEN') or 'YOUR_BOT_TOKEN'
 TELEGRAM_BOT_USERNAME = os.getenv('TELEGRAM_BOT_USERNAME', 'your_bot_username')
 # Всегда используйте свой реальный Telegram ID в продакшене
 ADMIN_USER_ID = os.getenv('ADMIN_USER_ID', '6286760403')  # Замените на свой Telegram ID
@@ -218,5 +218,15 @@ CACHES = {
 
 CSRF_TRUSTED_ORIGINS = [
     "https://flora.diy",
-    "https://352c-95-46-69-105.ngrok-free.app",
+    "https://092a-95-46-64-253.ngrok-free.app",
+    "https://0cc5-95-46-69-171.ngrok-free.app",
 ]
+
+# Сессии для работы в iframe (Telegram Web, web.telegram.org)
+# SameSite=None и Secure нужны, чтобы cookies работали при открытии из Telegram Web
+# В production (HTTPS) включаем; для localhost (HTTP) используем Lax
+_USE_SECURE_SESSION = os.getenv("USE_SECURE_SESSION", "false").lower() == "true" or not DEBUG
+SESSION_COOKIE_SAMESITE = "None" if _USE_SECURE_SESSION else "Lax"
+SESSION_COOKIE_SECURE = _USE_SECURE_SESSION
+CSRF_COOKIE_SAMESITE = SESSION_COOKIE_SAMESITE
+CSRF_COOKIE_SECURE = SESSION_COOKIE_SECURE

@@ -1,11 +1,14 @@
-// Инициализация Telegram WebApp
-const tg = window.Telegram.WebApp;
-tg.expand();
+// Инициализация Telegram WebApp (только если открыто в Telegram/Telegram Web)
+const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+if (tg) {
+    if (tg.ready) tg.ready();
+    if (tg.expand) tg.expand();
+}
 
 // Установка темы в соответствии с Telegram
 document.addEventListener('DOMContentLoaded', function() {
-    // Применение темы Telegram
-    if (tg.colorScheme === 'dark') {
+    // Применение темы Telegram (если доступно)
+    if (tg && tg.colorScheme === 'dark') {
         document.body.classList.add('dark-theme');
         document.documentElement.style.setProperty('--text', '#FFFFFF');
     } else {

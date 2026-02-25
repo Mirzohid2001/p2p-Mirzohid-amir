@@ -62,6 +62,36 @@ def validate_telegram_data(init_data: str, bot_token: str) -> dict | None:
     return data_dict
 
 
+def validate_telegram_login_widget(data_dict: dict, bot_token: str) -> bool:
+    """
+    Проверяет hash от Telegram Login Widget (для входа через браузер Chrome и т.д.).
+    Алгоритм отличается от WebApp: secret_key = SHA256(bot_token).
+    """
+    if not data_dict or not bot_token:
+        return False
+    data_copy = dict(data_dict)
+    received_hash = data_copy.pop("hash", None)
+    if not received_hash:
+        return False
+    data_check_list = [f"{k}={data_copy[k]}" for k in sorted(data_copy.keys())]
+    data_check_string = "\n".join(data_check_list)
+    secret_key = hashlib.sha256(bot_token.encode("utf-8")).digest()
+    calculated_hash = hmac.new(
+        secret_key,
+        data_check_string.encode("utf-8"),
+        hashlib.sha256
+    ).hexdigest()
+    if not hmac.compare_digest(calculated_hash, received_hash):
+        return False
+    try:
+        auth_ts = int(data_dict.get("auth_date", "0"))
+    except (ValueError, TypeError):
+        return False
+    if time.time() - auth_ts > 86400:
+        return False
+    return True
+
+
 def extract_user_data(validated_data: dict) -> dict | None:
     """
     Берёт словарь validated_data, проверенный validate_telegram_data,

@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.utils.crypto import get_random_string
 
 from cryptofarm import settings
+from cryptofarm.utils.telegram import validate_telegram_login_widget
 from trees.views import get_current_user
 from .models import User, TonDepositRequest
 from trees.models import Tree
@@ -15,29 +16,91 @@ from users.models import User as TelegramUser
 from django.views.decorators.http import require_POST
 
 
+def _is_ngrok_request(request):
+    host = request.get_host()
+    return "ngrok" in host.lower()
+
+
 def telegram_login(request):
+    # 1) Обработка callback от Telegram Login Widget (Chrome, обычный браузер)
+    widget_hash = request.GET.get("hash")
+    if widget_hash:
+        bot_token = getattr(settings, "TELEGRAM_BOT_TOKEN", None) or getattr(settings, "TG_BOT_TOKEN", None)
+        if bot_token:
+            data = {k: v for k, v in request.GET.items() if k != "hash"}
+            data["hash"] = widget_hash
+            if validate_telegram_login_widget(data, bot_token):
+                tg_id_int = int(request.GET.get("id", 0))
+                _create_or_login_user(request, tg_id_int, request.GET)
+                return redirect("home")
+        auth_url = request.build_absolute_uri(request.path)
+        bot_username = getattr(settings, "TELEGRAM_BOT_USERNAME", None) or getattr(settings, "BOT_USERNAME", None) or "OxiriP2P_bot"
+        return render(request, "users/telegram_login.html", {
+            "error": "Ошибка проверки авторизации. Попробуйте снова.",
+            "bot_username": bot_username,
+            "auth_url": auth_url,
+        })
+
+    # 2) Обработка tg_id от WebApp (Telegram / Telegram Web)
     tg_id = request.GET.get("tg_id")
     if not tg_id:
-        return render(request, "users/telegram_login.html")
+        auth_url = request.build_absolute_uri(request.path)
+        bot_username = getattr(settings, "TELEGRAM_BOT_USERNAME", None) or getattr(settings, "BOT_USERNAME", None) or "OxiriP2P_bot"
+        # ngrok + iframe (Telegram Web): первый запрос может не иметь header — отдаём loader
+        if _is_ngrok_request(request) and request.headers.get("ngrok-skip-browser-warning") != "true":
+            from django.http import HttpResponse
+            import json
+            fetch_url = request.build_absolute_uri(request.get_full_path())
+            loader_html = """<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Загрузка...</title></head><body style="margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#6B75E6;color:white;font-family:sans-serif"><p>Загрузка...</p></body><script>
+(function(){
+  var url = """ + json.dumps(fetch_url) + """;
+  fetch(url, { headers: { "ngrok-skip-browser-warning": "true" } })
+    .then(function(r){ return r.text(); })
+    .then(function(html){
+      document.open();
+      document.write(html);
+      document.close();
+    })
+    .catch(function(){ document.body.innerHTML = "<p>Ошибка загрузки. Попробуйте «Открыть в браузере» в меню Telegram.</p>"; });
+})();
+</script></html>"""
+            return HttpResponse(loader_html)
+        return render(request, "users/telegram_login.html", {
+            "bot_username": bot_username,
+            "auth_url": auth_url,
+        })
 
     try:
         tg_id_int = int(tg_id)
     except ValueError:
         return redirect("home")
 
+    _create_or_login_user(request, tg_id_int)
+    return redirect("home")
+
+
+def _create_or_login_user(request, tg_id_int, widget_data=None):
+    """Создаёт или находит пользователя и записывает в сессию."""
+    defaults = {
+        "username": "",
+        "first_name": "",
+        "last_name": "",
+        "photo_url": "",
+        "cf_balance": 100.00,
+        "ton_balance": 0.00
+    }
+    if widget_data:
+        defaults["username"] = widget_data.get("username", "") or ""
+        defaults["first_name"] = widget_data.get("first_name", "") or ""
+        defaults["last_name"] = widget_data.get("last_name", "") or ""
+        defaults["photo_url"] = widget_data.get("photo_url", "") or ""
+
     user, created = User.objects.get_or_create(
         telegram_id=tg_id_int,
-        defaults={
-            "username": "",
-            "first_name": "",
-            "last_name": "",
-            "photo_url": "",
-            "cf_balance": 100.00,
-            "ton_balance": 0.00
-        }
+        defaults=defaults
     )
 
-    if created:
+    if created and not widget_data:
         Tree.objects.create(user=user, type="CF")
         user.cf_balance = 100
         user.save()
@@ -69,12 +132,34 @@ def telegram_login(request):
                     )
                     referrer.cf_balance += 10
                     referrer.save()
+    elif created and widget_data:
+        Tree.objects.create(user=user, type="CF")
+        user.cf_balance = 100
+        user.save()
+        if request.GET.get("ref"):
+            try:
+                ref_id_int = int(request.GET.get("ref"))
+                referrer = User.objects.filter(telegram_id=ref_id_int).first()
+                if referrer and referrer != user and not Referral.objects.filter(invited=user).exists():
+                    user.referred_by = referrer
+                    user.save()
+                    referral = Referral.objects.create(inviter=referrer, invited=user, bonus_cf=10)
+                    ReferralBonus.objects.create(referral=referral, bonus_type="signup", amount=10, description=f"Бонус за регистрацию {user}")
+                    referrer.cf_balance += 10
+                    referrer.save()
+            except (ValueError, TypeError):
+                pass
     else:
         if not Tree.objects.filter(user=user).exists():
             Tree.objects.create(user=user, type="CF")
+        if widget_data:
+            user.username = widget_data.get("username", "") or user.username
+            user.first_name = widget_data.get("first_name", "") or user.first_name
+            user.last_name = widget_data.get("last_name", "") or user.last_name
+            user.photo_url = widget_data.get("photo_url", "") or user.photo_url
+            user.save()
 
     request.session["telegram_id"] = tg_id_int
-    return redirect("home")
 
 
 @require_POST

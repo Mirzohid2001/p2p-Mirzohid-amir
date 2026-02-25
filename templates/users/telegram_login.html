@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Авторизация через Telegram</title>
+  <script src="/static/js/ngrok-fetch.js"></script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
@@ -33,52 +34,94 @@
       font-size: 0.9rem;
       color: #FFD15A;
     }
+    .error {
+      color: #ff6b6b;
+      margin-top: 1rem;
+    }
+    .widget-container {
+      margin-top: 1.5rem;
+    }
+    .or-divider {
+      margin: 1.5rem 0;
+      opacity: 0.8;
+    }
+    .open-in-tg {
+      display: inline-block;
+      margin-top: 1rem;
+      color: #FFD15A;
+      text-decoration: none;
+      font-size: 0.95rem;
+    }
+    .open-in-tg:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
   <div class="box">
     <h1>Регистрация через Telegram</h1>
-    <p>Идёт получение данных…</p>
-    <p class="status" id="status-text">Пожалуйста, подождите</p>
+    <div id="webapp-section">
+      <p>Идёт получение данных…</p>
+      <p class="status" id="status-text">Пожалуйста, подождите</p>
+    </div>
+    <div id="widget-section" style="display:none;">
+      <p>Войдите через Telegram, чтобы продолжить:</p>
+      {% if bot_username and auth_url %}
+      <div class="widget-container">
+        <script async src="https://telegram.org/js/telegram-widget.js?22"
+          data-telegram-login="{{ bot_username }}"
+          data-size="large"
+          data-auth-url="{{ auth_url }}"
+          data-request-access="write">
+        </script>
+      </div>
+      {% else %}
+      <div class="widget-container">
+        <a href="https://t.me/OxiriP2P_bot" target="_blank" style="display:inline-block;background:#0088cc;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Войти через Telegram</a>
+      </div>
+      {% endif %}
+      <p class="or-divider">— или —</p>
+      <a href="https://t.me/{{ bot_username|default:'OxiriP2P_bot' }}" class="open-in-tg" target="_blank">
+        Открыть бота в Telegram
+      </a>
+    </div>
+    {% if error %}
+    <p class="error">{{ error }}</p>
+    {% endif %}
   </div>
 
   <script>
     (function() {
-      const tg = window.Telegram.WebApp;
-      const statusEl = document.getElementById("status-text");
+      var tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+      var statusEl = document.getElementById("status-text");
+      var webappSection = document.getElementById("webapp-section");
+      var widgetSection = document.getElementById("widget-section");
 
-      // Если WebApp SDK не определён – показываем ошибку
-      if (!tg) {
-        statusEl.innerText = "Эта страница должна открываться внутри Telegram WebApp.";
+      // Если WebApp SDK определён и есть initData – используем WebApp (Telegram / Telegram Web)
+      if (tg && tg.initData) {
+        if (tg.ready) tg.ready();
+        if (tg.expand) tg.expand();
+        function waitForUser() {
+          if (tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
+            var userId = tg.initDataUnsafe.user.id;
+            var urlParams = new URLSearchParams(window.location.search);
+            var refParam = urlParams.get("ref");
+            var newHref = "/telegram_login/?tg_id=" + userId;
+            if (refParam) newHref += "&ref=" + encodeURIComponent(refParam);
+            statusEl.innerText = "Перенаправляем…";
+            setTimeout(function() { window.location.href = newHref; }, 300);
+          } else {
+            setTimeout(waitForUser, 100);
+          }
+        }
+        waitForUser();
         return;
       }
 
-      // Раскрываем WebApp (если доступно)
-      if (tg.expand) {
-        tg.expand();
-      }
+      // Нет WebApp (Chrome, Safari и т.д.) – показываем Login Widget
+      webappSection.style.display = "none";
+      widgetSection.style.display = "block";
 
-      // Ждём, пока Telegram передаст initDataUnsafe.user.id
-      function waitForUser() {
-        if (tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
-          const userId = tg.initDataUnsafe.user.id;
-          const urlParams = new URLSearchParams(window.location.search);
-          const refParam = urlParams.get("ref");
-
-          let newHref = `/telegram_login/?tg_id=${userId}`;
-          if (refParam) {
-            newHref += `&ref=${encodeURIComponent(refParam)}`;
-          }
-
-          statusEl.innerText = "Перенаправляем…";
-          setTimeout(() => {
-            window.location.href = newHref;
-          }, 300);
-        } else {
-          setTimeout(waitForUser, 100);
-        }
-      }
-      waitForUser();
     })();
   </script>
 </body>
