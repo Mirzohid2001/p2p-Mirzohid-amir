@@ -1,4 +1,11 @@
 // RPS Game JavaScript
+function tgUrl(url) {
+  var id = (typeof window !== 'undefined' && window.__TG_ID);
+  return (id && url) ? url + (url.indexOf('?') >= 0 ? '&' : '?') + 'tg_id=' + id : url;
+}
+function navigateTo(url) {
+  window.location.href = tgUrl(url);
+}
 const t = (window.I18N_RPS || {});
 const tr = (key, fallback) => (t[key] != null ? t[key] : fallback);
 let searchInterval = null;
@@ -35,7 +42,7 @@ function forceFinalizeLoop() {
   finalizeInterval = setInterval(() => {
     finalizeAttempts++;
 
-    fetch(`/rps/api/game/${currentGameId}/status/`)
+    fetch(tgUrl(`/rps/api/game/${currentGameId}/status/`))
       .then(r => r.json())
       .then(data => {
         if (data?.error) return;
@@ -132,14 +139,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const exitBtn = document.getElementById('btn-exit');
     if (exitBtn) {
         exitBtn.addEventListener('click', function() {
-            window.location.href = '/rps/';
+            navigateTo('/rps/');
         });
     }
     
     const exitBtnCancelled = document.getElementById('btn-exit-cancelled');
     if (exitBtnCancelled) {
         exitBtnCancelled.addEventListener('click', function() {
-            window.location.href = '/rps/';
+            navigateTo('/rps/');
         });
     }
 });
@@ -172,7 +179,7 @@ function startGameSearch(betAmount) {
     }
     
     // Отправляем запрос на поиск
-    fetch('/rps/api/search/', {
+    fetch(tgUrl('/rps/api/search/'), {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -196,7 +203,7 @@ function startGameSearch(betAmount) {
             showNotification(tr('opponent_found', 'Противник найден!'), 'success');
 
             setTimeout(() => {
-                window.location.href = `/rps/game/${data.game_id}/`;
+                navigateTo(`/rps/game/${data.game_id}/`);
             }, 500);
         } else {
             // Начинаем поиск
@@ -232,7 +239,7 @@ function startSearchTimer(betAmount) {
 
 // Проверка противника
 function checkForOpponent(betAmount) {
-    fetch('/rps/api/search/', {
+    fetch(tgUrl('/rps/api/search/'), {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -246,7 +253,7 @@ function checkForOpponent(betAmount) {
     .then(data => {
         if (data.opponent_found) {
             clearInterval(searchInterval);
-            window.location.href = `/rps/game/${data.game_id}/`;
+            navigateTo(`/rps/game/${data.game_id}/`);
         }
     })
     .catch(error => {
@@ -262,7 +269,7 @@ function connectBot(betAmount) {
     searchTimerEl.textContent = tr('bot_connecting', 'Подключение ...');
 
     
-    fetch('/rps/api/bot/connect/', {
+    fetch(tgUrl('/rps/api/bot/connect/'), {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -288,7 +295,7 @@ function connectBot(betAmount) {
                 navigator.vibrate([100, 50, 100]);
             }
             setTimeout(() => {
-                window.location.href = `/rps/game/${data.game_id}/`;
+                navigateTo(`/rps/game/${data.game_id}/`);
             }, 500);
         }
     })
@@ -309,7 +316,7 @@ function cancelGameSearch() {
     }
     
     // Удаляем из очереди на сервере
-    fetch('/rps/api/search/cancel/', {
+    fetch(tgUrl('/rps/api/search/cancel/'), {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -356,7 +363,7 @@ function cancelGame() {
     
     console.log('Отправка запроса на отмену игры:', currentGameId);
     
-    fetch('/rps/api/game/cancel/', {
+    fetch(tgUrl('/rps/api/game/cancel/'), {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -404,7 +411,7 @@ function cancelGame() {
             
             // Переходим на главную страницу
             setTimeout(() => {
-                window.location.href = '/rps/';
+                navigateTo('/rps/');
             }, 1500);
         }
     })
@@ -440,7 +447,7 @@ function startGameStatusPolling() {
   if (gameStatusInterval) clearInterval(gameStatusInterval);
 
   gameStatusInterval = setInterval(() => {
-    fetch(`/rps/api/game/${currentGameId}/status/`)
+    fetch(tgUrl(`/rps/api/game/${currentGameId}/status/`))
       .then(r => r.json())
       .then(data => {
         if (data?.error) return;
@@ -581,7 +588,7 @@ function startMoveTimer() {
 document.addEventListener('click', function(e) {
   const exit = e.target.closest('#btn-exit');
   if (!exit) return;
-  window.location.href = '/rps/';
+  navigateTo('/rps/');
 });
 function finalizeGameUI(data) {
   onGameFinishedUI(); // выключаем кнопки, таймеры
@@ -712,7 +719,7 @@ function makeMove(move) {
     // Показываем индикатор загрузки
     showLoading();
     
-    fetch('/rps/api/move/', {
+    fetch(tgUrl('/rps/api/move/'), {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -862,7 +869,7 @@ function startRematch(gameId) {
 
   showLoading();
 
-  fetch('/rps/api/rematch/', {
+  fetch(tgUrl('/rps/api/rematch/'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -887,7 +894,7 @@ function startRematch(gameId) {
       stopAllRpsIntervals();
 
       // ✅ ВАЖНО: сразу уходим на новую игру
-      window.location.replace(`/rps/game/${data.game_id}/`);
+      window.location.replace(tgUrl(`/rps/game/${data.game_id}/`));
     }
   })
   .catch(err => {

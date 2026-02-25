@@ -250,6 +250,10 @@
         // Сохраняем tg_id для fetch (Telegram Web iframe)
         var m = /[?&]tg_id=(\d+)/.exec(window.location.search);
         if (m && window.Telegram && window.Telegram.WebApp) window.__TG_ID = m[1];
+        window.tgUrl = function(url) {
+          var id = window.__TG_ID;
+          return (id && url) ? url + (url.indexOf('?') >= 0 ? '&' : '?') + 'tg_id=' + id : url;
+        };
         var tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
         if (tg) {
             if (tg.ready) tg.ready();
