@@ -15,7 +15,8 @@ class TelegramFrameMiddleware:
         # Разрешаем Telegram Web, десктоп и мобильные приложения
         csp = "frame-ancestors 'self' https://web.telegram.org https://telegram.org https://t.me https://*.telegram.org;"
         response["Content-Security-Policy"] = csp
-        response.pop("X-Frame-Options", None)  # убираем DENY, CSP имеет приоритет
+        if "X-Frame-Options" in response:
+            del response["X-Frame-Options"]
         return response
 
 
