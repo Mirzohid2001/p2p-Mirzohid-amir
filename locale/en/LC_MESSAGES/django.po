@@ -221,8 +221,8 @@ msgid "Игра"
 msgstr "Game"
 
 #: .\templates\base.html:278
-msgid "P2P"
-msgstr ""
+msgid "Рынок"
+msgstr "Market"
 
 #: .\templates\base.html:283
 msgid "Рефералы"

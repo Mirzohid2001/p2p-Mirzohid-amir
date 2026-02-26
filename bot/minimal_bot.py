@@ -424,19 +424,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     user_lang = getattr(tg_user, "language", None) or "ru"
-
-    # если язык не выбран — спрашиваем 1 раз
-    if created or not getattr(tg_user, "language", None):
-        await update.message.reply_text(t("ru", "choose_lang"), reply_markup=language_keyboard())
-        return
-
-    # бонусы (перевод)
     inviter_id = None
     if context.args and context.args[0].isdigit():
         inviter_id = int(context.args[0])
-    is_new_user = created  # или твоё exists/created как удобнее
 
-    if is_new_user and inviter_id:
+    # Реферальный бонус и уведомление — ДО проверки языка (иначе новый юзер не дойдёт)
+    if created and inviter_id:
         res = await db_apply_referral_bonus(inviter_id, telegram_id)
         if res.get("ok"):
             inviter_lang = await db_get_lang(res["inviter_tg_id"])
@@ -444,15 +437,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await context.bot.send_message(
                     res["inviter_tg_id"],
                     t(inviter_lang, "bonus_inviter", name=res["invited_name"]),
-                    reply_markup=_play_keyboard(res["inviter_tg_id"],lang=inviter_lang)
+                    reply_markup=_play_keyboard(res["inviter_tg_id"], lang=inviter_lang)
                 )
             except Exception:
                 pass
             await update.message.reply_text(t(user_lang, "bonus_invited"))
 
+    # если язык не выбран — спрашиваем 1 раз
+    if created or not getattr(tg_user, "language", None):
+        await update.message.reply_text(t("ru", "choose_lang"), reply_markup=language_keyboard())
+        return
+
     await update.message.reply_text(
         t(user_lang, "start_welcome", first_name=user.first_name or ""),
-        reply_markup=_play_keyboard(telegram_id, inviter_id,lang=user_lang)
+        reply_markup=_play_keyboard(telegram_id, inviter_id, lang=user_lang)
     )
 
 
