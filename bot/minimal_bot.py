@@ -624,7 +624,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     chat_id=uid,
                     from_chat_id=src_chat_id,
                     message_id=src_message_id,
-                    reply_markup=_play_keyboard(uid),  # можно прикрепить твою кнопку
                 )
                 sent += 1
             except Exception:
