@@ -919,12 +919,12 @@ def main():
     request = HTTPXRequest(**request_kwargs)
 
     app = Application.builder().token(BOT_TOKEN).request(request).post_init(post_init).build()
-    app.job_queue.run_repeating(
-        notify_water_due_job,
-        interval=60,  # проверка каждую минуту
-        first=10,
-        name="notify_water_due"
-    )
+    # app.job_queue.run_repeating(
+    #     notify_water_due_job,
+    #     interval=60,  # проверка каждую минуту
+    #     first=10,
+    #     name="notify_water_due"
+    # )
 
 
     app.add_handler(CommandHandler("start", start))
