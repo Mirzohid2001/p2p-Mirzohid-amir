@@ -907,10 +907,10 @@ def main():
     from telegram.request import HTTPXRequest
 
     request_kwargs = {
-        "connect_timeout": 20.0,
-        "read_timeout": 30.0,
-        "write_timeout": 30.0,
-        "pool_timeout": 30.0,
+        "connect_timeout": 5,
+        "read_timeout": 15,
+        "write_timeout": 15,
+        "pool_timeout": 10,
     }
     if BOT_PROXY_URL:
         request_kwargs["proxy"] = BOT_PROXY_URL
