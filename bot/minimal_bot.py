@@ -70,6 +70,7 @@ logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "PUT_YOUR_TOKEN_HERE")
 WEBAPP_URL_BASE = os.getenv("WEBAPP_URL_BASE", "https://flora.diy/telegram_login/")
+BOT_PROXY_URL = os.getenv("BOT_PROXY_URL", "").strip()
 
 ADMIN_IDS = [1010942377, 455168812]
 class AdminOnly(MessageFilter):
@@ -905,12 +906,17 @@ def main():
 
     from telegram.request import HTTPXRequest
 
-    request = HTTPXRequest(
-        connect_timeout=20.0,
-        read_timeout=30.0,
-        write_timeout=30.0,
-        pool_timeout=30.0,
-    )
+    request_kwargs = {
+        "connect_timeout": 20.0,
+        "read_timeout": 30.0,
+        "write_timeout": 30.0,
+        "pool_timeout": 30.0,
+    }
+    if BOT_PROXY_URL:
+        request_kwargs["proxy"] = BOT_PROXY_URL
+        logger.info("Using bot proxy: %s", BOT_PROXY_URL)
+
+    request = HTTPXRequest(**request_kwargs)
 
     app = Application.builder().token(BOT_TOKEN).request(request).post_init(post_init).build()
     app.job_queue.run_repeating(
