@@ -119,6 +119,27 @@
   <div class="muted">Игроки: <b>{{ pve_player_wins }}</b> · бот: <b>{{ pve_bot_wins }}</b> · ничьи: <b>{{ pve_draws }}</b></div>
 </div>
 
+<h2>Антибот</h2>
+<div class="grid">
+  <div class="card kpi"><div class="v">{{ guard_stats.pending }}</div><div class="l">сейчас должны пройти проверку</div></div>
+  <div class="card kpi"><div class="v">{{ guard_stats.suspicious }}</div><div class="l">помечены подозрительными</div></div>
+  <div class="card kpi"><div class="v">{{ guard_stats.passed|default:0 }}</div><div class="l">проверок пройдено</div></div>
+  <div class="card kpi"><div class="v">{{ guard_stats.failed|default:0 }}</div><div class="l">неверных ответов</div></div>
+</div>
+<div class="card tw" style="margin-top:12px"><h3>Подозрительные и непрошедшие <span class="muted" style="font-weight:400">— проверка каждые 100 партий и сразу при подозрении</span></h3><table>
+  <tr><th>Игрок</th><th>Причина подозрения</th><th>Когда</th><th>Проверка</th><th class="n">Пройдено</th><th class="n">Ошибок</th><th class="n">Ходов &lt; 0.25 с</th><th class="n">Партий с проверки</th></tr>
+  {% for g in guards %}<tr>
+    <td>{% include "admin_panel/_u.html" with u=g.user %}</td>
+    <td>{{ g.suspicious_reason|default:"—" }}</td>
+    <td class="muted">{{ g.suspicious_at|date:"d.m H:i"|default:"—" }}</td>
+    <td>{% if g.check_required %}<span class="pill w">ждёт: {{ g.check_reason }}</span>{% else %}<span class="pill g">пройдена</span>{% endif %}</td>
+    <td class="n">{{ g.checks_passed }}</td>
+    <td class="n">{% if g.checks_failed %}<b>{{ g.checks_failed }}</b>{% else %}0{% endif %}</td>
+    <td class="n">{{ g.fast_moves }}</td>
+    <td class="n">{{ g.games_since_check }}</td>
+  </tr>{% empty %}<tr><td colspan="8" class="empty">Подозрительных пока нет</td></tr>{% endfor %}
+</table></div>
+
 <h2>Турнир</h2>
 <div class="cols">
   <div class="card"><h3>{% if active_tournament %}Текущий турнир #{{ active_tournament.id }} · до {{ active_tournament.end_date|date:"d.m H:i" }}{% else %}Активного турнира нет — запустить можно командой /tyrnir в боте{% endif %}</h3>

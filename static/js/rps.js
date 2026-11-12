@@ -13,6 +13,91 @@ let gameStatusInterval = null;
 let moveTimerInterval = null;
 let isMoveTimerRunning = false;
 let currentGameId = null;
+// isPlayer1 из шаблона — const и не меняется; при подгрузке новой партии без перезагрузки берём значение отсюда
+let currentIsPlayer1 = (typeof isPlayer1 !== 'undefined') ? !!isPlayer1 : true;
+let rematchInFlight = false;
+// пауза между партиями (сервер не даёт начать новую раньше, чем через 5 с)
+const GAME_COOLDOWN_SECONDS = 5;
+let rematchCooldownInterval = null;
+
+// Проверка «вы не бот?»: сервер не даёт начать партию, пока игрок не нажмёт нужный фрукт.
+// onPassed — что сделать после успешной проверки (повторить «Ещё раз», поиск и т.п.)
+function showHumanCheck(check, onPassed, message) {
+  hideLoading();
+  const old = document.getElementById('human-check');
+  if (old) old.remove();
+
+  const ov = document.createElement('div');
+  ov.id = 'human-check';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(10,14,40,.78);display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML = `
+    <div style="background:linear-gradient(160deg,#3D50C7,#6B75E6);color:#fff;border-radius:18px;padding:20px 18px;max-width:340px;width:100%;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.45)">
+      <div style="font-size:18px;font-weight:700;margin-bottom:6px">${tr('hc_title', '🤖 Проверка: вы не бот?')}</div>
+      <div style="opacity:.92;margin-bottom:14px">${tr('hc_prompt', 'Нажмите на')} <span class="hc-target" style="font-size:28px;vertical-align:middle"></span></div>
+      <div class="hc-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div>
+      <div class="hc-msg" style="min-height:20px;margin-top:12px;color:#ffd6e2;font-size:14px"></div>
+    </div>`;
+  ov.querySelector('.hc-target').textContent = check.target;
+  ov.querySelector('.hc-msg').textContent = message || '';
+
+  let busy = false;
+  const answer = (choice) => {
+    if (busy) return;
+    busy = true;
+    fetch(tgUrl('/rps/api/human-check/'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: check.id, choice: choice })
+    })
+      .then(r => r.json())
+      .then(d => {
+        busy = false;
+        if (d.passed) {
+          ov.remove();
+          showNotification(tr('hc_ok', 'Спасибо! Можно играть'), 'success');
+          if (onPassed) onPassed();
+        } else if (d.human_check) {
+          showHumanCheck(d.human_check, onPassed, d.error || '');
+        }
+      })
+      .catch(() => { busy = false; });
+  };
+
+  const grid = ov.querySelector('.hc-grid');
+  (check.options || []).forEach(f => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = f;
+    b.style.cssText = 'font-size:34px;line-height:1;padding:14px 0;border-radius:14px;border:0;background:rgba(255,255,255,.16);cursor:pointer';
+    b.addEventListener('click', () => answer(f));
+    grid.appendChild(b);
+  });
+  document.body.appendChild(ov);
+}
+
+function startRematchCooldown(seconds) {
+  if (rematchCooldownInterval) { clearInterval(rematchCooldownInterval); rematchCooldownInterval = null; }
+  const buttons = [...document.querySelectorAll('#btn-rematch, #btn-rematch-cancelled')];
+  if (!buttons.length) return;
+  buttons.forEach(b => {
+    if (!b.dataset.label) b.dataset.label = b.textContent.trim();
+    b.disabled = true;
+    b.style.opacity = '0.6';
+  });
+  let left = Math.max(1, Math.ceil(seconds));
+  const paint = () => buttons.forEach(b => { b.textContent = `${b.dataset.label} (${left})`; });
+  paint();
+  rematchCooldownInterval = setInterval(() => {
+    left--;
+    if (left <= 0) {
+      clearInterval(rematchCooldownInterval);
+      rematchCooldownInterval = null;
+      buttons.forEach(b => { b.textContent = b.dataset.label; b.disabled = false; b.style.opacity = ''; });
+      return;
+    }
+    paint();
+  }, 1000);
+}
 let searchTimer = 5;
 let moveTimer = 8;
 let gameFinalized = false;
@@ -83,14 +168,20 @@ document.addEventListener('click', function (e) {
   const btn = e.target.closest('#btn-rematch, #btn-rematch-cancelled');
   if (!btn) return;
 
-  const gid = btn.dataset.gameId;
-  console.log('REMATCH CLICK gid=', gid);
-
+  // у кнопки из серверного шаблона нет data-game-id — берём текущую игру
+  const gid = btn.dataset.gameId || currentGameId;
   startRematch(gid);
 });
 
 // Инициализация
 document.addEventListener('DOMContentLoaded', function() {
+    currentGameId = (typeof gameId !== 'undefined' && gameId) ? gameId : null;
+    initRpsPage();
+});
+
+// Навешивает обработчики на текущее содержимое .rps-game-container.
+// Вызывается при загрузке страницы и после подгрузки новой партии без перезагрузки.
+function initRpsPage() {
     // Если мы на странице выбора ставки
     const betButtons = document.querySelectorAll('.bet-btn');
     if (betButtons.length > 0) {
@@ -112,8 +203,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Если мы на странице игры
-    if (typeof gameId !== 'undefined' && gameId) {
-        currentGameId = gameId;
+    if (currentGameId) {
         startGameStatusPolling();
         
         // Обработчики ходов
@@ -153,7 +243,59 @@ document.addEventListener('DOMContentLoaded', function() {
             navigateTo('/rps/');
         });
     }
-});
+}
+
+// Сбрасывает состояние прошлой партии перед показом новой
+function resetGameState() {
+    stopFinalizeLoop();
+    stopAllRpsIntervals();
+    if (rematchCooldownInterval) { clearInterval(rematchCooldownInterval); rematchCooldownInterval = null; }
+    gameFinalized = false;
+    awaitingFinalize = false;
+    additionalTimeUsed = false;
+    moveTimer = 8;
+    searchTimer = 5;
+}
+
+// Показывает партию без перезагрузки страницы: берём готовый HTML партии с сервера
+// и подменяем только игровой блок. Если что-то пошло не так — обычный переход.
+function loadGameInPlace(newGameId) {
+    const url = `/rps/game/${newGameId}/`;
+    const container = document.querySelector('.rps-game-container');
+    if (!container || !window.fetch || !window.DOMParser) {
+        window.location.replace(tgUrl(url));
+        return Promise.resolve();
+    }
+
+    resetGameState();
+
+    return fetch(tgUrl(url), { credentials: 'same-origin' })
+        .then(r => {
+            // сессия слетела — сервер отправил на страницу входа: пусть разбирается обычный переход
+            if (!r.ok || (r.redirected && r.url.indexOf('/rps/game/') === -1)) {
+                throw new Error('soft navigation failed: ' + r.status);
+            }
+            return r.text();
+        })
+        .then(html => {
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            const fresh = doc.querySelector('.rps-game-container');
+            const idMatch = html.match(/const gameId = (\d+|null);/);
+            const p1Match = html.match(/const isPlayer1 = (true|false);/);
+            if (!fresh || !idMatch) throw new Error('unexpected game page');
+
+            container.innerHTML = fresh.innerHTML;
+            currentGameId = idMatch[1] === 'null' ? null : Number(idMatch[1]);
+            currentIsPlayer1 = p1Match ? p1Match[1] === 'true' : true;
+            try { history.replaceState(history.state, '', url); } catch (e) {}
+            window.scrollTo(0, 0);
+            initRpsPage();
+        })
+        .catch(err => {
+            console.warn('loadGameInPlace fallback:', err);
+            window.location.replace(tgUrl(url));
+        });
+}
 
 // Поиск игры
 function startGameSearch(betAmount) {
@@ -195,19 +337,25 @@ function startGameSearch(betAmount) {
     })
     .then(response => response.json())
     .then(data => {
+        if (data.human_check) {
+            resetBetButtons();
+            searchStatus.style.display = 'none';
+            showHumanCheck(data.human_check, () => startGameSearch(betAmount));
+            return;
+        }
         if (data.error) {
             showNotification(data.error, 'error');
             resetBetButtons();
             searchStatus.style.display = 'none';
             return;
         }
-        
+
         if (data.opponent_found) {
             // Противник найден - переходим к игре
             showNotification(tr('opponent_found', 'Противник найден!'), 'success');
 
             setTimeout(() => {
-                navigateTo(`/rps/game/${data.game_id}/`);
+                loadGameInPlace(data.game_id);
             }, 500);
         } else {
             // Начинаем поиск
@@ -255,9 +403,19 @@ function checkForOpponent(betAmount) {
     })
     .then(response => response.json())
     .then(data => {
+        if (data.human_check) {
+            clearInterval(searchInterval);
+            searchInterval = null;
+            resetBetButtons();
+            const st = document.getElementById('search-status');
+            if (st) st.style.display = 'none';
+            showHumanCheck(data.human_check, () => startGameSearch(betAmount));
+            return;
+        }
         if (data.opponent_found) {
             clearInterval(searchInterval);
-            navigateTo(`/rps/game/${data.game_id}/`);
+            searchInterval = null;
+            loadGameInPlace(data.game_id);
         }
     })
     .catch(error => {
@@ -285,13 +443,19 @@ function connectBot(betAmount) {
     })
     .then(response => response.json())
     .then(data => {
+        if (data.human_check) {
+            resetBetButtons();
+            searchStatus.style.display = 'none';
+            showHumanCheck(data.human_check, () => startGameSearch(betAmount));
+            return;
+        }
         if (data.error) {
             showNotification(data.error, 'error');
             resetBetButtons();
             searchStatus.style.display = 'none';
             return;
         }
-        
+
         if (data.bot_connected) {
             showNotification(tr('bot_connected', 'Подключен!'), 'success');
 
@@ -299,7 +463,7 @@ function connectBot(betAmount) {
                 navigator.vibrate([100, 50, 100]);
             }
             setTimeout(() => {
-                navigateTo(`/rps/game/${data.game_id}/`);
+                loadGameInPlace(data.game_id);
             }, 500);
         }
     })
@@ -608,11 +772,11 @@ function finalizeGameUI(data) {
   if (normalized === 'draw') {
     isDraw = true;
   } else if (normalized === 'player1_win') {
-    userWin = !!isPlayer1;
-    userLose = !isPlayer1;
+    userWin = currentIsPlayer1;
+    userLose = !currentIsPlayer1;
   } else if (normalized === 'player2_win') {
-    userWin = !isPlayer1;
-    userLose = !!isPlayer1;
+    userWin = !currentIsPlayer1;
+    userLose = currentIsPlayer1;
   }
 
   const bank = (data.game_bank != null) ? Number(data.game_bank).toFixed(0) : null;
@@ -689,6 +853,9 @@ function finalizeGameUI(data) {
   // прячем отмену игры (на всякий)
   const cancelBtn = document.getElementById('btn-cancel-game');
   if (cancelBtn) cancelBtn.style.display = 'none';
+
+  // 5 секунд до следующей партии
+  startRematchCooldown(GAME_COOLDOWN_SECONDS);
 }
 
 function hideMovePanel() {
@@ -746,7 +913,7 @@ function makeMove(move) {
         
         // Обновляем отображение хода с анимацией
         const player1Move = document.getElementById('player1-move');
-        if (player1Move && typeof isPlayer1 !== 'undefined' && isPlayer1) {
+        if (player1Move && currentIsPlayer1) {
             const moveEmoji = move === 'rock' ? '✊' : move === 'paper' ? '🖐️' : '✌️';
             player1Move.innerHTML = `<div class="move-icon move-${move}">${moveEmoji}</div>`;
             // Вибрация (если поддерживается)
@@ -870,6 +1037,9 @@ function startRematch(gameId) {
 
     return;
   }
+  // двойное нажатие не должно создавать две игры
+  if (rematchInFlight) return;
+  rematchInFlight = true;
 
   showLoading();
 
@@ -883,26 +1053,39 @@ function startRematch(gameId) {
   })
   .then(r => r.json())
   .then(data => {
-    hideLoading();
-
+    if (data.human_check) {
+      hideLoading();
+      rematchInFlight = false;
+      showHumanCheck(data.human_check, () => startRematch(gameId));
+      return;
+    }
+    if (data.cooldown) {
+      // сервер просит подождать — показываем отсчёт на кнопке
+      hideLoading();
+      rematchInFlight = false;
+      startRematchCooldown(data.cooldown);
+      return;
+    }
     if (data.error) {
+      hideLoading();
+      rematchInFlight = false;
       showNotification(data.error, 'error');
       return;
     }
 
     if (data.success && data.game_id) {
-      showNotification(tr('rematch_created', 'Новая игра создана!'), 'success');
-
-
-      // ✅ ВАЖНО: стопаем опросы старой игры
-      stopAllRpsIntervals();
-
-      // ✅ ВАЖНО: сразу уходим на новую игру
-      window.location.replace(tgUrl(`/rps/game/${data.game_id}/`));
+      // новая партия на месте, без перезагрузки страницы
+      return loadGameInPlace(data.game_id).then(() => {
+        hideLoading();
+        rematchInFlight = false;
+      });
     }
+    hideLoading();
+    rematchInFlight = false;
   })
   .catch(err => {
     hideLoading();
+    rematchInFlight = false;
     console.error(err);
     showNotification(tr('rematch_error', 'Ошибка при создании новой игры'), 'error');
 

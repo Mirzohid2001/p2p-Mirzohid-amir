@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.db import transaction
-from django.db.models import Q, Subquery
+from django.db.models import Q, Subquery, Max
 from decimal import Decimal
 from datetime import timedelta
 import json
@@ -18,6 +18,29 @@ logger = logging.getLogger(__name__)
 
 # Таймаут на совершение хода: 10 секунд
 MOVE_TIMEOUT_SECONDS = 10
+
+# Пауза между партиями одного игрока — против набивки партий подряд
+GAME_COOLDOWN_SECONDS = 5
+
+
+def _cooldown_left(user):
+    """Сколько секунд игроку ещё ждать до новой партии (0 — можно играть)."""
+    last = (
+        Game.objects.filter(Q(player1=user) | Q(player2=user), finished_at__isnull=False)
+        .aggregate(m=Max('finished_at'))['m']
+    )
+    if not last:
+        return 0
+    import math
+    left = GAME_COOLDOWN_SECONDS - (timezone.now() - last).total_seconds()
+    return math.ceil(left) if left > 0 else 0
+
+
+def _cooldown_response(left):
+    return JsonResponse(
+        {'error': f'Подождите {left} с перед следующей игрой', 'cooldown': left},
+        status=429,
+    )
 
 
 def get_current_user(request):
@@ -246,6 +269,13 @@ def api_search_game(request):
         return JsonResponse({'error': 'Method not allowed'}, status=405)
     
     user = request.user
+    left = _cooldown_left(user)
+    if left:
+        return _cooldown_response(left)
+    from .antibot import check_required_response
+    blocked = check_required_response(user)
+    if blocked:
+        return blocked
 
     try:
         data = json.loads(request.body or b"{}")
@@ -663,6 +693,13 @@ def api_connect_bot(request):
         return JsonResponse({'error': 'Method not allowed'}, status=405)
     
     user = request.user
+    left = _cooldown_left(user)
+    if left:
+        return _cooldown_response(left)
+    from .antibot import check_required_response
+    blocked = check_required_response(user)
+    if blocked:
+        return blocked
 
     try:
         data = json.loads(request.body or b"{}")
@@ -936,6 +973,13 @@ def api_rematch(request):
         return JsonResponse({'error': 'Method not allowed'}, status=405)
     
     user = request.user
+    left = _cooldown_left(user)
+    if left:
+        return _cooldown_response(left)
+    from .antibot import check_required_response
+    blocked = check_required_response(user)
+    if blocked:
+        return blocked
     
     try:
         data = json.loads(request.body)
@@ -1070,3 +1114,16 @@ def api_rematch(request):
             'is_bot_game': False,
         })
 
+
+
+@csrf_exempt
+def api_human_check(request):
+    """Ответ на проверку «вы человек?»."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    try:
+        data = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    from .antibot import verify
+    return JsonResponse(verify(request.user, str(data.get('id', '')), str(data.get('choice', ''))))

@@ -208,6 +208,19 @@ def games():
     agg = finished.aggregate(volume=Sum("bet_amount"), bank=Sum("game_bank"))
     pool = BotPool.objects.first()
 
+    from rps.models import PlayerGuard
+    guards = (
+        PlayerGuard.objects.select_related("user")
+        .filter(Q(suspicious_at__isnull=False) | Q(check_required=True) | Q(checks_failed__gt=0))
+        .order_by("-check_required", "-suspicious_at", "-checks_failed")[:50]
+    )
+    guard_stats = PlayerGuard.objects.aggregate(
+        pending=Count("pk", filter=Q(check_required=True)),
+        suspicious=Count("pk", filter=Q(suspicious_at__isnull=False)),
+        passed=Sum("checks_passed"),
+        failed=Sum("checks_failed"),
+    )
+
     return {
         "games_total": Game.objects.count(),
         "games_finished": finished.count(),
@@ -222,6 +235,8 @@ def games():
         "volume": _d(agg["volume"]),
         "bank": _d(agg["bank"]),
         "bot_pool": pool,
+        "guards": guards,
+        "guard_stats": guard_stats,
         "live_games": _live_games(now).select_related("player1", "player2").order_by("-created_at")[:50],
         "stuck_games": _stuck_games(now).select_related("player1", "player2").order_by("-created_at")[:50],
         "queue": GameQueue.objects.filter(expires_at__gt=now).select_related("user").order_by("-created_at")[:50],

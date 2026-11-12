@@ -269,6 +269,9 @@ class Game(models.Model):
             notify_overtaken(self.tournament, [p for p in (participant1, participant2) if p], points_before)
         
         self.save()
+
+        from .antibot import record_game
+        record_game(self)
         return result
 
 
@@ -321,6 +324,29 @@ class BotPool(models.Model):
         """Возвращает баланс в пул"""
         self.used_balance = max(0, self.used_balance - amount)
         self.save()
+
+
+class PlayerGuard(models.Model):
+    """Антибот: счётчик партий, подозрения и проверка «вы человек?» (см. rps/antibot.py)."""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name='rps_guard')
+    games_since_check = models.PositiveIntegerField(default=0)
+    check_required = models.BooleanField(default=False)
+    check_reason = models.CharField(max_length=200, blank=True, default='')
+    challenge = models.JSONField(null=True, blank=True)
+    checks_passed = models.PositiveIntegerField(default=0)
+    checks_failed = models.PositiveIntegerField(default=0)
+    last_passed_at = models.DateTimeField(null=True, blank=True)
+    suspicious_reason = models.CharField(max_length=200, blank=True, default='')
+    suspicious_at = models.DateTimeField(null=True, blank=True)
+    fast_moves = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Антибот: игрок'
+        verbose_name_plural = 'Антибот: игроки'
+
+    def __str__(self):
+        return f"{self.user} — проверок {self.checks_passed}/{self.checks_failed}"
 
 
 class BotAdmin(models.Model):
