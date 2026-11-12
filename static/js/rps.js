@@ -39,13 +39,14 @@ function forceFinalizeLoop() {
   awaitingFinalize = true;
   finalizeAttempts = 0;
 
-  finalizeInterval = setInterval(() => {
+  const finalizeTick = () => {
     finalizeAttempts++;
 
     fetch(tgUrl(`/rps/api/game/${currentGameId}/status/`))
       .then(r => r.json())
       .then(data => {
         if (data?.error) return;
+        if (gameFinalized) return; // результат уже показан предыдущим ответом
 
         // обновим UI хоть чем-то (например, ходами)
         updateGameStatus(data);
@@ -67,7 +68,10 @@ function forceFinalizeLoop() {
         }
       })
       .catch(() => {});
-  }, 900);
+  };
+
+  finalizeInterval = setInterval(finalizeTick, 900);
+  finalizeTick(); // сразу: сервер обычно уже знает результат в момент ответа на ход
 }
 
 

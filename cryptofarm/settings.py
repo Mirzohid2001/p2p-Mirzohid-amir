@@ -107,6 +107,14 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        'OPTIONS': {
+            # WAL: чтение не блокирует запись и наоборот — игроки не ждут друг друга
+            'init_command': 'PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;',
+            # транзакции сразу берут блокировку записи — без внезапных «database is locked»
+            'transaction_mode': 'IMMEDIATE',
+            # если запись всё же занята — ждём до 20 с, а не 5
+            'timeout': 20,
+        },
     }
 }
 
