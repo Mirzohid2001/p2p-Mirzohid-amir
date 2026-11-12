@@ -16,7 +16,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
-COOLDOWN = timedelta(hours=1)
+COOLDOWN = timedelta(minutes=15)
 SITE_URL = getattr(settings, "SITE_URL", "https://floracoin.cc")
 
 TEXT = {
