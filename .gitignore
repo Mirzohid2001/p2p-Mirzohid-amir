@@ -85,3 +85,6 @@ htmlcov/
 # Docker (agar ishlatsang)
 # =========================
 docker-compose.override.yml
+
+# Данные рассылок бота (кому и какое сообщение ушло) — не код
+bot/broadcasts.json

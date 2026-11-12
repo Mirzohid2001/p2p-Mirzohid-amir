@@ -1,0 +1,265 @@
+{% extends "admin_panel/base_new.html" %}
+{% block content %}
+
+{% if tab == "overview" %}
+<h2>Сейчас <span class="muted" style="font-weight:400;font-size:13px">· обновлено {{ now|date:"d.m.Y H:i" }} МСК</span></h2>
+<div class="grid">
+  <div class="card kpi live"><div class="v">{{ kpi.active_15m }}</div><div class="l">активны за 15 минут</div></div>
+  <div class="card kpi live"><div class="v">{{ kpi.games_live }}</div><div class="l">игр идёт сейчас{% if kpi.games_stuck %} · <a href="?tab=games">{{ kpi.games_stuck }} зависли</a>{% endif %}</div></div>
+  <div class="card kpi live"><div class="v">{{ kpi.queue }}</div><div class="l">в очереди на игру</div></div>
+  <div class="card kpi"><div class="v">{% if active_tournament %}#{{ active_tournament.id }}{% else %}—{% endif %}</div><div class="l">{% if active_tournament %}турнир до {{ active_tournament.end_date|date:"d.m H:i" }}{% else %}нет активного турнира{% endif %}</div></div>
+</div>
+
+<h2>Сегодня</h2>
+<div class="grid">
+  <div class="card kpi"><div class="v">{{ kpi.users_today }}</div><div class="l">новых пользователей</div></div>
+  <div class="card kpi"><div class="v">{{ activation.today.active }} <span class="muted" style="font-size:15px;font-weight:500">· {{ activation.today.pct }}%</span></div><div class="l">из новых начали играть</div></div>
+  <div class="card kpi"><div class="v">{{ kpi.active_today }}</div><div class="l">активных пользователей</div></div>
+  <div class="card kpi"><div class="v">{{ kpi.games_today }}</div><div class="l">игр сыграно</div></div>
+  <div class="card kpi"><div class="v">{{ kpi.refs_today }}</div><div class="l">пришли по рефералке</div></div>
+  <div class="card kpi"><div class="v">{{ kpi.purchases_today }}</div><div class="l">покупок в магазине</div></div>
+</div>
+
+<h2>Всего</h2>
+<div class="grid">
+  <div class="card kpi"><div class="v">{{ kpi.users_total }}</div><div class="l">пользователей</div></div>
+  <div class="card kpi"><div class="v">{{ kpi.users_7d }}</div><div class="l">новых за 7 дней</div></div>
+  <div class="card kpi"><div class="v">{{ kpi.users_30d }}</div><div class="l">новых за 30 дней</div></div>
+  <div class="card kpi"><div class="v">{{ kpi.active_7d }}</div><div class="l">активных за 7 дней</div></div>
+</div>
+
+<h2>Кто из зарегистрировавшихся начал играть</h2>
+<div class="card tw"><table>
+  <tr><th>Пришли</th><th class="n">Нажали /start</th><th class="n">Начали играть</th><th class="n">Доля</th><th style="width:40%"></th></tr>
+  {% for label, a in activation_rows %}<tr><td>{{ label }}</td><td class="n">{{ a.n }}</td><td class="n"><b>{{ a.active }}</b></td><td class="n">{{ a.pct }}%</td>
+    <td><div style="background:var(--line);border-radius:99px;height:8px;overflow:hidden"><div style="width:{{ a.pct }}%;background:var(--accent);height:100%"></div></div></td></tr>{% endfor %}
+</table>
+<div class="muted" style="margin-top:8px;font-size:12px">«Начали играть» — хоть раз сыграли, полили дерево, выполнили задание или что-то купили. Остальные только нажали /start в боте.</div></div>
+
+<h2>Динамика за 30 дней</h2>
+<div class="cols">
+  <div class="card"><h3>Регистрации и активные пользователи</h3><div class="chart"><canvas id="c_users"></canvas></div></div>
+  <div class="card"><h3>Игры и рефералы</h3><div class="chart"><canvas id="c_games"></canvas></div></div>
+</div>
+
+<div class="cols" style="margin-top:12px">
+  <div class="card"><h3>Игры, которые идут сейчас <span class="muted" style="font-weight:400">· за последний час</span></h3><div class="tw"><table>
+    <tr><th>Игра</th><th>Игрок 1</th><th>Игрок 2</th><th class="n">Ставка</th><th>Статус</th><th>Создана</th></tr>
+    {% for g in live_games %}{% include "admin_panel/_game_row.html" %}{% empty %}<tr><td colspan="6" class="empty">Сейчас никто не играет</td></tr>{% endfor %}
+  </table></div></div>
+  <div class="card"><h3>Последние регистрации</h3><div class="tw"><table>
+    <tr><th>Пользователь</th><th>ID</th><th>Пригласил</th><th>Когда</th></tr>
+    {% for u2 in recent_users %}<tr><td>{% include "admin_panel/_u.html" with u=u2 %}</td><td class="muted">{{ u2.telegram_id }}</td><td>{% include "admin_panel/_u.html" with u=u2.referred_by %}</td><td class="muted">{{ u2.date_joined|date:"d.m H:i" }}</td></tr>{% endfor %}
+  </table></div></div>
+</div>
+{{ labels|json_script:"d_labels" }}{{ series|json_script:"d_series" }}
+{% endif %}
+
+
+{% if tab == "users" %}
+<h2>Пользователи <span class="muted" style="font-weight:400">· найдено {{ page.paginator.count }}</span></h2>
+<form class="inline card" method="get">
+  <input type="hidden" name="tab" value="users">
+  <input name="q" value="{{ q }}" placeholder="ID, @username, имя или TON-кошелёк" style="flex:1;min-width:220px">
+  <select name="sort">{% for k, n in sorts %}<option value="{{ k }}" {% if k == sort %}selected{% endif %}>{{ n }}</option>{% endfor %}</select>
+  <button>Найти</button>
+</form>
+<div class="card tw" style="margin-top:12px"><table>
+  <tr><th>Пользователь</th><th>Telegram ID</th><th class="n">FL</th><th class="n">TON</th><th class="n">Деревья</th><th class="n">Игры</th><th class="n">Рефералы</th><th>Пригласил</th><th>Регистрация</th></tr>
+  {% for u2 in page %}<tr>
+    <td>{% include "admin_panel/_u.html" with u=u2 %}{% if u2.username and u2.first_name %} <span class="muted">{{ u2.first_name }}</span>{% endif %}</td>
+    <td class="muted">{{ u2.telegram_id }}</td>
+    <td class="n">{{ u2.cf_balance|floatformat:2 }}</td>
+    <td class="n">{{ u2.ton_balance|floatformat:4 }}</td>
+    <td class="n">{{ u2.n_trees }}</td>
+    <td class="n">{{ u2.n_games }}</td>
+    <td class="n">{{ u2.n_refs }}</td>
+    <td>{% include "admin_panel/_u.html" with u=u2.referred_by %}</td>
+    <td class="muted">{{ u2.date_joined|date:"d.m.Y H:i" }}</td>
+  </tr>{% empty %}<tr><td colspan="9" class="empty">Никого не нашлось</td></tr>{% endfor %}
+</table></div>
+{% if page.paginator.num_pages > 1 %}<div class="pager">
+  {% if page.has_previous %}<a href="?tab=users&q={{ q|urlencode }}&sort={{ sort }}&page={{ page.previous_page_number }}">← Назад</a>{% endif %}
+  <span class="muted">стр. {{ page.number }} из {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a href="?tab=users&q={{ q|urlencode }}&sort={{ sort }}&page={{ page.next_page_number }}">Дальше →</a>{% endif %}
+</div>{% endif %}
+{% endif %}
+
+
+{% if tab == "games" %}
+<h2>Сейчас</h2>
+<div class="cols">
+  <div class="card"><h3>Игры в процессе ({{ live_games|length }}) <span class="muted" style="font-weight:400">· за последний час</span></h3><div class="tw"><table>
+    <tr><th>Игра</th><th>Игрок 1</th><th>Игрок 2</th><th class="n">Ставка</th><th>Статус</th><th>Создана</th></tr>
+    {% for g in live_games %}{% include "admin_panel/_game_row.html" %}{% empty %}<tr><td colspan="6" class="empty">Сейчас никто не играет</td></tr>{% endfor %}
+  </table></div></div>
+  <div class="card"><h3>Очередь на игру ({{ queue|length }})</h3><div class="tw"><table>
+    <tr><th>Игрок</th><th class="n">Ставка</th><th>Ждёт с</th><th>До</th></tr>
+    {% for q2 in queue %}<tr><td>{% include "admin_panel/_u.html" with u=q2.user %}</td><td class="n">{{ q2.bet_amount|floatformat:2 }}</td><td class="muted">{{ q2.created_at|date:"H:i:s" }}</td><td class="muted">{{ q2.expires_at|date:"H:i:s" }}</td></tr>{% empty %}<tr><td colspan="4" class="empty">Очередь пуста</td></tr>{% endfor %}
+  </table></div></div>
+</div>
+
+{% if stuck_games %}<div class="card tw" style="margin-top:12px"><h3>Зависшие игры ({{ stuck_games|length }}) <span class="muted" style="font-weight:400">— созданы больше часа назад и так и не закончились</span></h3><table>
+    <tr><th>Игра</th><th>Игрок 1</th><th>Игрок 2</th><th class="n">Ставка</th><th>Статус</th><th>Создана</th></tr>
+    {% for g in stuck_games %}{% include "admin_panel/_game_row.html" %}{% endfor %}
+</table></div>{% endif %}
+
+<h2>Статистика игр</h2>
+<div class="grid">
+  <div class="card kpi"><div class="v">{{ games_finished }}</div><div class="l">завершённых игр (всего {{ games_total }})</div></div>
+  <div class="card kpi"><div class="v">{{ games_today }}</div><div class="l">игр сегодня</div></div>
+  <div class="card kpi"><div class="v">{{ pvp }}</div><div class="l">игрок против игрока</div></div>
+  <div class="card kpi"><div class="v">{{ pve }}</div><div class="l">против бота</div></div>
+  <div class="card kpi"><div class="v">{{ pve_winrate }}%</div><div class="l">игроки выигрывают у бота</div></div>
+  <div class="card kpi"><div class="v">{{ volume|floatformat:0 }}</div><div class="l">FL поставлено всего</div></div>
+  <div class="card kpi"><div class="v">{{ games_cancelled }}</div><div class="l">отменённых игр</div></div>
+  {% if bot_pool %}<div class="card kpi"><div class="v">{{ bot_pool.used_balance|floatformat:0 }} / {{ bot_pool.total_balance|floatformat:0 }}</div><div class="l">пул бота: использовано / всего</div></div>{% endif %}
+</div>
+<div class="card" style="margin-top:12px"><h3>Игры против бота: кто выигрывает</h3>
+  <div class="muted">Игроки: <b>{{ pve_player_wins }}</b> · бот: <b>{{ pve_bot_wins }}</b> · ничьи: <b>{{ pve_draws }}</b></div>
+</div>
+
+<h2>Турнир</h2>
+<div class="cols">
+  <div class="card"><h3>{% if active_tournament %}Текущий турнир #{{ active_tournament.id }} · до {{ active_tournament.end_date|date:"d.m H:i" }}{% else %}Активного турнира нет — запустить можно командой /tyrnir в боте{% endif %}</h3>
+  {% if active_tournament %}<div class="tw"><table>
+    <tr><th>#</th><th>Игрок</th><th class="n">Очки</th><th class="n">Игры</th><th class="n">П/Н/П</th><th class="n">Выиграл FL</th></tr>
+    {% for p in tournament_top %}<tr><td>{{ forloop.counter }}</td><td>{% include "admin_panel/_u.html" with u=p.user %}</td><td class="n"><b>{{ p.points }}</b></td><td class="n">{{ p.games_played }}</td><td class="n">{{ p.wins }}/{{ p.draws }}/{{ p.losses }}</td><td class="n">{{ p.coins_won|floatformat:0 }}</td></tr>{% empty %}<tr><td colspan="6" class="empty">Пока никто не играл</td></tr>{% endfor %}
+  </table></div>{% endif %}</div>
+  <div class="card"><h3>Прошлые турниры</h3><div class="tw"><table>
+    <tr><th>Турнир</th><th>Статус</th><th>Начало</th><th>Конец</th><th class="n">Игроков</th><th class="n">Наград FL</th></tr>
+    {% for t in tournaments %}<tr><td>#{{ t.id }}</td><td><span class="pill {% if t.status == 'active' %}g{% elif t.status == 'completed' %}w{% endif %}">{{ t.get_status_display }}</span></td><td class="muted">{{ t.start_date|date:"d.m.Y" }}</td><td class="muted">{{ t.end_date|date:"d.m.Y" }}</td><td class="n">{{ t.n_players }}</td><td class="n">{{ t.rewards|default:0|floatformat:0 }}</td></tr>{% empty %}<tr><td colspan="6" class="empty">Турниров не было</td></tr>{% endfor %}
+  </table></div></div>
+</div>
+
+<h2>Игроки и последние игры</h2>
+<div class="cols">
+  <div class="card"><h3>Самые активные игроки</h3><div class="tw"><table>
+    <tr><th>Игрок</th><th class="n">Игр начато</th><th class="n">Побед</th></tr>
+    {% for p in top_players %}<tr><td>{% include "admin_panel/_u.html" with u=p %}</td><td class="n">{{ p.n }}</td><td class="n">{{ p.w }}</td></tr>{% endfor %}
+  </table></div></div>
+  <div class="card"><h3>Последние завершённые игры</h3><div class="tw"><table>
+    <tr><th>Игра</th><th>Игрок 1</th><th>Игрок 2</th><th class="n">Ставка</th><th>Победитель</th><th>Когда</th></tr>
+    {% for g in recent_games %}{% include "admin_panel/_game_row.html" %}{% endfor %}
+  </table></div></div>
+</div>
+{% endif %}
+
+
+{% if tab == "economy" %}
+<h2>Токены</h2>
+<div class="grid">
+  <div class="card kpi"><div class="v">{{ cf_balance|floatformat:0 }}</div><div class="l">FL на балансах</div></div>
+  <div class="card kpi"><div class="v">{{ ton_balance|floatformat:4 }}</div><div class="l">TON на балансах</div></div>
+  <div class="card kpi"><div class="v">{{ branches }}</div><div class="l">веток на балансах</div></div>
+  <div class="card kpi"><div class="v">{{ staked|floatformat:0 }}</div><div class="l">FL в стейкинге</div></div>
+  <div class="card kpi"><div class="v">{{ burned|floatformat:0 }}</div><div class="l">FL сожжено</div></div>
+  <div class="card kpi"><div class="v">{{ cf_total_supply|floatformat:0 }}</div><div class="l">общее предложение FL</div></div>
+  <div class="card kpi"><div class="v">{{ deposits.done }} / {{ deposits.n }}</div><div class="l">пополнений TON (успешных / всего)</div></div>
+  <div class="card kpi"><div class="v">{{ trees_total }}</div><div class="l">деревьев посажено</div></div>
+</div>
+
+<div class="cols" style="margin-top:12px">
+  <div class="card"><h3>Магазин</h3><div class="tw"><table>
+    <tr><th>Товар</th><th class="n">Покупок</th><th class="n">Выручка</th></tr>
+    {% for s in shop %}<tr><td>{{ s.item__name }}</td><td class="n">{{ s.c }}</td><td class="n">{{ s.total|floatformat:2 }} {{ s.item__price_token_type }}</td></tr>{% empty %}<tr><td colspan="3" class="empty">Покупок не было</td></tr>{% endfor %}
+  </table></div></div>
+  <div class="card"><h3>Деревья по типу и уровню</h3><div class="tw"><table>
+    <tr><th>Тип</th><th class="n">Уровень</th><th class="n">Количество</th></tr>
+    {% for t in trees_by %}<tr><td>{% if t.type == "CF" %}FLORA{% else %}{{ t.type }}{% endif %}</td><td class="n">{{ t.level }}</td><td class="n">{{ t.c }}</td></tr>{% endfor %}
+  </table></div></div>
+  <div class="card"><h3>Задания</h3><div class="tw"><table>
+    <tr><th>Задание</th><th class="n">Награда</th><th class="n">Выполнили</th></tr>
+    {% for t in tasks %}<tr><td>{{ t.task__title }}</td><td class="n">{{ t.task__reward_fl }}</td><td class="n">{{ t.c }}</td></tr>{% empty %}<tr><td colspan="3" class="empty">Никто не выполнял</td></tr>{% endfor %}
+  </table></div></div>
+  <div class="card"><h3>Реферальные бонусы</h3><div class="tw"><table>
+    <tr><th>Тип</th><th class="n">Начислений</th><th class="n">Сумма</th></tr>
+    {% for b in bonuses %}<tr><td>{{ b.name }}</td><td class="n">{{ b.c }}</td><td class="n">{{ b.total|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="3" class="empty">Бонусов не было</td></tr>{% endfor %}
+  </table></div></div>
+</div>
+
+<h2>Самые богатые</h2>
+<div class="cols">
+  <div class="card"><h3>По FL</h3><div class="tw"><table>
+    <tr><th>#</th><th>Пользователь</th><th class="n">FL</th></tr>
+    {% for u2 in richest_cf %}<tr><td>{{ forloop.counter }}</td><td>{% include "admin_panel/_u.html" with u=u2 %}</td><td class="n">{{ u2.cf_balance|floatformat:2 }}</td></tr>{% endfor %}
+  </table></div></div>
+  <div class="card"><h3>По TON</h3><div class="tw"><table>
+    <tr><th>#</th><th>Пользователь</th><th class="n">TON</th></tr>
+    {% for u2 in richest_ton %}<tr><td>{{ forloop.counter }}</td><td>{% include "admin_panel/_u.html" with u=u2 %}</td><td class="n">{{ u2.ton_balance|floatformat:4 }}</td></tr>{% empty %}<tr><td colspan="3" class="empty">Ни у кого нет TON</td></tr>{% endfor %}
+  </table></div></div>
+</div>
+
+<h2>Управление</h2>
+<div class="cols">
+  <div class="card"><h3>Сжечь FL</h3>
+    <form class="inline" method="post" action="{% url 'burn_tokens' %}" onsubmit="return confirm('Сжечь '+this.amount.value+' FL? Отменить будет нельзя.')">{% csrf_token %}
+      <input name="amount" type="number" step="0.01" min="0.01" placeholder="Сколько FL" required>
+      <button class="danger">Сжечь</button>
+    </form>
+  </div>
+  <div class="card"><h3>Новая раздача TON</h3>
+    <form class="inline" method="post" action="{% url 'create_ton_distribution' %}" onsubmit="return confirm('Создать раздачу '+this.total_amount.value+' TON?')">{% csrf_token %}
+      <input name="total_amount" type="number" step="0.0001" min="0.0001" placeholder="Сколько TON" required>
+      <input name="duration_hours" type="number" min="1" value="24" style="width:90px" title="Часов">
+      <button>Создать</button>
+    </form>
+    {% if active_ton_distributions %}<div class="tw" style="margin-top:10px"><table>
+      <tr><th>Раздача</th><th class="n">Всего</th><th class="n">Роздано</th><th>Создана</th></tr>
+      {% for d in active_ton_distributions %}<tr><td>#{{ d.id }} <span class="pill g">активна</span></td><td class="n">{{ d.total_amount|floatformat:4 }}</td><td class="n">{{ d.distributed_amount|floatformat:4 }}</td><td class="muted">{{ d.created_at|date:"d.m.Y H:i" }}</td></tr>{% endfor %}
+    </table></div>{% endif %}
+  </div>
+</div>
+<div class="card tw" style="margin-top:12px"><h3>Последние операции с токенами</h3><table>
+  <tr><th>Тип</th><th class="n">Сумма</th><th>Описание</th><th>Когда</th></tr>
+  {% for op in recent_operations %}<tr><td>{{ op.get_operation_type_display }}</td><td class="n">{{ op.amount }}</td><td>{{ op.description }}</td><td class="muted">{{ op.timestamp|date:"d.m.Y H:i" }}</td></tr>{% empty %}<tr><td colspan="4" class="empty">Операций не было</td></tr>{% endfor %}
+</table></div>
+{% endif %}
+
+
+{% if tab == "referrals" %}
+<h2>Рефералы</h2>
+<div class="grid">
+  <div class="card kpi"><div class="v">{{ total }}</div><div class="l">пришли по приглашению</div></div>
+  <div class="card kpi"><div class="v">{{ share }}%</div><div class="l">от всех пользователей</div></div>
+  <div class="card kpi"><div class="v">{{ inviters }}</div><div class="l">кто приглашал</div></div>
+  <div class="card kpi"><div class="v">{{ today }}</div><div class="l">сегодня</div></div>
+  <div class="card kpi"><div class="v">{{ week }}</div><div class="l">за 7 дней</div></div>
+  <div class="card kpi"><div class="v">{{ bonus_total|floatformat:0 }}</div><div class="l">FL выплачено бонусами</div></div>
+</div>
+<div class="cols" style="margin-top:12px">
+  <div class="card"><h3>Кто привёл больше всех</h3><div class="tw"><table>
+    <tr><th>#</th><th>Пользователь</th><th class="n">Всего</th><th class="n">За 7 дней</th><th>Последний</th></tr>
+    {% for u2 in top %}<tr><td>{{ forloop.counter }}</td><td>{% include "admin_panel/_u.html" with u=u2 %}</td><td class="n"><b>{{ u2.n }}</b></td><td class="n">{{ u2.n7 }}</td><td class="muted">{{ u2.last|date:"d.m H:i" }}</td></tr>{% empty %}<tr><td colspan="5" class="empty">Приглашений не было</td></tr>{% endfor %}
+  </table></div></div>
+  <div class="card"><h3>Последние приглашения</h3><div class="tw"><table>
+    <tr><th>Пригласил</th><th>Пришёл</th><th class="n">Бонус</th><th>Когда</th></tr>
+    {% for r in recent %}<tr><td>{% include "admin_panel/_u.html" with u=r.inviter %}</td><td>{% include "admin_panel/_u.html" with u=r.invited %}</td><td class="n">{{ r.bonus_cf|floatformat:2 }}</td><td class="muted">{{ r.date_joined|date:"d.m H:i" }}</td></tr>{% endfor %}
+  </table></div></div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}{% if tab == "overview" %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function(){
+  const labels = JSON.parse(document.getElementById('d_labels').textContent);
+  const s = JSON.parse(document.getElementById('d_series').textContent);
+  const css = getComputedStyle(document.documentElement);
+  const c = n => css.getPropertyValue(n).trim();
+  Chart.defaults.color = c('--muted'); Chart.defaults.borderColor = c('--line');
+  const opts = {responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+    plugins:{legend:{position:'bottom',labels:{boxWidth:12}}}, scales:{y:{beginAtZero:true,ticks:{precision:0}}}};
+  new Chart(document.getElementById('c_users'), {type:'bar', data:{labels, datasets:[
+    {label:'Регистрации', data:s.registrations, backgroundColor:c('--accent')},
+    {label:'Активные', data:s.dau, type:'line', borderColor:c('--blue'), backgroundColor:c('--blue'), tension:.3, pointRadius:2}
+  ]}, options:opts});
+  new Chart(document.getElementById('c_games'), {type:'line', data:{labels, datasets:[
+    {label:'Игры', data:s.games, borderColor:c('--warn'), backgroundColor:c('--warn'), tension:.3, pointRadius:2, yAxisID:'y'},
+    {label:'Рефералы', data:s.referrals, borderColor:c('--accent'), backgroundColor:c('--accent'), tension:.3, pointRadius:2, yAxisID:'y1'}
+  ]}, options:{...opts, scales:{y:{beginAtZero:true,ticks:{precision:0},title:{display:true,text:'игры'}}, y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false},ticks:{precision:0},title:{display:true,text:'рефералы'}}}}});
+})();
+</script>
+{% endif %}{% endblock %}

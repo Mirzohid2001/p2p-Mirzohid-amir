@@ -103,7 +103,7 @@ def burn_tokens(request):
             amount = Decimal(request.POST.get('amount', 0))
             if amount <= 0:
                 messages.error(request, 'Сумма должна быть больше нуля')
-                return redirect('admin_panel')
+                return redirect('admin_dashboard')
                 
             success, new_supply = TokenSupply.burn_tokens(amount)
             
@@ -115,7 +115,7 @@ def burn_tokens(request):
         except (ValueError, TypeError):
             messages.error(request, 'Некорректное значение для сжигания токенов')
             
-    return redirect('admin_panel')
+    return redirect('admin_dashboard')
 
 @admin_required
 def create_ton_distribution(request):
@@ -127,11 +127,11 @@ def create_ton_distribution(request):
             
             if total_amount <= 0:
                 messages.error(request, 'Сумма должна быть больше нуля')
-                return redirect('admin_panel')
+                return redirect('admin_dashboard')
                 
             if duration_hours <= 0:
                 messages.error(request, 'Длительность должна быть больше нуля')
-                return redirect('admin_panel')
+                return redirect('admin_dashboard')
             
             # Создаем новую раздачу TON
             distribution = TonDistribution.objects.create(
@@ -152,7 +152,7 @@ def create_ton_distribution(request):
         except (ValueError, TypeError):
             messages.error(request, 'Некорректные значения для раздачи TON')
             
-    return redirect('admin_panel')
+    return redirect('admin_dashboard')
 
 @admin_required
 def get_token_stats(request):

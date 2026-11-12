@@ -11,7 +11,7 @@ from datetime import timedelta
 @sync_to_async
 def check_is_admin(user_id, admin_user_id):
     """Проверяет, является ли пользователь администратором"""
-    if admin_user_id and str(user_id) == str(admin_user_id):
+    if admin_user_id and str(user_id) in [x.strip() for x in str(admin_user_id).split(",")]:
         return True
     return BotAdmin.is_admin(user_id)
 

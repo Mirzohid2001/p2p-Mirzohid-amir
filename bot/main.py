@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import sys
@@ -5,9 +6,22 @@ import django
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 from datetime import timedelta
+from asgiref.sync import sync_to_async
 
 # Импорт конфигурации
 from config import BOT_TOKEN, WEBAPP_URL, ADMIN_USER_ID, print_config_info
+
+
+def play_webapp_url(user_id, extra=None):
+    """URL Mini App с tg_id — на iOS cookie часто не сохраняются."""
+    from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
+    parts = urlsplit(WEBAPP_URL)
+    q = dict(parse_qsl(parts.query, keep_blank_values=True))
+    from users.auth_token import make_token  # подписанный tg_id, голый больше не принимается
+    q["tg_id"] = make_token(user_id)
+    if extra:
+        q.update({k: str(v) for k, v in extra.items() if v is not None})
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(q), parts.fragment))
 
 # Настройка Django для использования моделей
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -15,6 +29,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'cryptofarm.settings')
 django.setup()
 
 from users.models import User
+from users.services import get_or_create_user, apply_referral, get_admin_chat_ids, build_registration_message, build_referral_link
 from rps.models import BotAdmin, Tournament, TournamentParticipant
 from db_helpers import (
     check_is_admin, get_active_tournament, create_tournament,
@@ -35,21 +50,53 @@ logging.basicConfig(
     level=logging.INFO
 )
 
+async def notify_admins_registration(context: ContextTypes.DEFAULT_TYPE, user, inviter=None):
+    """Асинхронная отправка уведомления админам (для бота)."""
+    try:
+        ids = await sync_to_async(get_admin_chat_ids)()
+        text = build_registration_message(user, inviter)
+        for chat_id in ids:
+            try:
+                await context.bot.send_message(chat_id=chat_id, text=text)
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+
 # Обработчик команды /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /start"""
+    tg_user = update.effective_user
+    tg_id = tg_user.id
+
+    user, created = await sync_to_async(get_or_create_user)(
+        tg_id,
+        username=tg_user.username or "",
+        first_name=tg_user.first_name or "",
+        last_name=tg_user.last_name or "",
+        photo_url="",
+    )
+
+    inviter = None
+    if created and context.args and context.args[0].isdigit():
+        inviter = await sync_to_async(apply_referral)(user, int(context.args[0]))
+
+    if created:
+        await notify_admins_registration(context, user, inviter)
+
     # Создаем клавиатуру с кнопкой для открытия веб-приложения
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton(text="🌱 Играть", web_app=WebAppInfo(url=WEBAPP_URL))]
+        [InlineKeyboardButton(text="🌱 Играть", web_app=WebAppInfo(url=play_webapp_url(tg_id)))]
     ])
-    
+
     # Текст приветствия
     welcome_text = (
-        f"Привет, {update.effective_user.first_name}! 👋\n\n"
+        f"Привет, {tg_user.first_name}! 👋\n\n"
         "Добро пожаловать в Crypto Farm!\n\n"
         "Нажми на кнопку ниже, чтобы открыть игру:"
     )
-    
+
     await update.message.reply_text(welcome_text, reply_markup=keyboard)
 
 # Обработчик команды /help
@@ -68,7 +115,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def play_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /play"""
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton(text="🌱 Играть", web_app=WebAppInfo(url=WEBAPP_URL))]
+        [InlineKeyboardButton(text="🌱 Играть", web_app=WebAppInfo(url=play_webapp_url(update.effective_user.id)))]
     ])
     
     await update.message.reply_text("Нажми на кнопку ниже, чтобы открыть игру:", reply_markup=keyboard)
@@ -77,11 +124,11 @@ async def play_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def ref_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /ref"""
     user_id = update.effective_user.id
-    ref_url = f"{WEBAPP_URL}?ref={user_id}"
-    
+    ref_url = build_referral_link(user_id)
+
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton(text="🔗 Пригласить друзей", url=ref_url)],
-        [InlineKeyboardButton(text="🌱 Играть", web_app=WebAppInfo(url=WEBAPP_URL))]
+        [InlineKeyboardButton(text="🌱 Играть", web_app=WebAppInfo(url=play_webapp_url(user_id)))]
     ])
     
     ref_text = (
@@ -208,7 +255,7 @@ async def priz_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик всех остальных сообщений"""
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton(text="🌱 Играть", web_app=WebAppInfo(url=WEBAPP_URL))]
+        [InlineKeyboardButton(text="🌱 Играть", web_app=WebAppInfo(url=play_webapp_url(update.effective_user.id)))]
     ])
     
     await update.message.reply_text(
@@ -379,35 +426,132 @@ async def listadmins_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
     
     await update.message.reply_text(message)
 
-def main():
-    """Запуск бота"""
-    # Вывод информации о конфигурации
-    print_config_info()
-    
-    # Создание объекта Application для версии 22.x
-    application = Application.builder().token(BOT_TOKEN).build()
-    
-    # Регистрация обработчиков
+async def post_init(application: Application):
+    # Кнопка меню слева от поля ввода — всегда актуальный домен
+    try:
+        await application.bot.set_chat_menu_button(
+            menu_button={
+                "type": "web_app",
+                "text": "Играть",
+                "web_app": {"url": WEBAPP_URL},
+            }
+        )
+        await application.bot.set_my_commands([
+            ("start", "Открыть игру"),
+        ])
+    except Exception:
+        logging.exception("Не удалось обновить кнопку меню/команды")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Расширенные админ-команды из minimal_bot.py:
+# /broadcast, /finduser (+ кнопки пополнения/списания), /burn, /market_open,
+# /market_close, /stata. Права проверяются той же функцией is_admin, что и
+# у остальных админ-команд (ADMIN_USER_ID из .env + таблица BotAdmin).
+# ──────────────────────────────────────────────────────────────────────────────
+import minimal_bot as _ext
+from telegram.ext import CallbackQueryHandler
+
+_ext._is_admin = is_admin  # вместо старой проверки из minimal_bot, которая пускала всех
+import broadcasts
+_ext._webapp_url = lambda tg_id, ref=None: play_webapp_url(tg_id, {"ref": ref} if ref else None)
+
+
+def _has_admin_state(user_id):
+    return (
+        user_id in _ext.BROADCAST_STATES
+        or user_id in _ext.ADMIN_STATES
+        or user_id in _ext.BURN_STATES
+    )
+
+
+async def route_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Если админ в процессе рассылки / ввода суммы / сжигания — передаём в обработчик minimal_bot."""
+    user_id = update.effective_user.id
+    if _has_admin_state(user_id) and await is_admin(user_id):
+        if user_id in _ext.BROADCAST_STATES:
+            # рассылка с сохранением отправленных сообщений (чтобы их можно было удалить)
+            _ext.BROADCAST_STATES.pop(user_id, None)
+            user_ids = await _ext.db_get_all_user_ids()
+            await broadcasts.send_broadcast(update, context, user_ids)
+            return
+        await _ext.text_router(update, context)
+        return
+    if update.message and update.message.text:
+        await handle_message(update, context)
+
+
+ADMIN_HELP = (
+    "Команды админа:\n"
+    "/finduser <id или @username> — найти пользователя, изменить баланс\n"
+    "/broadcast — рассылка всем (следующим сообщением текст или фото)\n"
+    "/delbroadcast — удалить последнюю рассылку у всех (в течение 48 часов)\n"
+    "/burn — сжечь FL\n"
+    "/market_open, /market_close — открыть / закрыть P2P-рынок\n"
+    "/stata — статистика по поливу\n"
+    "/myid — ваш ID\n"
+    "/addadmin, /removeadmin, /listadmins — админы бота\n"
+    "/tyrnir — начать турнир\n"
+    "/priz — завершить турнир и выдать призы"
+)
+
+
+async def delbroadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await broadcasts.delbroadcast_command(update, context, is_admin)
+
+
+async def delbroadcast_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await broadcasts.delbroadcast_callback(update, context, is_admin)
+
+
+async def help_command_full(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await help_command(update, context)
+    if await is_admin(update.effective_user.id):
+        await update.message.reply_text(ADMIN_HELP)
+
+
+def build_application():
+    application = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("help", help_command_full))
     application.add_handler(CommandHandler("play", play_command))
     application.add_handler(CommandHandler("ref", ref_command))
-    application.add_handler(CommandHandler("myid", myid_command))  # Получить свой ID
-    application.add_handler(CommandHandler("addadmin", addadmin_command))  # Добавить администратора
-    application.add_handler(CommandHandler("removeadmin", removeadmin_command))  # Удалить администратора
-    application.add_handler(CommandHandler("listadmins", listadmins_command))  # Список администраторов
-    application.add_handler(CommandHandler("tyrnir", tyrnir_command))  # Запуск турнира
-    application.add_handler(CommandHandler("priz", priz_command))  # Выдача наград
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    
-    # Запуск бота
+    application.add_handler(CommandHandler("myid", myid_command))
+    application.add_handler(CommandHandler("addadmin", addadmin_command))
+    application.add_handler(CommandHandler("removeadmin", removeadmin_command))
+    application.add_handler(CommandHandler("listadmins", listadmins_command))
+    application.add_handler(CommandHandler("tyrnir", tyrnir_command))
+    application.add_handler(CommandHandler("priz", priz_command))
+    application.add_handler(CommandHandler("broadcast", _ext.broadcast_command))
+    application.add_handler(CommandHandler("delbroadcast", delbroadcast_command))
+    application.add_handler(CallbackQueryHandler(delbroadcast_callback, pattern=r"^delbc_(yes|no)_"))
+    application.add_handler(CommandHandler("finduser", _ext.finduser_command))
+    application.add_handler(CommandHandler("burn", _ext.burn_command))
+    application.add_handler(CommandHandler("market_open", _ext.market_open_command))
+    application.add_handler(CommandHandler("market_close", _ext.market_close_command))
+    application.add_handler(CommandHandler("stata", _ext.stata_command))
+    application.add_handler(CallbackQueryHandler(_ext.callback_handler, pattern=r"^(addfl|subfl|addton|subton)_"))
+    application.add_handler(MessageHandler((filters.TEXT | filters.PHOTO) & ~filters.COMMAND, route_message))
+    return application
+
+
+async def _run():
+    application = build_application()
     logging.info("Бот запущен!")
     print("✅ Бот успешно запущен и готов к работе!")
     print(f"✨ URL веб-приложения: {WEBAPP_URL}")
-    
-    # Запуск polling
+    async with application:
+        await application.start()
+        await application.updater.start_polling(drop_pending_updates=True)
+        # держим процесс живым
+        await asyncio.Event().wait()
+
+
+def main():
     import asyncio
-    asyncio.run(application.run_polling())
+    print_config_info()
+    asyncio.run(_run())
+
 
 if __name__ == "__main__":
     main()

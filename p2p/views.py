@@ -428,22 +428,30 @@ def get_ton_to_usd():
     cached = cache.get(cache_key)
     if cached:
         return cached
+    if cache.get(cache_key + ":failed"):
+        return 0
 
-    try:
-        r = requests.get(
-            'https://min-api.cryptocompare.com/data/price?fsym=TON&tsyms=USD',
-            timeout=5
-        )
-        r.raise_for_status()
-        ton_usd = float(r.json().get('USD', 0))
+    # CryptoCompare стал требовать ключ (401), поэтому берём курс у CoinGecko, запасной — tonapi.io
+    sources = (
+        ('https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd',
+         lambda d: d['the-open-network']['usd']),
+        ('https://tonapi.io/v2/rates?tokens=ton&currencies=usd',
+         lambda d: d['rates']['TON']['prices']['USD']),
+    )
+    for url, pick in sources:
+        try:
+            r = requests.get(url, timeout=3)
+            r.raise_for_status()
+            ton_usd = float(pick(r.json()))
+            if ton_usd > 0:
+                ton_usd = round(ton_usd, 6)
+                cache.set(cache_key, ton_usd, 300)  # ⏱ 5 минут
+                return ton_usd
+        except Exception as e:
+            print("TON→USD error:", url.split('/')[2], e)
 
-        if ton_usd > 0:
-            ton_usd = round(ton_usd, 6)
-            cache.set(cache_key, ton_usd, 300)  # ⏱ 5 минут
-            return ton_usd
-    except Exception as e:
-        print("TON→USD error:", e)
-
+    # все источники недоступны — не дёргаем их на каждом открытии страницы
+    cache.set(cache_key + ":failed", True, 60)
     return 0
 
 

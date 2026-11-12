@@ -3,6 +3,7 @@
 from django.conf import settings
 from django.shortcuts import redirect
 from .models import User
+from .auth_token import read_token
 
 class TelegramAuthMiddleware:
     """
@@ -15,12 +16,10 @@ class TelegramAuthMiddleware:
 
     def __call__(self, request):
         # Сохраняем tg_id в сессию при любом запросе (для iframe, где cookie могут не работать)
-        tg_from_get = request.GET.get("tg_id")
+        # tg_id в ссылке принимаем только с подписью (см. users/auth_token.py)
+        tg_from_get = read_token(request.GET.get("tg_id"))
         if tg_from_get:
-            try:
-                request.session["telegram_id"] = int(tg_from_get)
-            except (ValueError, TypeError):
-                pass
+            request.session["telegram_id"] = tg_from_get
         # Пути, на которые не нужно авторизовываться
         exempt_urls = ["/telegram_login/", "/admin/", "/static/", "/admin-panel/"]
         for url in exempt_urls:
@@ -49,7 +48,7 @@ class TelegramAuthMiddleware:
             return self.get_response(request)
 
         # telegram_id из сессии или из GET (для iframe, где cookie может не сохраниться)
-        telegram_id = request.session.get("telegram_id") or request.GET.get("tg_id")
+        telegram_id = request.session.get("telegram_id")
         if telegram_id:
             try:
                 telegram_id = int(telegram_id)

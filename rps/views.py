@@ -136,60 +136,57 @@ def rps_home(request):
     return render(request, 'rps/home.html', context)
 
 
-def get_top_5_players():
-    """Получает топ-5 игроков по общему рейтингу"""
-    from django.db.models import Count, Q
-    
-    # Получаем всех пользователей, которые играли
-    all_users = User.objects.filter(
-        Q(games_as_player1__status='finished') | Q(games_as_player2__status='finished')
-    ).distinct()
-    
-    players_stats = []
-    
-    for user in all_users:
-        # Игры где пользователь был player1
-        games_as_p1 = Game.objects.filter(player1=user, status='finished')
-        # Игры где пользователь был player2
-        games_as_p2 = Game.objects.filter(player2=user, status='finished')
-        
-        total_games = games_as_p1.count() + games_as_p2.count()
-        
-        if total_games == 0:
+TOP5_CACHE_KEY = "rps:top5_players:v2"
+TOP5_CACHE_TTL = 60  # секунд
+
+
+def _compute_top_5_players():
+    """Топ-5 по победам, затем по числу игр. Считается агрегатами, а не циклом по всем игрокам."""
+    from collections import Counter
+    from django.db.models import Count
+
+    finished = Game.objects.filter(status='finished')
+
+    def counts(qs, field):
+        return Counter(dict(
+            qs.exclude(**{field: None}).values(field).annotate(c=Count('id')).values_list(field, 'c')
+        ))
+
+    total = counts(finished, 'player1_id') + counts(finished, 'player2_id')
+    wins = counts(finished, 'winner_id')
+    drawn = finished.filter(result='draw')
+    draws = counts(drawn, 'player1_id') + counts(drawn, 'player2_id')
+
+    ranked = sorted(total, key=lambda uid: (wins.get(uid, 0), total[uid]), reverse=True)[:5]
+    users = User.objects.in_bulk(ranked)
+
+    top_5 = []
+    for uid in ranked:
+        user = users.get(uid)
+        if not user:
             continue
-        
-        # Подсчитываем победы
-        wins = Game.objects.filter(winner=user, status='finished').count()
-        
-        # Подсчитываем ничьи
-        draws = Game.objects.filter(
-            Q(player1=user, result='draw', status='finished') |
-            Q(player2=user, result='draw', status='finished')
-        ).count()
-        
-        losses = total_games - wins - draws
-        win_rate = (wins / total_games * 100) if total_games > 0 else 0
-        win_rate = round(win_rate, 1)  # Округляем до 1 знака после запятой
-        
-        players_stats.append({
+        t, w, d = total[uid], wins.get(uid, 0), draws.get(uid, 0)
+        top_5.append({
             'user': user,
-            'wins': wins,
-            'losses': losses,
-            'draws': draws,
-            'total_games': total_games,
-            'win_rate': win_rate,
+            'wins': w,
+            'losses': t - w - d,
+            'draws': d,
+            'total_games': t,
+            'win_rate': round(w / t * 100, 1) if t else 0,
         })
-    
-    # Сортируем по победам, затем по общему количеству игр
-    players_stats.sort(key=lambda x: (x['wins'], x['total_games']), reverse=True)
-    
-    # Берем топ-5
-    top_5 = players_stats[:5]
-    
-    # Добавляем ранги
     for idx, player in enumerate(top_5, 1):
         player['rank'] = idx
-    
+    return top_5
+
+
+def get_top_5_players():
+    """Получает топ-5 игроков по общему рейтингу (кэш на минуту)."""
+    from django.core.cache import cache
+
+    top_5 = cache.get(TOP5_CACHE_KEY)
+    if top_5 is None:
+        top_5 = _compute_top_5_players()
+        cache.set(TOP5_CACHE_KEY, top_5, TOP5_CACHE_TTL)
     return top_5
 
 

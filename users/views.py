@@ -7,8 +7,10 @@ from cryptofarm import settings
 from cryptofarm.utils.telegram import validate_telegram_data, extract_user_data, validate_telegram_login_widget
 from trees.views import get_current_user
 from .models import User, TonDepositRequest
-from trees.models import Tree
 from referrals.models import Referral, ReferralBonus
+from users.services import get_or_create_user, apply_referral, notify_admins_registration
+from users.auth_token import make_token, read_token
+from urllib.parse import quote
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.utils import translation
@@ -71,13 +73,18 @@ def telegram_login(request):
             "auth_url": auth_url,
         })
 
-    try:
-        tg_id_int = int(tg_id)
-    except ValueError:
-        return redirect("home")
+    tg_id_int = read_token(tg_id)
+    if not tg_id_int:
+        # Голый или поддельный tg_id больше не принимаем — страница войдёт через initData от Telegram
+        auth_url = request.build_absolute_uri(request.path)
+        bot_username = getattr(settings, "TELEGRAM_BOT_USERNAME", None) or getattr(settings, "BOT_USERNAME", None) or "OxiriP2P_bot"
+        return render(request, "users/telegram_login.html", {
+            "bot_username": bot_username,
+            "auth_url": auth_url,
+        })
 
     _create_or_login_user(request, tg_id_int)
-    home_url = request.build_absolute_uri("/") + f"?tg_id={tg_id_int}"
+    home_url = request.build_absolute_uri("/") + "?tg_id=" + quote(tg_id)
     from django.http import HttpResponse
     # meta refresh + ссылка — form.submit() может не сработать в Telegram Web iframe
     html = f'''<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -120,7 +127,8 @@ def telegram_auth_initdata(request):
         )
     tg_id_int = user_data["telegram_id"]
     _create_or_login_user(request, tg_id_int, user_data)
-    home_url = request.build_absolute_uri("/")
+    # подписанный tg_id в ссылке — для iOS, где cookie в мини-приложении часто не сохраняются
+    home_url = request.build_absolute_uri("/") + "?tg_id=" + quote(make_token(tg_id_int))
     # HTML с meta refresh — надёжнее в Telegram WebView чем 302
     html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><meta http-equiv="refresh" content="0;url={home_url}"><title>Вход...</title></head><body><p>Вход выполнен. <a href="{home_url}">Перейти</a></p></body></html>"""
     resp = HttpResponse(html)
@@ -129,83 +137,22 @@ def telegram_auth_initdata(request):
 
 def _create_or_login_user(request, tg_id_int, widget_data=None):
     """Создаёт или находит пользователя и записывает в сессию."""
-    defaults = {
-        "username": "",
-        "first_name": "",
-        "last_name": "",
-        "photo_url": "",
-        "cf_balance": 100.00,
-        "ton_balance": 0.00
-    }
-    if widget_data:
-        defaults["username"] = widget_data.get("username", "") or ""
-        defaults["first_name"] = widget_data.get("first_name", "") or ""
-        defaults["last_name"] = widget_data.get("last_name", "") or ""
-        defaults["photo_url"] = widget_data.get("photo_url", "") or ""
+    username = (widget_data or {}).get("username", "") or ""
+    first_name = (widget_data or {}).get("first_name", "") or ""
+    last_name = (widget_data or {}).get("last_name", "") or ""
+    photo_url = (widget_data or {}).get("photo_url", "") or ""
 
-    user, created = User.objects.get_or_create(
-        telegram_id=tg_id_int,
-        defaults=defaults
+    user, created = get_or_create_user(
+        tg_id_int,
+        username=username,
+        first_name=first_name,
+        last_name=last_name,
+        photo_url=photo_url,
     )
 
-    if created and not widget_data:
-        Tree.objects.create(user=user, type="CF")
-        user.cf_balance = 100
-        user.save()
-        ref_code = request.GET.get("ref")
-        if ref_code:
-            try:
-                ref_id_int = int(ref_code)
-                referrer = User.objects.filter(telegram_id=ref_id_int).first()
-            except (ValueError, User.DoesNotExist):
-                referrer = None
-
-            if referrer and referrer != user:
-
-                already_has_ref = Referral.objects.filter(invited=user).exists()
-                if not already_has_ref:
-                    user.referred_by = referrer
-                    user.save()
-
-                    referral = Referral.objects.create(
-                        inviter=referrer,
-                        invited=user,
-                        bonus_cf=10
-                    )
-                    ReferralBonus.objects.create(
-                        referral=referral,
-                        bonus_type="signup",
-                        amount=10,
-                        description=f"Бонус за регистрацию {user}"
-                    )
-                    referrer.cf_balance += 10
-                    referrer.save()
-    elif created and widget_data:
-        Tree.objects.create(user=user, type="CF")
-        user.cf_balance = 100
-        user.save()
-        if request.GET.get("ref"):
-            try:
-                ref_id_int = int(request.GET.get("ref"))
-                referrer = User.objects.filter(telegram_id=ref_id_int).first()
-                if referrer and referrer != user and not Referral.objects.filter(invited=user).exists():
-                    user.referred_by = referrer
-                    user.save()
-                    referral = Referral.objects.create(inviter=referrer, invited=user, bonus_cf=10)
-                    ReferralBonus.objects.create(referral=referral, bonus_type="signup", amount=10, description=f"Бонус за регистрацию {user}")
-                    referrer.cf_balance += 10
-                    referrer.save()
-            except (ValueError, TypeError):
-                pass
-    else:
-        if not Tree.objects.filter(user=user).exists():
-            Tree.objects.create(user=user, type="CF")
-        if widget_data:
-            user.username = widget_data.get("username", "") or user.username
-            user.first_name = widget_data.get("first_name", "") or user.first_name
-            user.last_name = widget_data.get("last_name", "") or user.last_name
-            user.photo_url = widget_data.get("photo_url", "") or user.photo_url
-            user.save()
+    if created:
+        inviter = apply_referral(user, request.GET.get("ref"))
+        notify_admins_registration(user, inviter)
 
     request.session["telegram_id"] = tg_id_int
 
@@ -225,7 +172,7 @@ def set_lang_and_django(request):
     return resp
 
 def profile_view(request):
-    telegram_id = request.session.get("telegram_id") or request.GET.get("telegram_id") or request.GET.get("tg_id")
+    telegram_id = request.session.get("telegram_id")
     if not telegram_id:
         return redirect('/telegram_login/')
 

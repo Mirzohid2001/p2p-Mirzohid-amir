@@ -15,9 +15,9 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="{% url 'javascript-catalog' %}"></script>
     <!-- TailwindCSS и ваш кастомный CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+    <link href="/static/vendor/tailwind-2.2.19.purged.css?v=1"
           rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/vendor/fontawesome-6.4.0/css/fa.purged.css?v=1">
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/tree-effects.css">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -62,7 +62,7 @@
     z-index: -2;
     background:
         linear-gradient(to bottom, #3D50C7, #6B75E6),
-        url('{% static 'images/bg.png' %}') no-repeat center center fixed;
+        url('{% static 'images/bg.jpg' %}') no-repeat center center fixed;
     background-size: cover;
     background-blend-mode: overlay;
     filter: blur(8px) brightness(1.03);
@@ -237,7 +237,7 @@
 <body style="
     background:
         linear-gradient(to bottom, #3D50C7, #6B75E6),
-        url('{% static 'images/bg.png' %}') no-repeat center center fixed;
+        url('{% static 'images/bg.jpg' %}') no-repeat center center fixed;
     background-size: cover;
     background-blend-mode: overlay;
 ">
@@ -248,7 +248,7 @@
     -->
     <script>
         // Сохраняем tg_id для fetch (Telegram Web iframe)
-        var m = /[?&]tg_id=(\d+)/.exec(window.location.search);
+        var m = /[?&]tg_id=([^&#]+)/.exec(window.location.search);
         if (m && window.Telegram && window.Telegram.WebApp) window.__TG_ID = m[1];
         window.tgUrl = function(url) {
           var id = window.__TG_ID;
@@ -310,7 +310,7 @@
     <script>
       // tg_id в ссылках и формах для Telegram Web iframe (когда cookie не сохраняются)
       (function(){
-        var m = /[?&]tg_id=(\d+)/.exec(window.location.search);
+        var m = /[?&]tg_id=([^&#]+)/.exec(window.location.search);
         if (!m || !(window.Telegram && window.Telegram.WebApp)) return;
         var tgId = m[1];
         var appendTg = function(url) {

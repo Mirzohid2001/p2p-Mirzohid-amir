@@ -1,5 +1,6 @@
 from django.utils import translation
 from users.models import User as TelegramUser
+from users.auth_token import read_token
 
 
 class TelegramFrameMiddleware:
@@ -13,10 +14,9 @@ class TelegramFrameMiddleware:
     def __call__(self, request):
         response = self.get_response(request)
         # Разрешаем Telegram Web, десктоп и мобильные приложения
-        csp = "frame-ancestors 'self' https://web.telegram.org https://telegram.org https://t.me https://*.telegram.org;"
+        csp = "frame-ancestors 'self' https://web.telegram.org https://webk.telegram.org https://webz.telegram.org https://telegram.org https://t.me https://*.telegram.org;"
         response["Content-Security-Policy"] = csp
-        if "X-Frame-Options" in response:
-            del response["X-Frame-Options"]
+        response.headers.pop("X-Frame-Options", None)
         return response
 
 
@@ -25,7 +25,7 @@ class TelegramLanguageMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        tg_id = request.GET.get("tg_id") or request.session.get("telegram_id")
+        tg_id = read_token(request.GET.get("tg_id")) or request.session.get("telegram_id")
         if tg_id:
             try:
                 u = TelegramUser.objects.only("language").get(telegram_id=int(tg_id))

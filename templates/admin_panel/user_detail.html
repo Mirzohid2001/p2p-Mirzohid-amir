@@ -1,0 +1,47 @@
+{% extends "admin_panel/base_new.html" %}
+{% block title %}{% if u.username %}@{{ u.username }}{% else %}{{ u.first_name }}{% endif %} · Админ-панель{% endblock %}
+{% block content %}
+<p><a href="{% url 'admin_dashboard' %}?tab=users">← Все пользователи</a></p>
+<h2>{% if u.username %}@{{ u.username }}{% endif %} {{ u.first_name }} {{ u.last_name|default:"" }}
+  {% if is_bot_admin %}<span class="pill g">админ бота</span>{% endif %}</h2>
+<div class="muted">Telegram ID {{ u.telegram_id }} · регистрация {{ u.date_joined|date:"d.m.Y H:i" }} · язык {{ u.language|default:"—" }}
+  · пригласил {% include "admin_panel/_u.html" with u=u.referred_by %}
+  {% if u.ton_wallet %} · кошелёк <code>{{ u.ton_wallet }}</code>{% endif %}</div>
+
+<h2>Баланс и активность</h2>
+<div class="grid">
+  <div class="card kpi"><div class="v">{{ u.cf_balance|floatformat:2 }}</div><div class="l">FL</div></div>
+  <div class="card kpi"><div class="v">{{ u.ton_balance|floatformat:4 }}</div><div class="l">TON</div></div>
+  <div class="card kpi"><div class="v">{{ u.branches_balance }}</div><div class="l">веток</div></div>
+  <div class="card kpi"><div class="v">{{ u.staking_cf|floatformat:0 }}</div><div class="l">FL в стейкинге</div></div>
+  <div class="card kpi"><div class="v">{{ games_finished }}</div><div class="l">игр сыграно (П {{ wins }} / Н {{ draws }} / П {{ losses }})</div></div>
+  <div class="card kpi"><div class="v">{{ invited|length }}</div><div class="l">пригласил людей · бонус {{ ref_bonus|floatformat:0 }} FL</div></div>
+  <div class="card kpi"><div class="v">{{ u.last_watered|date:"d.m H:i"|default:"—" }}</div><div class="l">последний полив</div></div>
+  <div class="card kpi"><div class="v">{{ u.auto_water_until|date:"d.m H:i"|default:"—" }}</div><div class="l">автополив до</div></div>
+</div>
+
+<div class="cols" style="margin-top:12px">
+  <div class="card"><h3>Деревья ({{ trees|length }})</h3><div class="tw"><table>
+    <tr><th>Тип</th><th class="n">Уровень</th><th class="n">Доход/ч</th><th>Полив</th><th>Сбор</th></tr>
+    {% for t in trees %}<tr><td>{% if t.type == "CF" %}FLORA{% else %}{{ t.type }}{% endif %}</td><td class="n">{{ t.level }}</td><td class="n">{{ t.income_per_hour|floatformat:2 }}</td><td class="muted">{{ t.last_watered|date:"d.m H:i"|default:"—" }}</td><td class="muted">{{ t.last_collected|date:"d.m H:i"|default:"—" }}</td></tr>{% empty %}<tr><td colspan="5" class="empty">Деревьев нет</td></tr>{% endfor %}
+  </table></div></div>
+  <div class="card"><h3>Последние игры</h3><div class="tw"><table>
+    <tr><th>Игра</th><th>Игрок 1</th><th>Игрок 2</th><th class="n">Ставка</th><th>Итог</th><th>Когда</th></tr>
+    {% for g in recent_games %}{% include "admin_panel/_game_row.html" %}{% empty %}<tr><td colspan="6" class="empty">Не играл</td></tr>{% endfor %}
+  </table></div></div>
+  <div class="card"><h3>Кого пригласил</h3><div class="tw"><table>
+    <tr><th>Пользователь</th><th class="n">Бонус</th><th>Когда</th></tr>
+    {% for r in invited %}<tr><td>{% include "admin_panel/_u.html" with u=r.invited %}</td><td class="n">{{ r.bonus_cf|floatformat:2 }}</td><td class="muted">{{ r.date_joined|date:"d.m.Y H:i" }}</td></tr>{% empty %}<tr><td colspan="3" class="empty">Никого</td></tr>{% endfor %}
+  </table></div></div>
+  <div class="card"><h3>Покупки и задания</h3><div class="tw"><table>
+    <tr><th>Что</th><th class="n">Цена / награда</th><th>Когда</th></tr>
+    {% for p in purchases %}<tr><td>🛒 {{ p.item.name }}</td><td class="n">{{ p.price_paid|floatformat:2 }}</td><td class="muted">{{ p.created_at|date:"d.m.Y H:i" }}</td></tr>{% endfor %}
+    {% for t in tasks %}<tr><td>✅ {{ t.task.title }}</td><td class="n">{{ t.task.reward_fl }}</td><td class="muted">{{ t.completed_at|date:"d.m.Y H:i" }}</td></tr>{% endfor %}
+    {% if not purchases and not tasks %}<tr><td colspan="3" class="empty">Ничего</td></tr>{% endif %}
+  </table></div></div>
+  <div class="card"><h3>Турниры</h3><div class="tw"><table>
+    <tr><th>Турнир</th><th class="n">Очки</th><th class="n">П/Н/П</th><th class="n">Награда</th></tr>
+    {% for p in tournaments %}<tr><td>#{{ p.tournament.id }}</td><td class="n">{{ p.points }}</td><td class="n">{{ p.wins }}/{{ p.draws }}/{{ p.losses }}</td><td class="n">{{ p.reward_amount|floatformat:0 }}</td></tr>{% empty %}<tr><td colspan="4" class="empty">Не участвовал</td></tr>{% endfor %}
+  </table></div></div>
+</div>
+{% endblock %}

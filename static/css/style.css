@@ -1070,7 +1070,7 @@ input::placeholder, textarea::placeholder {
     border-radius: 20px;
     overflow: hidden;
     margin: 0 auto 14px auto;
-    background: url('/static/images/bg.png') center bottom / 100% 100% no-repeat, #e6f3ff;
+    background: url('/static/images/bg.jpg') center bottom / 100% 100% no-repeat, #e6f3ff;
     box-shadow: 0 4px 24px 0 rgba(34,60,80,0.09);
     display: flex;
     flex-direction: column;
@@ -1252,7 +1252,7 @@ input::placeholder, textarea::placeholder {
   max-width: 430px;
   margin: 0 auto;
   padding: 0;
-  background: url('/static/images/bg.png') center/cover no-repeat;
+  background: url('/static/images/bg.jpg') center/cover no-repeat;
   min-height: 100vh;
   position: relative;
 }

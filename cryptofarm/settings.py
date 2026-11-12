@@ -73,8 +73,8 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'cryptofarm.middleware.TelegramFrameMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'cryptofarm.middleware.TelegramFrameMiddleware',  # после XFrameOptions — переопределяет для Telegram
     'users.middleware.TelegramAuthMiddleware',
 ]
 
@@ -154,7 +154,7 @@ LOCALE_PATHS = [
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
@@ -222,9 +222,8 @@ CACHES = {
 }
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://flora.diy",
-    "https://092a-95-46-64-253.ngrok-free.app",
-    "https://0cc5-95-46-69-171.ngrok-free.app",
+    "https://floracoin.cc",
+    "https://www.floracoin.cc",
 ]
 
 # Сессии для работы в iframe (Telegram Web, web.telegram.org)
@@ -235,3 +234,10 @@ SESSION_COOKIE_SAMESITE = "None" if _USE_SECURE_SESSION else "Lax"
 SESSION_COOKIE_SECURE = _USE_SECURE_SESSION
 CSRF_COOKIE_SAMESITE = SESSION_COOKIE_SAMESITE
 CSRF_COOKIE_SECURE = SESSION_COOKIE_SECURE
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+SECURE_CROSS_ORIGIN_OPENER_POLICY = None
+SECURE_REFERRER_POLICY = "no-referrer-when-downgrade"
+SESSION_COOKIE_HTTPONLY = True
+SESSION_SAVE_EVERY_REQUEST = True

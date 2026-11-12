@@ -1,0 +1,8 @@
+<tr>
+  <td>#{{ g.id }}</td>
+  <td>{% include "admin_panel/_u.html" with u=g.player1 %}</td>
+  <td>{% if g.is_bot_game %}<span class="muted">бот {{ g.bot_name|default:"" }}</span>{% else %}{% include "admin_panel/_u.html" with u=g.player2 %}{% endif %}</td>
+  <td class="n">{{ g.bet_amount|floatformat:2 }}</td>
+  <td>{% if g.status == "finished" %}{% if g.result == "draw" %}<span class="pill">ничья</span>{% elif g.winner %}<span class="pill g">{% include "admin_panel/_u.html" with u=g.winner %}</span>{% elif g.result == "player2_win" %}<span class="pill r">бот</span>{% else %}<span class="pill">{{ g.result|default:"—" }}</span>{% endif %}{% else %}<span class="pill w">{{ g.get_status_display }}</span>{% endif %}</td>
+  <td class="muted">{{ g.created_at|date:"d.m H:i" }}</td>
+</tr>

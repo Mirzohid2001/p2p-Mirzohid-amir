@@ -92,49 +92,57 @@
 
   <script>
     (function() {
-      var tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
       var statusEl = document.getElementById("status-text");
       var webappSection = document.getElementById("webapp-section");
       var widgetSection = document.getElementById("widget-section");
+      var params = new URLSearchParams(window.location.search);
 
-      // Если WebApp SDK определён и есть initData – используем WebApp (Telegram / Telegram Web)
-      if (tg && tg.initData) {
-        if (tg.ready) tg.ready();
-        if (tg.expand) tg.expand();
-        function waitForUser() {
-          var refParam = new URLSearchParams(window.location.search).get("ref");
-          // Сначала tg_id — не требует проверки hash, работает всегда
-          if (tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
-            statusEl.innerText = "Перенаправляем…";
-            var form = document.createElement("form");
-            form.method = "GET";
-            form.action = "/telegram_login/";
-            var inp = document.createElement("input");
-            inp.type = "hidden";
-            inp.name = "tg_id";
-            inp.value = tg.initDataUnsafe.user.id;
-            form.appendChild(inp);
-            if (refParam) {
-              var refInp = document.createElement("input");
-              refInp.type = "hidden";
-              refInp.name = "ref";
-              refInp.value = refParam;
-              form.appendChild(refInp);
-            }
-            document.body.appendChild(form);
-            form.submit();
-          } else {
-            setTimeout(waitForUser, 100);
-          }
-        }
-        waitForUser();
-        return;
+      function goLogin(id) {
+        if (!id) return;
+        statusEl.innerText = "Перенаправляем…";
+        var url = "/telegram_login/?tg_id=" + encodeURIComponent(id);
+        var refParam = params.get("ref");
+        if (refParam) url += "&ref=" + encodeURIComponent(refParam);
+        window.location.replace(url);
       }
 
-      // Нет WebApp (Chrome, Safari и т.д.) – показываем Login Widget
-      webappSection.style.display = "none";
-      widgetSection.style.display = "block";
+      function showWidget() {
+        webappSection.style.display = "none";
+        widgetSection.style.display = "block";
+      }
 
+
+      var attempts = 0;
+      function tryWebApp() {
+        var tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+        if (tg) {
+          try { if (tg.ready) tg.ready(); if (tg.expand) tg.expand(); } catch (e) {}
+          if (tg.initData) {
+            statusEl.innerText = "Входим…";
+            var form = document.createElement("form");
+            form.method = "POST";
+            var refParam = params.get("ref");
+            form.action = "/telegram_login/auth/" + (refParam ? "?ref=" + encodeURIComponent(refParam) : "");
+            var inp = document.createElement("input");
+            inp.type = "hidden";
+            inp.name = "init_data";
+            inp.value = tg.initData;
+            form.appendChild(inp);
+            document.body.appendChild(form);
+            form.submit();
+            return;
+          }
+        }
+        attempts += 1;
+        if (attempts < 40) {
+          setTimeout(tryWebApp, 150);
+        } else if (tg) {
+          statusEl.innerText = "Не удалось получить данные Telegram. Закройте Mini App и откройте снова через кнопку «Играть».";
+        } else {
+          showWidget();
+        }
+      }
+      tryWebApp();
     })();
   </script>
 </body>

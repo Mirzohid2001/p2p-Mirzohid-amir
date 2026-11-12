@@ -61,6 +61,7 @@ class TournamentParticipant(models.Model):
     coins_lost = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     reward_received = models.BooleanField(default=False)
     reward_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    overtaken_notified_at = models.DateTimeField(null=True, blank=True)  # когда последний раз писали «вас скинули»
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -247,6 +248,10 @@ class Game(models.Model):
                     user=self.player2
                 )
             
+            points_before = {participant1.pk: participant1.points}
+            if participant2:
+                points_before[participant2.pk] = participant2.points
+
             if result == 'player1_win':
                 participant1.add_points('win')
                 if participant2:
@@ -259,6 +264,9 @@ class Game(models.Model):
                 participant1.add_points('draw')
                 if participant2:
                     participant2.add_points('draw')
+
+            from .overtake import notify_overtaken
+            notify_overtaken(self.tournament, [p for p in (participant1, participant2) if p], points_before)
         
         self.save()
         return result

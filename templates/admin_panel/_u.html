@@ -1,0 +1,1 @@
+{% if u %}<a href="{% url 'admin_user' u.telegram_id %}">{% if u.username %}@{{ u.username }}{% else %}{{ u.first_name|default:u.telegram_id }}{% endif %}</a>{% else %}<span class="muted">—</span>{% endif %}

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Админ-панель Flora{% endblock %}</title>
+<style>
+:root{
+  --bg:#f4f6f8;--card:#fff;--text:#1d2330;--muted:#6b7385;--line:#e4e8ee;
+  --accent:#1f9d55;--accent-soft:#e6f6ec;--warn:#c27c0e;--danger:#c63d3d;--blue:#2f6fd6;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#12151b;--card:#1b2029;--text:#e7eaf0;--muted:#98a1b3;--line:#2a313d;
+  --accent:#3ccf7a;--accent-soft:#183324;--warn:#e0a640;--danger:#ef6b6b;--blue:#6aa0ff;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+header{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.top{max-width:1280px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brand{font-weight:700;font-size:16px}
+.brand span{color:var(--accent)}
+nav{display:flex;gap:4px;flex-wrap:wrap;flex:1}
+nav a{padding:7px 12px;border-radius:8px;color:var(--muted);font-weight:500}
+nav a.on{background:var(--accent-soft);color:var(--accent)}
+nav a:hover{text-decoration:none;color:var(--text)}
+.top .right{display:flex;gap:12px;color:var(--muted);font-size:13px;align-items:center}
+main{max-width:1280px;margin:0 auto;padding:16px}
+h2{font-size:17px;margin:24px 0 10px}
+h2:first-child{margin-top:4px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+.cols{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.kpi .v{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.kpi .l{color:var(--muted);font-size:12px;margin-top:2px}
+.kpi.live .v{color:var(--accent)}
+.card h3{margin:0 0 10px;font-size:14px}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{color:var(--muted);font-weight:500;font-size:12px}
+td.n,th.n{text-align:right}
+tr:last-child td{border-bottom:0}
+.muted{color:var(--muted)}
+.pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;background:var(--line)}
+.pill.g{background:var(--accent-soft);color:var(--accent)}
+.pill.w{background:rgba(194,124,14,.15);color:var(--warn)}
+.pill.r{background:rgba(198,61,61,.13);color:var(--danger)}
+.chart{position:relative;height:220px}
+form.inline{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input,select,button{font:inherit;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text)}
+button{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;cursor:pointer}
+button.danger{background:var(--danger);border-color:var(--danger)}
+.pager{display:flex;gap:8px;align-items:center;margin-top:10px}
+.msg{padding:10px 14px;border-radius:8px;margin-bottom:12px;background:var(--accent-soft)}
+.msg.error{background:rgba(198,61,61,.13)}
+.empty{color:var(--muted);padding:8px 0}
+</style>
+{% block head %}{% endblock %}
+</head>
+<body>
+<header><div class="top">
+  <div class="brand">🌱 Flora <span>admin</span></div>
+  <nav>{% for key, name in tabs %}<a href="{% url 'admin_dashboard' %}?tab={{ key }}" class="{% if key == tab %}on{% endif %}">{{ name }}</a>{% endfor %}</nav>
+  <div class="right"><a href="/admin/">Django-админка</a><a href="{% url 'admin_logout' %}">Выйти</a></div>
+</div></header>
+<main>
+{% if messages %}{% for m in messages %}<div class="msg {{ m.tags }}">{{ m }}</div>{% endfor %}{% endif %}
+{% block content %}{% endblock %}
+</main>
+{% block scripts %}{% endblock %}
+</body>
+</html>
