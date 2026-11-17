@@ -7,7 +7,7 @@ from django.db.models.functions import TruncDate
 from django.utils import timezone
 
 from users.models import User, TonDepositRequest
-from rps.models import Game, GameQueue, Tournament, TournamentParticipant, BotPool, BotAdmin
+from rps.models import Game, GameQueue, Tournament, TournamentParticipant, BotPool, BotAdmin, GameSettings
 from referrals.models import Referral, ReferralBonus, TaskCompletion
 from shop.models import Purchase
 from trees.models import Tree, TonDistribution, BurnedToken
@@ -102,6 +102,28 @@ def _dau_series(days, start):
     return [len(per_day.get((start + timedelta(days=i)).date(), ())) for i in range(days)]
 
 
+def _watering(now):
+    """Полив по пользователям: полито сейчас / было полито, но высохло / ни разу не поливали."""
+    fresh = now - timedelta(hours=Tree.WATER_DURATION)
+    wet_q = Q(auto_water_until__gt=now) | Q(last_watered__gte=fresh)
+    wet = set(Tree.objects.filter(wet_q).values_list("user_id", flat=True))
+    ever = set(Tree.objects.filter(last_watered__isnull=False).values_list("user_id", flat=True))
+    total = User.objects.count()
+    dried = len(ever - wet)
+    never = total - len(ever | wet)
+    pct = lambda n: round(100 * n / total) if total else 0
+    return {
+        "total": total,
+        "wet": len(wet), "wet_pct": pct(len(wet)),
+        "dried": dried, "dried_pct": pct(dried),
+        "never": never, "never_pct": pct(never),
+        "trees_wet": Tree.objects.filter(wet_q).count(),
+        "trees_total": Tree.objects.count(),
+        "auto": Tree.objects.filter(auto_water_until__gt=now).values("user_id").distinct().count(),
+        "hours": Tree.WATER_DURATION,
+    }
+
+
 def overview():
     now = timezone.now()
     today = _day_start(now)
@@ -162,6 +184,7 @@ def overview():
         "active_tournament": active_tournament,
         "live_games": live_games,
         "recent_users": users.select_related("referred_by").order_by("-date_joined")[:15],
+        "watering": _watering(now),
     }
 
 
@@ -176,11 +199,18 @@ def games():
 
     active_tournament = Tournament.objects.filter(status="active").order_by("-start_date").first()
     top = []
+    disqualified = []
     if active_tournament:
+        # таблица — как у игроков: без снятых с турнира
         top = (
-            TournamentParticipant.objects.filter(tournament=active_tournament)
+            TournamentParticipant.objects.filter(tournament=active_tournament, disqualified=False)
             .select_related("user")
             .order_by("-points", "-wins")[:20]
+        )
+        disqualified = (
+            TournamentParticipant.objects.filter(tournament=active_tournament, disqualified=True)
+            .select_related("user")
+            .order_by("-disqualified_at")
         )
 
     tournaments = (
@@ -212,9 +242,13 @@ def games():
     guards = (
         PlayerGuard.objects.select_related("user")
         .filter(Q(suspicious_at__isnull=False) | Q(check_required=True) | Q(checks_failed__gt=0))
+        .filter(banned=False)
         .order_by("-check_required", "-suspicious_at", "-checks_failed")[:50]
     )
+    from rps.models import active_ban_q
+    banned_guards = PlayerGuard.objects.select_related("user").filter(active_ban_q(prefix="")).order_by("-banned_at")[:100]
     guard_stats = PlayerGuard.objects.aggregate(
+        banned=Count("pk", filter=active_ban_q(prefix="")),
         pending=Count("pk", filter=Q(check_required=True)),
         suspicious=Count("pk", filter=Q(suspicious_at__isnull=False)),
         passed=Sum("checks_passed"),
@@ -235,16 +269,37 @@ def games():
         "volume": _d(agg["volume"]),
         "bank": _d(agg["bank"]),
         "bot_pool": pool,
+        "game_settings": GameSettings.get(),
         "guards": guards,
+        "banned_guards": banned_guards,
         "guard_stats": guard_stats,
         "live_games": _live_games(now).select_related("player1", "player2").order_by("-created_at")[:50],
         "stuck_games": _stuck_games(now).select_related("player1", "player2").order_by("-created_at")[:50],
         "queue": GameQueue.objects.filter(expires_at__gt=now).select_related("user").order_by("-created_at")[:50],
         "active_tournament": active_tournament,
         "tournament_top": top,
+        "tournament_disqualified": disqualified,
         "tournaments": tournaments,
         "top_players": top_players,
         "recent_games": Game.objects.filter(status="finished").select_related("player1", "player2", "winner").order_by("-finished_at", "-created_at")[:30],
+    }
+
+
+POOL_LOW_FL = 2000  # ниже этого остатка — предупреждение в админке
+
+
+def _bot_pool_info():
+    """Пул бота: из него бот ставит свою ставку; выигрыши игроков уходят из пула, проигрыши возвращаются."""
+    pool = BotPool.get_pool()
+    left = pool.total_balance - pool.used_balance
+    return {
+        "total": pool.total_balance,
+        "used": pool.used_balance,
+        "left": left,
+        "per_game": pool.get_bot_balance(),
+        "low": left < POOL_LOW_FL,
+        "empty": left <= 0,
+        "low_limit": POOL_LOW_FL,
     }
 
 
@@ -285,6 +340,7 @@ def economy():
         "active_ton_distributions": TonDistribution.objects.filter(is_active=True).order_by("-created_at"),
         "past_ton_distributions": TonDistribution.objects.filter(is_active=False).order_by("-created_at")[:5],
         "recent_operations": TokenOperation.objects.order_by("-timestamp")[:15],
+        "bot_pool": _bot_pool_info(),
     }
 
 

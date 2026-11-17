@@ -16,9 +16,29 @@ let currentGameId = null;
 // isPlayer1 из шаблона — const и не меняется; при подгрузке новой партии без перезагрузки берём значение отсюда
 let currentIsPlayer1 = (typeof isPlayer1 !== 'undefined') ? !!isPlayer1 : true;
 let rematchInFlight = false;
-// пауза между партиями (сервер не даёт начать новую раньше, чем через 5 с)
-const GAME_COOLDOWN_SECONDS = 5;
+// пауза между партиями — задаётся в админке; страница игры передаёт её в window.RPS_COOLDOWN (0 — выключена)
+let GAME_COOLDOWN_SECONDS = (typeof window.RPS_COOLDOWN === 'number') ? window.RPS_COOLDOWN : 0;
 let rematchCooldownInterval = null;
+
+// Блокировка антиботом: закрываем игру сообщением с причиной (остальное приложение работает)
+function showBanned(message) {
+  hideLoading();
+  stopAllRpsIntervals();
+  stopFinalizeLoop();
+  ['human-check', 'rps-banned'].forEach(id => { const el = document.getElementById(id); if (el) el.remove(); });
+  const ov = document.createElement('div');
+  ov.id = 'rps-banned';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:10002;background:rgba(10,14,40,.85);display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML = `
+    <div style="background:#2a2f55;color:#fff;border-radius:18px;padding:22px 18px;max-width:340px;width:100%;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.5)">
+      <div style="font-size:40px;line-height:1;margin-bottom:10px">🚫</div>
+      <div class="ban-text" style="font-size:15px;line-height:1.45"></div>
+      <button type="button" class="ban-home" style="margin-top:16px;padding:10px 18px;border-radius:12px;border:0;background:#3D50C7;color:#fff;font-weight:600;cursor:pointer">${tr('ban_home', 'На главную')}</button>
+    </div>`;
+  ov.querySelector('.ban-text').textContent = message || tr('ban_default', '🚫 Доступ к игре закрыт.');
+  ov.querySelector('.ban-home').addEventListener('click', () => navigateTo('/'));
+  document.body.appendChild(ov);
+}
 
 // Проверка «вы не бот?»: сервер не даёт начать партию, пока игрок не нажмёт нужный фрукт.
 // onPassed — что сделать после успешной проверки (повторить «Ещё раз», поиск и т.п.)
@@ -52,6 +72,7 @@ function showHumanCheck(check, onPassed, message) {
       .then(r => r.json())
       .then(d => {
         busy = false;
+        if (d.banned) { showBanned(d.error); return; }
         if (d.passed) {
           ov.remove();
           showNotification(tr('hc_ok', 'Спасибо! Можно играть'), 'success');
@@ -77,6 +98,7 @@ function showHumanCheck(check, onPassed, message) {
 
 function startRematchCooldown(seconds) {
   if (rematchCooldownInterval) { clearInterval(rematchCooldownInterval); rematchCooldownInterval = null; }
+  if (!seconds || seconds <= 0) return; // пауза выключена
   const buttons = [...document.querySelectorAll('#btn-rematch, #btn-rematch-cancelled')];
   if (!buttons.length) return;
   buttons.forEach(b => {
@@ -175,6 +197,7 @@ document.addEventListener('click', function (e) {
 
 // Инициализация
 document.addEventListener('DOMContentLoaded', function() {
+    if (window.RPS_BAN) { showBanned(window.RPS_BAN); return; }
     currentGameId = (typeof gameId !== 'undefined' && gameId) ? gameId : null;
     initRpsPage();
 });
@@ -285,6 +308,8 @@ function loadGameInPlace(newGameId) {
             if (!fresh || !idMatch) throw new Error('unexpected game page');
 
             container.innerHTML = fresh.innerHTML;
+            const cdMatch = html.match(/window\.RPS_COOLDOWN = (\d+);/);
+            if (cdMatch) GAME_COOLDOWN_SECONDS = Number(cdMatch[1]); // админ мог поменять паузу
             currentGameId = idMatch[1] === 'null' ? null : Number(idMatch[1]);
             currentIsPlayer1 = p1Match ? p1Match[1] === 'true' : true;
             try { history.replaceState(history.state, '', url); } catch (e) {}
@@ -337,7 +362,8 @@ function startGameSearch(betAmount) {
     })
     .then(response => response.json())
     .then(data => {
-        if (data.human_check) {
+        if (data.banned) { showBanned(data.error); return; }
+    if (data.human_check) {
             resetBetButtons();
             searchStatus.style.display = 'none';
             showHumanCheck(data.human_check, () => startGameSearch(betAmount));
@@ -403,7 +429,8 @@ function checkForOpponent(betAmount) {
     })
     .then(response => response.json())
     .then(data => {
-        if (data.human_check) {
+        if (data.banned) { showBanned(data.error); return; }
+    if (data.human_check) {
             clearInterval(searchInterval);
             searchInterval = null;
             resetBetButtons();
@@ -443,7 +470,8 @@ function connectBot(betAmount) {
     })
     .then(response => response.json())
     .then(data => {
-        if (data.human_check) {
+        if (data.banned) { showBanned(data.error); return; }
+    if (data.human_check) {
             resetBetButtons();
             searchStatus.style.display = 'none';
             showHumanCheck(data.human_check, () => startGameSearch(betAmount));
@@ -905,6 +933,7 @@ function makeMove(move) {
     .then(data => {
         hideLoading();
         
+        if (data.banned) { showBanned(data.error); return; }
         if (data.error) {
             showNotification(data.error, 'error');
             moveButtons.forEach(btn => btn.disabled = false);
@@ -1053,6 +1082,7 @@ function startRematch(gameId) {
   })
   .then(r => r.json())
   .then(data => {
+    if (data.banned) { showBanned(data.error); return; }
     if (data.human_check) {
       hideLoading();
       rematchInFlight = false;

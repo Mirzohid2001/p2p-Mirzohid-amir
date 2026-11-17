@@ -41,13 +41,14 @@ def notify_overtaken(tournament, participants, points_before):
         targets = {}
         for p in participants:
             old = points_before.get(p.pk, p.points)
-            if p.points <= old:
+            if p.points <= old or p.disqualified:
                 continue
             # были выше или наравне с игроком, а теперь ниже него (в том числе его соперник по этой игре)
             overtaken = (
                 TournamentParticipant.objects
                 .filter(tournament=tournament, points__gte=old, points__lt=p.points, points__gt=0)
                 .exclude(pk=p.pk)
+                .exclude(disqualified=True)
                 .filter(not_recent)
                 .select_related("user")
             )
@@ -59,7 +60,7 @@ def notify_overtaken(tournament, participants, points_before):
             # помечаем атомарно: если параллельная игра уже отправила уведомление, второй раз не шлём
             if not TournamentParticipant.objects.filter(pk=x.pk).filter(not_recent).update(overtaken_notified_at=now):
                 continue
-            place = 1 + TournamentParticipant.objects.filter(tournament=tournament, points__gt=x.points).count()
+            place = 1 + TournamentParticipant.objects.filter(tournament=tournament, points__gt=x.points, disqualified=False).count()
             messages.append((x.user.telegram_id, (x.user.language or "ru").lower(), place))
 
         if messages:

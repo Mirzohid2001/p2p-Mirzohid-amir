@@ -202,6 +202,9 @@ class Tree(models.Model):
         self.water_reminder_sent_at = None
         self.save(update_fields=["last_watered", "water_reminder_sent_at"])
 
+        from referrals.rewards import maybe_reward_inviter
+        maybe_reward_inviter(user)
+
         return {
             "ok": True,
             "message": "Дерево успешно полито",

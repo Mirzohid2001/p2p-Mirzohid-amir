@@ -244,10 +244,12 @@
         const gameId = {% if game %}{{ game.id }}{% else %}null{% endif %};
         const userId = {{ user.telegram_id }};
         const isPlayer1 = {% if is_player1 %}true{% else %}false{% endif %};
+        window.RPS_COOLDOWN = {{ game_cooldown|default:0 }};
+        window.RPS_BAN = "{{ rps_ban|default:''|escapejs }}";
     </script>
     {% endblock %}
 
     {% block extra_js %}
-    <script src="{% static 'js/rps.js' %}?v=5"></script>
+    <script src="{% static 'js/rps.js' %}?v=7"></script>
     {% endblock %}
 

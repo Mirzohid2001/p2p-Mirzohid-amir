@@ -11,7 +11,8 @@ import json
 import random
 
 from users.models import User
-from .models import Tournament, TournamentParticipant, Game, GameQueue, BotPool
+from .models import Tournament, TournamentParticipant, Game, GameQueue, BotPool, GameSettings
+from .antibot import ban_reason_for
 from .templatetags.mask import mask_last
 import logging
 logger = logging.getLogger(__name__)
@@ -32,7 +33,10 @@ def _cooldown_left(user):
     if not last:
         return 0
     import math
-    left = GAME_COOLDOWN_SECONDS - (timezone.now() - last).total_seconds()
+    seconds = GameSettings.get().cooldown()
+    if not seconds:
+        return 0
+    left = seconds - (timezone.now() - last).total_seconds()
     return math.ceil(left) if left > 0 else 0
 
 
@@ -154,6 +158,7 @@ def rps_home(request):
         'top_10': top_10,
         'top_5_players': top_5_players,
         'recent_games': recent_games,
+        'rps_ban': ban_reason_for(user),
     }
     
     return render(request, 'rps/home.html', context)
@@ -257,6 +262,8 @@ def rps_game(request, game_id=None):
         'user': user,
         'game': game,
         'is_player1': is_player1,
+        'game_cooldown': GameSettings.get().cooldown(),
+        'rps_ban': ban_reason_for(user),
     }
     
     return render(request, 'rps/game.html', context)
@@ -428,6 +435,10 @@ def api_make_move(request):
         return JsonResponse({'error': 'Method not allowed'}, status=405)
     
     user = request.user
+    from .antibot import banned_response
+    blocked = banned_response(user)
+    if blocked:
+        return blocked
     
     try:
         data = json.loads(request.body)
@@ -489,7 +500,8 @@ def api_make_move(request):
         if game.is_bot_game and not game.player2_move:
 
             P_DRAW = 0.10  # 10% ничья (можешь менять)
-            BOT_WIN_RATE = 0.55
+            # доля побед бота среди партий без ничьей: 0.45 -> игрок выигрывает 55% (49.5% всех партий)
+            BOT_WIN_RATE = 0.45
 
 
             r = random.random()

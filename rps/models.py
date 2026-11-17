@@ -5,6 +5,13 @@ from decimal import Decimal
 from users.models import User
 
 
+def active_ban_q(prefix='user__rps_guard__'):
+    """Q: у игрока сейчас действует блокировка антибота (для исключения из топа и призов)."""
+    return Q(**{prefix + 'banned': True}) & (
+        Q(**{prefix + 'banned_until__isnull': True}) | Q(**{prefix + 'banned_until__gt': timezone.now()})
+    )
+
+
 class Tournament(models.Model):
     """Турнир по игре Камень-Ножницы-Бумага"""
     STATUS_CHOICES = [
@@ -37,11 +44,11 @@ class Tournament(models.Model):
     
     def get_top_10(self):
         """Возвращает топ-10 участников"""
-        return self.participants.all().order_by('-points')[:10]
+        return self.participants.exclude(disqualified=True).exclude(active_ban_q()).order_by('-points')[:10]
     
     def get_participant_rank(self, user):
         """Возвращает место пользователя в турнире"""
-        participants = self.participants.all().order_by('-points')
+        participants = self.participants.exclude(disqualified=True).exclude(active_ban_q()).order_by('-points')
         for idx, participant in enumerate(participants, 1):
             if participant.user == user:
                 return idx
@@ -62,6 +69,9 @@ class TournamentParticipant(models.Model):
     reward_received = models.BooleanField(default=False)
     reward_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     overtaken_notified_at = models.DateTimeField(null=True, blank=True)  # когда последний раз писали «вас скинули»
+    disqualified = models.BooleanField(default=False)   # снят с турнира (блокировка антибота во время турнира)
+    disqualified_reason = models.CharField(max_length=200, blank=True, default='')
+    disqualified_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -272,6 +282,11 @@ class Game(models.Model):
 
         from .antibot import record_game
         record_game(self)
+
+        from referrals.rewards import maybe_reward_inviter
+        for p in (self.player1, self.player2):
+            if p:
+                maybe_reward_inviter(p)
         return result
 
 
@@ -326,6 +341,26 @@ class BotPool(models.Model):
         self.save()
 
 
+class GameSettings(models.Model):
+    """Настройки игры, меняются в админ-панели (/admin-panel/ → «Игры и турниры»)."""
+    cooldown_enabled = models.BooleanField(default=False, verbose_name='Пауза между партиями включена')
+    cooldown_seconds = models.PositiveSmallIntegerField(default=5, verbose_name='Пауза между партиями, сек')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Настройки игры'
+        verbose_name_plural = 'Настройки игры'
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def cooldown(self):
+        """Текущая пауза в секундах (0 — выключена)."""
+        return self.cooldown_seconds if self.cooldown_enabled else 0
+
+
 class PlayerGuard(models.Model):
     """Антибот: счётчик партий, подозрения и проверка «вы человек?» (см. rps/antibot.py)."""
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name='rps_guard')
@@ -339,6 +374,15 @@ class PlayerGuard(models.Model):
     suspicious_reason = models.CharField(max_length=200, blank=True, default='')
     suspicious_at = models.DateTimeField(null=True, blank=True)
     fast_moves = models.PositiveIntegerField(default=0)
+    strikes = models.PositiveSmallIntegerField(default=0)            # подозрений за последние сутки
+    last_strike_at = models.DateTimeField(null=True, blank=True)
+    consecutive_failed = models.PositiveSmallIntegerField(default=0)  # неверных ответов подряд
+    blocked_attempts = models.PositiveIntegerField(default=0)        # попыток играть при висящей проверке
+    banned = models.BooleanField(default=False)                      # закрыт доступ к КНБ
+    ban_reason = models.CharField(max_length=200, blank=True, default='')
+    banned_at = models.DateTimeField(null=True, blank=True)
+    banned_until = models.DateTimeField(null=True, blank=True)       # до когда закрыт доступ
+    ban_count = models.PositiveSmallIntegerField(default=0)          # сколько раз блокировали (для ×2)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

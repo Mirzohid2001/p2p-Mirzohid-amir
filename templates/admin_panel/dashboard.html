@@ -10,6 +10,14 @@
   <div class="card kpi"><div class="v">{% if active_tournament %}#{{ active_tournament.id }}{% else %}—{% endif %}</div><div class="l">{% if active_tournament %}турнир до {{ active_tournament.end_date|date:"d.m H:i" }}{% else %}нет активного турнира{% endif %}</div></div>
 </div>
 
+<h2>Полив сейчас <span class="muted" style="font-weight:400;font-size:13px">· вода держится {{ watering.hours }} ч после полива</span></h2>
+<div class="grid">
+  <div class="card kpi live"><div class="v">{{ watering.wet }} <span class="muted" style="font-size:15px;font-weight:500">· {{ watering.wet_pct }}%</span></div><div class="l">полито сейчас{% if watering.auto %} (из них {{ watering.auto }} на автополиве){% endif %}</div></div>
+  <div class="card kpi"><div class="v" style="color:var(--warn)">{{ watering.dried }} <span class="muted" style="font-size:15px;font-weight:500">· {{ watering.dried_pct }}%</span></div><div class="l">не полито — поливали раньше, сейчас сухо</div></div>
+  <div class="card kpi"><div class="v" style="color:var(--danger)">{{ watering.never }} <span class="muted" style="font-size:15px;font-weight:500">· {{ watering.never_pct }}%</span></div><div class="l">ни разу не поливали</div></div>
+  <div class="card kpi"><div class="v">{{ watering.trees_wet }} / {{ watering.trees_total }}</div><div class="l">деревьев полито сейчас</div></div>
+</div>
+
 <h2>Сегодня</h2>
 <div class="grid">
   <div class="card kpi"><div class="v">{{ kpi.users_today }}</div><div class="l">новых пользователей</div></div>
@@ -87,6 +95,21 @@
 
 
 {% if tab == "games" %}
+{% if can_control %}
+<h2>Настройки игры</h2>
+<div class="card">
+  <form class="inline" method="post" action="{% url 'admin_game_settings' %}">{% csrf_token %}
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+      <input type="checkbox" name="cooldown_enabled" {% if game_settings.cooldown_enabled %}checked{% endif %} style="width:18px;height:18px">
+      Пауза между партиями
+    </label>
+    <input type="number" name="cooldown_seconds" min="1" max="120" value="{{ game_settings.cooldown_seconds }}" style="width:80px"> <span class="muted">сек</span>
+    <button>Сохранить</button>
+    <span class="muted">Сейчас: {% if game_settings.cooldown_enabled %}<b>включена, {{ game_settings.cooldown_seconds }} с</b>{% else %}<b>выключена</b>{% endif %} · действует для всех игроков сразу</span>
+  </form>
+</div>
+{% endif %}
+
 <h2>Сейчас</h2>
 <div class="cols">
   <div class="card"><h3>Игры в процессе ({{ live_games|length }}) <span class="muted" style="font-weight:400">· за последний час</span></h3><div class="tw"><table>
@@ -121,12 +144,27 @@
 
 <h2>Антибот</h2>
 <div class="grid">
+  <div class="card kpi"><div class="v">{{ guard_stats.banned }}</div><div class="l">заблокированы в КНБ</div></div>
   <div class="card kpi"><div class="v">{{ guard_stats.pending }}</div><div class="l">сейчас должны пройти проверку</div></div>
   <div class="card kpi"><div class="v">{{ guard_stats.suspicious }}</div><div class="l">помечены подозрительными</div></div>
   <div class="card kpi"><div class="v">{{ guard_stats.passed|default:0 }}</div><div class="l">проверок пройдено</div></div>
   <div class="card kpi"><div class="v">{{ guard_stats.failed|default:0 }}</div><div class="l">неверных ответов</div></div>
 </div>
-<div class="card tw" style="margin-top:12px"><h3>Подозрительные и непрошедшие <span class="muted" style="font-weight:400">— проверка каждые 100 партий и сразу при подозрении</span></h3><table>
+<div class="card tw" style="margin-top:12px"><h3>Заблокированные <span class="muted" style="font-weight:400">— не могут играть в КНБ и не попадают в топ-10 и призы, пока блокировка действует · 1-я 3 ч, 2-я 6 ч, 3-я 12 ч … ×2</span></h3><table>
+  <tr><th>Игрок</th><th>Причина</th><th>Когда</th><th>До</th><th class="n">Блокировка №</th><th class="n">Проверок пройдено</th><th class="n">Неверных ответов</th><th></th></tr>
+  {% for g in banned_guards %}<tr>
+    <td>{% include "admin_panel/_u.html" with u=g.user %}</td>
+    <td>{{ g.ban_reason }}</td>
+    <td class="muted">{{ g.banned_at|date:"d.m H:i" }}</td>
+    <td><b>{{ g.banned_until|date:"d.m H:i"|default:"бессрочно" }}</b></td>
+    <td class="n">{{ g.ban_count }}</td>
+    <td class="n">{{ g.checks_passed }}</td>
+    <td class="n">{{ g.checks_failed }}</td>
+    <td><form method="post" action="{% url 'admin_antibot_unban' g.user_id %}" onsubmit="return confirm('Разблокировать этого игрока в КНБ? Все его подозрения будут сброшены.')" style="margin:0">{% csrf_token %}<button style="padding:4px 10px">Разблокировать</button></form></td>
+  </tr>{% empty %}<tr><td colspan="8" class="empty">Никто не заблокирован</td></tr>{% endfor %}
+</table></div>
+
+<div class="card tw" style="margin-top:12px"><h3>Подозрительные и непрошедшие <span class="muted" style="font-weight:400">— проверка каждые 100 партий, после подозрений чаще (30, затем 10)</span></h3><table>
   <tr><th>Игрок</th><th>Причина подозрения</th><th>Когда</th><th>Проверка</th><th class="n">Пройдено</th><th class="n">Ошибок</th><th class="n">Ходов &lt; 0.25 с</th><th class="n">Партий с проверки</th></tr>
   {% for g in guards %}<tr>
     <td>{% include "admin_panel/_u.html" with u=g.user %}</td>
@@ -147,6 +185,16 @@
     <tr><th>#</th><th>Игрок</th><th class="n">Очки</th><th class="n">Игры</th><th class="n">П/Н/П</th><th class="n">Выиграл FL</th></tr>
     {% for p in tournament_top %}<tr><td>{{ forloop.counter }}</td><td>{% include "admin_panel/_u.html" with u=p.user %}</td><td class="n"><b>{{ p.points }}</b></td><td class="n">{{ p.games_played }}</td><td class="n">{{ p.wins }}/{{ p.draws }}/{{ p.losses }}</td><td class="n">{{ p.coins_won|floatformat:0 }}</td></tr>{% empty %}<tr><td colspan="6" class="empty">Пока никто не играл</td></tr>{% endfor %}
   </table></div>{% endif %}</div>
+  {% if tournament_disqualified %}<div class="card tw" style="margin-top:12px;border-color:var(--danger)"><h3>Сняты с турнира #{{ active_tournament.id }} <span class="muted" style="font-weight:400">— заблокированы антиботом во время турнира; в таблице и призах не участвуют</span></h3><table>
+    <tr><th>Игрок</th><th class="n">Очки</th><th>Причина</th><th>Когда</th><th></th></tr>
+    {% for p in tournament_disqualified %}<tr>
+      <td>{% include "admin_panel/_u.html" with u=p.user %}</td>
+      <td class="n">{{ p.points }}</td>
+      <td>{{ p.disqualified_reason }}</td>
+      <td class="muted">{{ p.disqualified_at|date:"d.m H:i" }}</td>
+      <td><form method="post" action="{% url 'admin_tournament_requalify' p.pk %}" onsubmit="return confirm('Вернуть игрока в турнир со всеми очками?')" style="margin:0">{% csrf_token %}<button style="padding:4px 10px">Вернуть в турнир</button></form></td>
+    </tr>{% endfor %}
+  </table></div>{% endif %}
   <div class="card"><h3>Прошлые турниры</h3><div class="tw"><table>
     <tr><th>Турнир</th><th>Статус</th><th>Начало</th><th>Конец</th><th class="n">Игроков</th><th class="n">Наград FL</th></tr>
     {% for t in tournaments %}<tr><td>#{{ t.id }}</td><td><span class="pill {% if t.status == 'active' %}g{% elif t.status == 'completed' %}w{% endif %}">{{ t.get_status_display }}</span></td><td class="muted">{{ t.start_date|date:"d.m.Y" }}</td><td class="muted">{{ t.end_date|date:"d.m.Y" }}</td><td class="n">{{ t.n_players }}</td><td class="n">{{ t.rewards|default:0|floatformat:0 }}</td></tr>{% empty %}<tr><td colspan="6" class="empty">Турниров не было</td></tr>{% endfor %}
@@ -209,6 +257,22 @@
     <tr><th>#</th><th>Пользователь</th><th class="n">TON</th></tr>
     {% for u2 in richest_ton %}<tr><td>{{ forloop.counter }}</td><td>{% include "admin_panel/_u.html" with u=u2 %}</td><td class="n">{{ u2.ton_balance|floatformat:4 }}</td></tr>{% empty %}<tr><td colspan="3" class="empty">Ни у кого нет TON</td></tr>{% endfor %}
   </table></div></div>
+</div>
+
+<h2>Пул бота</h2>
+<div class="card"{% if bot_pool.low %} style="border-color:var(--danger)"{% endif %}>
+  <div class="grid">
+    <div class="kpi"><div class="v" style="{% if bot_pool.low %}color:var(--danger){% endif %}">{{ bot_pool.left|floatformat:0 }}</div><div class="l">FL осталось в пуле</div></div>
+    <div class="kpi"><div class="v">{{ bot_pool.used|floatformat:0 }}</div><div class="l">FL ушло игрокам (выигрыши минус проигрыши)</div></div>
+    <div class="kpi"><div class="v">{{ bot_pool.total|floatformat:0 }}</div><div class="l">FL всего положено в пул</div></div>
+  </div>
+  {% if bot_pool.empty %}<p class="msg error" style="margin:12px 0 0">Пул пуст — бот не садится за игру, игроки видят «Бот временно недоступен». Пополните пул.</p>
+  {% elif bot_pool.low %}<p class="msg error" style="margin:12px 0 0">Осталось меньше {{ bot_pool.low_limit }} FL — скоро игра с ботом остановится. Пополните пул.</p>{% endif %}
+  <form class="inline" method="post" action="{% url 'admin_bot_pool_topup' %}" style="margin-top:12px" onsubmit="return confirm('Пополнить пул бота на '+this.amount.value+' FL?')">{% csrf_token %}
+    <input name="amount" type="number" step="1" min="1" max="1000000" placeholder="Сколько FL" required style="width:160px">
+    <button>Пополнить</button>
+    <span class="muted">Бот ставит из пула; выигрыши игроков уходят из него, проигрыши возвращаются.</span>
+  </form>
 </div>
 
 <h2>Управление</h2>

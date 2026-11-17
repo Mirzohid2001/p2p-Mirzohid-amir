@@ -8,6 +8,7 @@ class Referral(models.Model):
     invited = models.ForeignKey('users.User', related_name='invited_by', on_delete=models.CASCADE, verbose_name='Приглашенный')
     bonus_cf = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Бонус CF')
     date_joined = models.DateTimeField(auto_now_add=True, verbose_name='Дата регистрации')
+    inviter_rewarded = models.BooleanField(default=False, verbose_name='Бонус пригласившему выдан')
     
     class Meta:
         verbose_name = 'Реферал'

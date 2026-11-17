@@ -1,86 +1,116 @@
+"""
+Автозачисление пополнений TON.
+
+Раз в минуту смотрит входящие переводы на кошелёк проекта (через tonapi.io) и
+зачисляет сумму на TON-баланс игрока, у которого в профиле привязан кошелёк-отправитель.
+Каждая транзакция обрабатывается ровно один раз (TonProcessedTx).
+
+Запускается постоянным сервисом: systemctl status flora-ton-payments
+  manage.py check_ton_payments                 — работать постоянно
+  manage.py check_ton_payments --once          — один проход и выйти
+  manage.py check_ton_payments --once --dry-run — показать, что было бы зачислено, ничего не меняя
+"""
 import time
-import requests
 from decimal import Decimal
+
+import requests
 from django.core.management.base import BaseCommand
-from tonsdk.utils import Address
+from django.db import IntegrityError, transaction
+from django.db.models import F
+
 from users.models import TonProcessedTx, User
 
 TON_ADDRESS_FRIENDLY = "UQAaSqEaBNAXz4gz7oJvrYXLaKXGaoUcxXFKR4rdW8KPwzLp"
-from tonsdk.utils import Address
-
-def to_raw(addr: str) -> str:
-    if not addr:
-        return ""
-    try:
-        return Address(addr).to_string(is_user_friendly=False)
-    except Exception:
-        return str(addr)
-TON_ADDRESS = Address(
-    TON_ADDRESS_FRIENDLY
-).to_string(is_user_friendly=False)
-# TON_ADDRESS = '0:16d5d488f168f01179c043df0c255632390f03ede82f1e62b102f1ff5d644b8e'
 TONAPI_TOKEN = 'AFTVO4WU53DURMIAAAAPFEGJ4KJR4WP5NK55EHL4NZHSKFQ52TBCLCFBDKNK3IMP4ACVIWI'
-API_URL = f'https://tonapi.io/v2/blockchain/accounts/{TON_ADDRESS}/transactions'
+TONAPI = "https://tonapi.io/v2"
+POLL_SECONDS = 60
+PAGE_LIMIT = 100
+NANO = Decimal("1e9")
+
+
+def _addr(obj):
+    return obj.get("address") if isinstance(obj, dict) else obj
+
 
 class Command(BaseCommand):
-    help = 'Автоматическое зачисление TON по кошелькам'
+    help = "Автоматическое зачисление пополнений TON по привязанным кошелькам"
 
-    def handle(self, *args, **kwargs):
-        headers = {"Authorization": f"Bearer {TONAPI_TOKEN}"}
-        params = {"limit": 50}
+    def add_arguments(self, parser):
+        parser.add_argument("--once", action="store_true", help="один проход и выйти")
+        parser.add_argument("--dry-run", action="store_true", help="ничего не зачислять, только показать")
 
+    def handle(self, *args, once=False, dry_run=False, **kwargs):
+        self.headers = {"Authorization": f"Bearer {TONAPI_TOKEN}"}
+        self.dry_run = dry_run
+        self.own = None
         while True:
             try:
-                resp = requests.get(API_URL, headers=headers, params=params, timeout=20)
-                print("[DEBUG] Ответ от TONAPI:", resp.text)
-                txs = resp.json().get("transactions", [])
-                for tx in txs:
-                    tx_hash = tx['hash']
-                    if TonProcessedTx.objects.filter(tx_hash=tx_hash).exists():
-                        continue
-
-                    in_msg = tx.get('in_msg')
-                    if not in_msg:
-                        continue
-
-                    dest = in_msg.get('destination')
-                    if isinstance(dest, dict):
-                        dest_addr = dest.get('address')
-                    else:
-                        dest_addr = dest
-
-                    # Сравниваем именно raw TON адрес (0:...)
-                    if dest_addr != TON_ADDRESS:
-                        continue
-
-                    sender = in_msg.get('source')
-                    if isinstance(sender, dict):
-                        sender_addr = sender.get('address')
-                    else:
-                        sender_addr = sender
-
-                    value = (Decimal(in_msg['value']) / Decimal('1e9')).quantize(Decimal('0.00000001'))
-
-                    user = User.objects.filter(ton_wallet=sender_addr).first()
-                    if user:
-                        user.ton_balance += value
-                        user.save()
-                        print(f"[INFO] Пользователь {user.username or user.telegram_id} пополнил TON на {value}")
-                        TonProcessedTx.objects.create(
-                            tx_hash=tx_hash,
-                            user=user,
-                            value=value
-                        )
-                    else:
-                        print(f"[WARN] Нет пользователя с TON кошельком {sender_addr}")
-                        TonProcessedTx.objects.create(
-                            tx_hash=tx_hash,
-                            user=None,
-                            value=value
-                        )
-
-                print("Ожидание 60 сек...")
-                time.sleep(60)
+                if not self.own:
+                    # raw-адрес кошелька проекта (0:…) — раньше считался через tonsdk, теперь спрашиваем tonapi
+                    r = requests.get(f"{TONAPI}/address/{TON_ADDRESS_FRIENDLY}/parse", headers=self.headers, timeout=20)
+                    r.raise_for_status()
+                    self.own = r.json()["raw_form"]
+                self.poll()
             except Exception as e:
-                print(f"[ERROR] {e}")
-                time.sleep(60)
+                self.stdout.write(f"[ERROR] {type(e).__name__}: {e}")
+            if once:
+                return
+            time.sleep(POLL_SECONDS)
+
+    def poll(self):
+        r = requests.get(f"{TONAPI}/blockchain/accounts/{self.own}/transactions",
+                         headers=self.headers, params={"limit": PAGE_LIMIT}, timeout=20)
+        r.raise_for_status()
+        txs = r.json().get("transactions", [])
+        known = set(TonProcessedTx.objects.filter(tx_hash__in=[t["hash"] for t in txs]).values_list("tx_hash", flat=True))
+
+        for tx in reversed(txs):  # от старых к новым
+            tx_hash = tx["hash"]
+            if tx_hash in known:
+                continue
+            in_msg = tx.get("in_msg") or {}
+            sender = _addr(in_msg.get("source"))
+            value = (Decimal(int(in_msg.get("value") or 0)) / NANO).quantize(Decimal("0.00000001"))
+
+            # что не является пополнением от игрока — помечаем обработанным и не зачисляем
+            skip = None
+            if not sender:
+                skip = "исходящая/внешняя транзакция"
+            elif not tx.get("success", True) or (in_msg.get("bounced")):
+                skip = "транзакция не прошла"
+            elif value <= 0:
+                skip = "нулевая сумма"
+            elif sender == self.own:
+                skip = "перевод кошелька проекта самому себе"
+            if skip:
+                self._mark(tx_hash, None, value, f"пропущено: {skip}")
+                continue
+
+            user = User.objects.filter(ton_wallet=sender).first()
+            if not user:
+                self._mark(tx_hash, None, value, f"нет игрока с кошельком {sender}")
+                continue
+            self._credit(tx_hash, user, value)
+
+    def _mark(self, tx_hash, user, value, note):
+        self.stdout.write(f"[SKIP] {tx_hash[:12]}… {value} TON — {note}")
+        if self.dry_run:
+            return
+        try:
+            TonProcessedTx.objects.create(tx_hash=tx_hash, user=user, value=value)
+        except IntegrityError:
+            pass
+
+    def _credit(self, tx_hash, user, value):
+        who = f"@{user.username}" if user.username else str(user.telegram_id)
+        if self.dry_run:
+            self.stdout.write(f"[DRY]  {tx_hash[:12]}… +{value} TON -> {who}")
+            return
+        try:
+            with transaction.atomic():
+                # запись о транзакции первой: уникальный hash не даст зачислить дважды
+                TonProcessedTx.objects.create(tx_hash=tx_hash, user=user, value=value)
+                User.objects.filter(pk=user.pk).update(ton_balance=F("ton_balance") + value)
+            self.stdout.write(f"[OK]   {tx_hash[:12]}… +{value} TON -> {who}")
+        except IntegrityError:
+            pass  # уже зачислено параллельно

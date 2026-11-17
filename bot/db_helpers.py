@@ -3,7 +3,7 @@
 """
 from asgiref.sync import sync_to_async
 from users.models import User
-from rps.models import BotAdmin, Tournament, TournamentParticipant
+from rps.models import BotAdmin, Tournament, TournamentParticipant, active_ban_q
 from django.utils import timezone
 from datetime import timedelta
 
@@ -51,7 +51,10 @@ def complete_tournament(tournament):
 def get_tournament_top_10(tournament):
     """Получает топ-10 участников турнира"""
     # Получаем участников с предзагрузкой связанных объектов
-    top_10_queryset = tournament.participants.select_related('user').order_by('-points')[:10]
+    top_10_queryset = (tournament.participants.select_related('user')
+                       .exclude(disqualified=True)  # снятые с турнира — без призов
+                       .exclude(active_ban_q())  # с действующей блокировкой антибота — без призов
+                       .order_by('-points')[:10])
     # Преобразуем QuerySet в список, чтобы избежать проблем с асинхронностью
     # И предзагружаем все связанные объекты
     return list(top_10_queryset)

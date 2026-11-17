@@ -46,7 +46,7 @@ def get_or_create_user(telegram_id, username="", first_name="", last_name="", ph
 
 
 def apply_referral(invited_user, inviter_id):
-    """Начисляет бонус 100 CF обоим участникам. Возвращает inviter или None."""
+    """Приглашённому +100 сразу, пригласившему — после полива и игры КНБ. Возвращает inviter или None."""
     if not inviter_id:
         return None
     try:
@@ -64,16 +64,13 @@ def apply_referral(invited_user, inviter_id):
     if not inviter:
         return None
 
+    # Пригласивший получит бонус позже — когда приглашённый польёт дерево
+    # и сыграет в КНБ (referrals/rewards.py). Приглашённому — сразу.
     referral = Referral.objects.create(
         inviter=inviter,
         invited=invited_user,
-        bonus_cf=REFERRAL_BONUS,
-    )
-    ReferralBonus.objects.create(
-        referral=referral,
-        bonus_type="signup",
-        amount=REFERRAL_BONUS,
-        description=f"Бонус за приглашение @{invited_user.username or invited_user.first_name}",
+        bonus_cf=0,
+        inviter_rewarded=False,
     )
     ReferralBonus.objects.create(
         referral=referral,
@@ -85,9 +82,6 @@ def apply_referral(invited_user, inviter_id):
     invited_user.referred_by = inviter
     invited_user.cf_balance += REFERRAL_BONUS
     invited_user.save(update_fields=["referred_by", "cf_balance"])
-
-    inviter.cf_balance += REFERRAL_BONUS
-    inviter.save(update_fields=["cf_balance"])
 
     return inviter
 
